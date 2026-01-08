@@ -1,7 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Status:** Planning Phase
+**Last Updated:** 2026-01-08  
+**Status:** Phase 1 - In Progress (Tasks 1 & 2 Complete ✅)
 
 ## Overview
 
@@ -17,23 +18,23 @@ Unit tests and documentation should be written for each component and function a
 **Goal:** Get basic Google Docs → Markdown conversion working, including multi-tab documents
 
 **Tasks:**
-1. **Project Setup**
-   - [ ] Set up proper project structure
-   - [ ] Configure development dependencies (pytest, black, ruff, mypy)
-   - [ ] Set up basic CI/CD (if applicable)
-   - [ ] Create `.gitignore` and development documentation
+1. **Project Setup** ✅
+   - [x] Set up proper project structure
+   - [x] Configure development dependencies (pytest, black, ruff, mypy)
+   - [x] Set up basic CI/CD (GitHub Actions with tests, linting, formatting, type checking)
+   - [x] Create `.gitignore` and development documentation
 
-2. **Google Docs API Client**
-   - [ ] Create `google_docs_markdown/api_client.py`
-   - [ ] Implement authentication using Application Default Credentials
-   - [ ] Create wrapper for Google Docs API (`documents().get()`)
-   - [ ] Handle authentication errors gracefully
-   - [ ] Add retry logic for transient failures
-   - [ ] Extract document ID from URLs
-   - [ ] Detect multi-tab documents via API
-   - [ ] Retrieve tab information (names, IDs) for multi-tab documents
-   - [ ] Ensure Location/Range objects include `tabId` when working with multi-tab documents
-   - [ ] Handle `segmentId` in Location/Range objects for headers/footers/footnotes
+2. **Google Docs API Client** ✅
+   - [x] Create `google_docs_markdown/api_client.py`
+   - [x] Implement authentication using Application Default Credentials
+   - [x] Create wrapper for Google Docs API (`documents().get()`)
+   - [x] Handle authentication errors gracefully
+   - [x] Add retry logic for transient failures
+   - [x] Extract document ID from URLs
+   - [x] Detect multi-tab documents via API
+   - [x] Retrieve tab information (names, IDs) for multi-tab documents
+   - [x] Ensure Location/Range objects include `tabId` when working with multi-tab documents (API client ready; objects created in later tasks)
+   - [x] Handle `segmentId` in Location/Range objects for headers/footers/footnotes (API client ready; objects created in later tasks)
 
 3. **Data Models**
    - [ ] Create `google_docs_markdown/models/` directory structure
@@ -84,7 +85,7 @@ Unit tests and documentation should be written for each component and function a
 7. **Testing**
    - [ ] Test with example Google Doc from `example_markdown/google_doc_urls.txt`
    - [ ] Test with multi-tab Google Doc (if available)
-   - [ ] Create unit tests for API client (including tab detection)
+   - [x] Create unit tests for API client (including tab detection) ✅
    - [ ] Create unit tests for downloader (single-tab and multi-tab)
    - [ ] Create integration tests for end-to-end download (both scenarios)
    - [ ] Verify deterministic output (same doc → same markdown)
@@ -478,8 +479,17 @@ This document should be used for testing throughout development.
 
 ## Next Steps
 
-1. Review and refine this plan
-2. Set up project structure (Phase 1, Task 1)
-3. Begin implementation with Phase 1
-4. Iterate based on testing and feedback
+**Completed:**
+- ✅ Phase 1, Task 1: Project Setup
+- ✅ Phase 1, Task 2: Google Docs API Client (with comprehensive unit tests)
+
+**In Progress:**
+- Phase 1, Task 3: Data Models (next up)
+
+**Remaining Phase 1 Tasks:**
+- Task 3: Data Models
+- Task 4: Basic Downloader (Docs → Markdown)
+- Task 5: CLI - Download Command
+- Task 6: Python API - Basic Interface
+- Task 7: Testing (API client tests complete; remaining tests depend on downloader)
 

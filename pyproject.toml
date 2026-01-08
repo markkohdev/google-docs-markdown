@@ -34,13 +34,30 @@ packages = ["google_docs_markdown"]
 # Dev dependencies are specified in [project.optional-dependencies]
 default-groups = ["dev"]
 
-[tool.black]
-line-length = 100
-target-version = ['py38']
-
 [tool.ruff]
-line-length = 100
-target-version = "py38"
+line-length = 120
+target-version = "py312"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["google_docs_markdown"]
+
+[tool.ruff.format]
+# The formatter shares some options with the linter, like line-length.
+# Additional formatter-specific options exist:
+quote-style = "double"
+indent-style = "space"
 
 [tool.mypy]
 python_version = "3.8"
