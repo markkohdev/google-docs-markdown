@@ -9,7 +9,7 @@
 
 This project is a Python package and CLI tool for downloading and editing Google Docs as Markdown using the Google Docs API. The tool enables bidirectional conversion between Google Docs and Markdown format, allowing users to edit documents locally in Markdown while maintaining synchronization with Google Docs.
 
-The tool leverages the [Google Docs API](https://googleapis.github.io/google-api-python-client/docs/dyn/docs_v1.documents.html) via the `google-api-python-client` library to interact with documents programmatically.
+The tool leverages the [Google Docs API](https://googleapis.github.io/google-api-python-client/docs/dyn/docs_v1.documents.html) via the `google-api-python-client` library to interact with documents programmatically.  This documentation has been downloaded locally for reference at `resources/google_docs_api_reference.md`.
 
 ## 2. Goals
 
@@ -29,22 +29,23 @@ The primary goals of this project are:
 - **FR-1**: Download Google Docs as Markdown
   - Convert Google Docs documents to Markdown format
   - Preserve document structure, formatting, and content
-  - Handle documents with multiple tabs (sheets) by creating separate markdown files per tab
+  - Handle documents with multiple tabs by creating separate markdown files per tab
 
 - **FR-2**: Upload Markdown to Google Docs
   - Convert Markdown content back to Google Docs format
   - Support both updating existing documents and creating new documents
   - Preserve Markdown structure and formatting in Google Docs
 
-- **FR-3**: Tab/Sheet Support
-  - Detect documents with multiple tabs (e.g., Google Sheets)
+- **FR-3**: Tab Support
+  - Detect documents with multiple tabs
   - Download each tab into a separate markdown file
-  - Organize output files in a directory structure matching the document name
+  - Create a folder based on the document title (or user-provided output directory)
+  - Save markdown files as `{Doc Title}/{Tab Name}.md` (e.g., `My Doc/Tab 1.md` for single-tab, `My Doc/Tab 1.md` and `My Doc/Tab 2.md` for multi-tab)
   - Support selective tab download via CLI flags
 
 - **FR-4**: Image Management
   - Extract images from Google Docs during download
-  - Store images locally in an `imgs` directory within the output directory
+  - Store images locally in an `imgs` directory within the document's output folder (e.g., `My Doc/imgs/`)
   - Upload local images to a configurable public storage service (S3, GCS, etc.)
   - Inline image URLs in Markdown files with public URLs
   - Replace local image references with public URLs after upload
@@ -165,6 +166,13 @@ The diff engine is critical for efficient updates and conflict resolution:
   - Enable precise change tracking
   - Reduce risk of overwriting unrelated content
 
+- **Update Ordering**: Process batch updates in a specific order to preserve indices:
+  1. **Deletions**: Process from end to start (preserves indices for earlier operations)
+  2. **Insertions**: Process from start to end (doesn't affect later insertions)
+  3. **Updates**: Can be processed in any order (don't affect indices)
+  
+  This ordering is critical because deletions and insertions change document indices, and processing them in the wrong order can cause index errors.
+
 - **Update Modes**:
   - **Update Mode**: Modify existing document (default)
   - **Create Mode**: Create new document from Markdown (via `create` endpoint)
@@ -180,9 +188,20 @@ The diff engine is critical for efficient updates and conflict resolution:
   - Better testability
 
 - **Implementation**:
-  - Define dataclasses matching the structure of API objects
+  - Use a modular structure with separate modules for reusable components:
+    - `text_style.py` - TextStyle dataclass and conversion logic
+    - `paragraph_style.py` - ParagraphStyle dataclass and conversion logic
+    - `color.py` - Color object handling
+    - `size.py` - Size object handling
+    - `location.py` - Location and Range utilities (with tabId and segmentId support)
+    - `table.py` - Table, TableRow, TableCell structures
+    - `structural_elements.py` - Paragraph, Table, SectionBreak, TableOfContents, Equation
+    - `paragraph_elements.py` - TextRun, InlineObjectElement, and other paragraph elements
+    - `document.py` - Document, Body, Tab structures, Header, Footer, Footnote segments
+  - Define dataclasses matching the structure of API objects (as documented in API_ELEMENT_ANALYSIS.md)
   - Implement conversion methods between dataclasses and API response dictionaries
   - Use dataclasses for internal representation throughout the codebase
+  - This modular approach ensures consistency and reduces code duplication
 
 ### 5.5 Image Management Workflow
 
@@ -199,25 +218,44 @@ The image management system handles images throughout the document lifecycle:
 **Configuration**:
 - Storage service configuration should be:
   - Configurable globally via config file (e.g., `~/.config/google-docs-markdown/config.yaml`)
-  - Overridable per-document via document-path-specific config (e.g: `my_doc/config.yaml`, alongside the markdown files)
+  - Overridable per-document via document-folder-specific config (e.g: `My Doc/config.yaml`, alongside the markdown files within the document folder)
   - Overridable per-command execution via CLI flags
 - Supported storage backends: S3, Google Cloud Storage, or other public URL providers
 
-### 5.6 Tab/Sheet Handling
+### 5.6 Tab Handling and Output Directory Structure
 
-- **Detection**: Identify documents with multiple tabs (primarily Google Sheets)
 - **Download Strategy**: 
-  - Create a directory named after the document
-  - Download each tab as a separate markdown file named after the tab
-  - Example: Document "My Spreadsheet" with tabs "Sheet1", "Sheet2" → `My Spreadsheet/Sheet1.md`, `My Spreadsheet/Sheet2.md`
-- **Selective Download**: Support `--tabs` flag to download specific tabs as single files
+  - Create a directory named after the document title (or user-provided output directory)
+  - Download each tab as a separate markdown file named after the tab within this directory
+  - Example: Document "My Doc" with tabs "Tab 1", "Tab 2" → `My Doc/Tab 1.md`, `My Doc/Tab 2.md`
+- **Selective Download**: Support `--tabs` flag to download specific tabs
 - **Upload Strategy**: When uploading, determine if target is multi-tab document and handle accordingly
+- **Tab Context**: Maintain `tabId` in Location/Range objects when working with multi-tab documents
 
-### 5.7 Handling Google Docs Features Not Supported in Markdown
+### 5.7 Headers, Footers, and Footnotes
+
+Google Docs supports headers, footers, and footnotes as separate document segments:
+
+- **Headers**: Reusable header content that can be linked to sections. Each tab in a multi-tab document can have its own headers.
+- **Footers**: Reusable footer content that can be linked to sections. Each tab in a multi-tab document can have its own footers.
+- **Footnotes**: Separate segment for footnote content. Footnotes are referenced inline via `FootnoteReference` elements and stored in a `footnotes[]` array.
+
+**Handling Strategy**:
+- **Download**: Extract headers, footers, and footnotes as separate content segments
+  - Serialize headers/footers as separate files (e.g., `header.md`, `footer.md`) or include in metadata
+  - Extract footnote references (`[^1]`) and footnote content separately
+  - For multi-tab documents, handle headers/footers per-tab
+- **Upload**: Upload header/footer content to appropriate segments using `segmentId` in Location/Range objects
+  - Create footnote segments and link footnote references appropriately
+  - Maintain segment context when uploading content
+
+**Segment IDs**: The Google Docs API uses `segmentId` in Location/Range objects to specify which segment (header, footer, footnote, or body) an operation targets. Empty `segmentId` indicates the document body.
+
+### 5.8 Handling Google Docs Features Not Supported in Markdown
 
 Markdown has limited support for many advanced Google Docs features. The tool must serialize and deserialize these features in a way that preserves functionality while maintaining editability where appropriate.
 
-#### 5.7.1 Serialization Strategy
+#### 5.8.1 Serialization Strategy
 
 The tool uses two serialization approaches based on whether users might want to edit the feature directly in Markdown:
 
@@ -256,7 +294,7 @@ For features that are complex, rarely edited, or require structured data, serial
 
 **Recommendation**: Support both options, with companion JSON file as the default for complex documents. Allow users to configure preference via CLI flag or config file.
 
-#### 5.7.2 Deserialization Strategy
+#### 5.8.2 Deserialization Strategy
 
 When uploading Markdown back to Google Docs:
 
@@ -265,7 +303,7 @@ When uploading Markdown back to Google Docs:
 - **Preserve Order**: Maintain the order of features as they appear in the original document
 - **Validation**: Validate that serialized data can be properly deserialized before upload
 
-#### 5.7.3 Examples (Illustrative, actual implementations will depend on the API and the specific features being serialized/deserialized)
+#### 5.8.3 Examples (Illustrative, actual implementations will depend on the API and the specific features being serialized/deserialized)
 
 **Date Picker in Markdown**:
 ```markdown
@@ -301,5 +339,5 @@ The meeting is scheduled for <!-- date-picker: {"type": "date", "value": "2026-0
 
 ## 6. Resources
 
-- Example Google Doc URLs for testing are provided in `example_markdown/google_doc_urls.txt`
+- Example Google Doc URLs for testing are provided in `resources/example_markdown/google_doc_urls.txt`
 - Google Docs API Documentation: https://googleapis.github.io/google-api-python-client/docs/dyn/docs_v1.documents.html

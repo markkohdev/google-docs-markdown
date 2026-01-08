@@ -7,24 +7,44 @@ requires-python = ">=3.8"
 dependencies = [
     "google-api-python-client>=2.100.0",
     "google-auth>=2.23.0",
+    "click>=8.1.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
-    # Add development dependencies here if needed
-    # "pytest>=7.0",
-    # "black>=23.0",
-    # "ruff>=0.1.0",
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0",
 ]
 
 [project.scripts]
-google-docs-markdown = "google_docs_markdown.downloader:main"
+google-docs-markdown = "google_docs_markdown.cli:main"
 extract-images = "google_docs_markdown.image_extractor:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools]
+packages = ["google_docs_markdown"]
+
 [tool.uv]
-dev-dependencies = []
+# Dev dependencies are specified in [project.optional-dependencies]
+default-groups = ["dev"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+
+[tool.ruff]
+line-length = 100
+target-version = "py38"
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
 
