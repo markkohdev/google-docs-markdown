@@ -1,0 +1,30 @@
+[project]
+name = "google-docs-markdown"
+version = "0.2.0"
+description = "Download and edit Google Docs as Markdown using the Google Docs API"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "google-api-python-client>=2.100.0",
+    "google-auth>=2.23.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Add development dependencies here if needed
+    # "pytest>=7.0",
+    # "black>=23.0",
+    # "ruff>=0.1.0",
+]
+
+[project.scripts]
+google-docs-markdown = "google_docs_markdown.downloader:main"
+extract-images = "google_docs_markdown.image_extractor:main"
+
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv]
+dev-dependencies = []
+
