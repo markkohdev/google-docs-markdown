@@ -33,37 +33,25 @@ pip install -e .
 
 ## Setup
 
-### Google API Authentication
+### Quick Setup (Recommended)
 
-1. **Authenticate using `gcloud`:**
-   ```bash
-   gcloud auth application-default login 
-   ```
-   
-   This will:
-   - Open a browser for authentication
-   - Grant permissions to access and edit your Google Docs
-   - Store credentials locally for future use
-   
-   **Important:** Include the `--scopes` flag to ensure your credentials have permission to access the Google Docs API. If you've already authenticated without scopes, revoke and re-authenticate:
-   ```bash
-   gcloud auth application-default revoke
-   gcloud auth application-default login --scopes=https://www.googleapis.com/auth/documents
-   ```
-   
-   **Note:** You need the Google Cloud SDK installed. If you don't have it:
-   ```bash
-   # macOS
-   brew install google-cloud-sdk
-   
-   # Or download from: https://cloud.google.com/sdk/docs/install
-   ```
+Run the interactive setup command to configure authentication and enable required APIs:
 
-   **For Spotify engineers:** If you're using Spotify's internal Google Cloud setup, you may need to configure your project:
-   ```bash
-   gcloud config set project YOUR_PROJECT_ID
-   gcloud services enable docs.googleapis.com
-   ```
+```bash
+google-docs-markdown setup
+```
+
+This command will:
+- ✅ Check if `gcloud` CLI is installed
+- ✅ Set up Application Default Credentials with required scopes
+- ✅ Configure your default GCP project
+- ✅ Enable the Google Docs API
+
+The setup command is interactive and will guide you through each step, skipping any that are already configured.
+
+### Manual Setup (Appendix)
+
+If you prefer to set up manually or need to troubleshoot, see [Manual Setup Steps](#manual-setup-steps) in the appendix below.
 
 ## Usage
 
@@ -207,6 +195,82 @@ These features are automatically serialized when downloading and deserialized wh
 - **Deterministic conversions**: Same document input always produces identical Markdown output
 - **No-change detection**: If a document is downloaded and immediately uploaded without modification, no API calls are made (unless `--overwrite` flag is used)
 - The tool handles concurrent edits gracefully by detecting changes and only submitting differences
+
+## Appendix
+
+### Manual Setup Steps
+
+If you prefer to set up manually or need to troubleshoot, follow these steps:
+
+#### 1. Install Google Cloud SDK
+
+If you don't have `gcloud` CLI installed:
+
+```bash
+# macOS
+brew install google-cloud-sdk
+
+# Or download from: https://cloud.google.com/sdk/docs/install
+```
+
+#### 2. Authenticate with Application Default Credentials
+
+Set up authentication with the required scopes:
+
+```bash
+gcloud auth application-default login --scopes=https://www.googleapis.com/auth/documents,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/sqlservice.login,openid
+```
+
+This will:
+- Open a browser for authentication
+- Grant permissions to access and edit your Google Docs
+- Store credentials locally for future use
+
+**Note:** If you've already authenticated without the required scopes, revoke and re-authenticate:
+
+```bash
+gcloud auth application-default revoke
+gcloud auth application-default login --scopes=https://www.googleapis.com/auth/documents,https://www.googleapis.com/auth/userinfo.email,https://www.googleapis.com/auth/cloud-platform,https://www.googleapis.com/auth/sqlservice.login,openid
+```
+
+#### 3. Set Default GCP Project
+
+Set your default Google Cloud project:
+
+```bash
+gcloud config set project YOUR_PROJECT_ID
+```
+
+**For Spotify engineers:** Use your Spotify GCP project ID.
+
+#### 4. Enable Google Docs API
+
+Enable the Google Docs API for your project:
+
+```bash
+gcloud services enable docs.googleapis.com --project=YOUR_PROJECT_ID
+```
+
+Or if you've already set a default project:
+
+```bash
+gcloud services enable docs.googleapis.com
+```
+
+#### Verification
+
+To verify your setup is correct:
+
+```bash
+# Check credentials
+gcloud auth application-default print-access-token
+
+# Check project
+gcloud config get-value project
+
+# Check if API is enabled
+gcloud services list --enabled --filter="name:docs.googleapis.com"
+```
 
 ## License
 

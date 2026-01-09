@@ -56,7 +56,10 @@ def upload(
             help="Path to local markdown file (if not provided, inferred from document URL)",
         ),
     ] = None,
-    create: Annotated[bool, typer.Option("--create", help="Create a new Google Doc instead of updating the existing one")] = False,
+    create: Annotated[
+        bool,
+        typer.Option("--create", help="Create a new Google Doc instead of updating the existing one"),
+    ] = False,
     overwrite: Annotated[
         bool, typer.Option("--overwrite", help="Force upload even when no changes detected")
     ] = False,
@@ -85,8 +88,9 @@ def diff(
 @app.command()
 def setup() -> None:
     """Set up authentication and configuration."""
-    typer.echo("Setting up authentication and configuration...")
-    raise NotImplementedError("This command is not implemented yet")
+    from google_docs_markdown.setup import setup as run_setup
+
+    run_setup()
 
 
 def main() -> None:

@@ -36,10 +36,11 @@ class TestCLICommands:
         with pytest.raises(NotImplementedError, match="This command is not implemented yet"):
             cli.diff(document_url="test-doc-id")
 
-    def test_setup_command_exists(self) -> None:
-        """Test that setup command exists and raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="This command is not implemented yet"):
-            cli.setup()
+    @patch("google_docs_markdown.setup.setup")
+    def test_setup_command_exists(self, mock_setup_module: pytest.Mock) -> None:
+        """Test that setup command exists and calls the setup module."""
+        cli.setup()
+        mock_setup_module.assert_called_once()
 
 
 class TestMain:
