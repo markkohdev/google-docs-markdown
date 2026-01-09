@@ -288,10 +288,12 @@ class TestSetup:
 
     @patch("google_docs_markdown.setup.sys.exit")
     @patch("google_docs_markdown.setup.check_gcloud_installed")
+    @patch("google_docs_markdown.setup.typer.prompt")
     @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_gcloud_not_installed(
         self,
         mock_echo: Mock,
+        mock_prompt: Mock,
         mock_check_gcloud: Mock,
         mock_exit: Mock,
     ) -> None:
@@ -334,10 +336,12 @@ class TestSetup:
     @patch("google_docs_markdown.setup.run_auth_login")
     @patch("google_docs_markdown.setup.check_credentials_exist")
     @patch("google_docs_markdown.setup.check_gcloud_installed")
+    @patch("google_docs_markdown.setup.typer.prompt")
     @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_auth_login_fails(
         self,
         mock_echo: Mock,
+        mock_prompt: Mock,
         mock_check_gcloud: Mock,
         mock_check_creds: Mock,
         mock_auth_login: Mock,

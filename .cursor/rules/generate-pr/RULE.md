@@ -85,7 +85,7 @@ Create a comprehensive PR description following the template format in `.github/
 - Clean up temporary file
 
 ### 7. Provide Summary
-- Share the PR URL with the user as a link
+- Share the PR URL with the user as a link in markdown format `[PR URL](<PR URL>)`
 - Confirm that the description was properly formatted and submitted
 - Note any important details about the PR
 
