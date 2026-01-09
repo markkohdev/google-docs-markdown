@@ -1,27 +1,32 @@
 """
 Google Docs API Client
 
-Handles authentication, API requests, and multi-tab document support.
+Handles authentication, API requests, and basic calls to the Google Docs API.
 """
 
+from __future__ import annotations
+
 import re
-import time
+import typing
 from dataclasses import dataclass
-from typing import Any
 
 from google.auth.credentials import Credentials
 from google.auth.exceptions import DefaultCredentialsError
 from googleapiclient.discovery import build
-from googleapiclient.errors import HttpError
-from googleapiclient.http import HttpRequest
+
+# Google API python clients are very weirdly typed so we need to use stubs to get the correct types
+# since these aren't "real" types, we need to use TYPE_CHECKING to get the correct types
+# see https://pypi.org/project/google-api-python-client-stubs/ for more info
+# and make sure you always have `from __future__ import annotations` at the top of the file!
+if typing.TYPE_CHECKING:
+    from googleapiclient._apis.docs.v1 import DocsResource, Document, Request, Response
+
 
 # Google Docs API scope
 SCOPES = ["https://www.googleapis.com/auth/documents"]
 
 # Retry configuration
 MAX_RETRIES = 3
-RETRY_DELAY_SECONDS = 1
-RETRYABLE_ERROR_CODES = [429, 500, 502, 503, 504]
 
 
 @dataclass
@@ -51,13 +56,13 @@ class GoogleDocsAPIClient:
         self._service = None
 
     @property
-    def service(self) -> Any:
+    def service(self) -> DocsResource:
         """Lazy-load the Google Docs API service."""
         if self._service is None:
             self._service = self._build_service()
         return self._service
 
-    def _build_service(self) -> Any:
+    def _build_service(self) -> DocsResource:
         """Build and return the Google Docs API service."""
         if self.credentials is None:
             self.credentials = self._get_credentials()
@@ -92,6 +97,7 @@ class GoogleDocsAPIClient:
         - https://docs.google.com/document/d/DOC_ID/edit
         - https://docs.google.com/document/d/DOC_ID/view
         - https://docs.google.com/document/d/DOC_ID
+        - https://docs.google.com/document/d/DOC_ID/edit?pli=1&tab=TAB_ID (will still only extract the DOC_ID)
         - DOC_ID (already extracted)
 
         Args:
@@ -126,17 +132,18 @@ class GoogleDocsAPIClient:
 
         raise ValueError(f"Could not extract document ID from: {url_or_id}. Expected a Google Docs URL or document ID.")
 
-    def get_document(self, document_id: str, include_tabs_content: bool = True) -> dict[str, Any]:
+    def get_document(self, document_id: str) -> Document:
         """
         Retrieve a document from Google Docs API.
 
+        Always includes content from all tabs, treating every document as a multi-tab document
+        (even if it only has a single tab).
+
         Args:
             document_id: The document ID
-            include_tabs_content: If True, includes content from all tabs
-                                 (required for multi-tab documents)
 
         Returns:
-            Document dictionary from the API
+            Document object from the API
 
         Raises:
             HttpError: If the API request fails
@@ -144,142 +151,45 @@ class GoogleDocsAPIClient:
         """
         document_id = self.extract_document_id(document_id)
 
-        result = self._execute_with_retry(
-            lambda: self.service.documents()
-            .get(documentId=document_id, includeTabsContent=include_tabs_content)
-            .execute()
+        result = (
+            self.service.documents()
+            .get(documentId=document_id, includeTabsContent=True)
+            .execute(num_retries=MAX_RETRIES)
         )
-        assert isinstance(result, dict)
         return result
 
-    def is_multi_tab(self, document_id: str) -> bool:
-        """
-        Check if a document has multiple tabs.
-
-        Args:
-            document_id: The document ID
-
-        Returns:
-            True if the document has multiple tabs, False otherwise
-        """
-        try:
-            doc = self.get_document(document_id, include_tabs_content=True)
-            tabs = doc.get("tabs", [])
-            return len(tabs) > 0
-        except Exception:
-            # If we can't determine, assume single-tab
-            return False
-
-    def get_tabs(self, document_id: str) -> list[TabInfo]:
-        """
-        Get information about all tabs in a document.
-
-        Args:
-            document_id: The document ID
-
-        Returns:
-            List of TabInfo objects. Empty list for single-tab documents.
-        """
-        doc = self.get_document(document_id, include_tabs_content=True)
-        tabs = doc.get("tabs", [])
-
-        tab_info_list = []
-        for tab in tabs:
-            tab_info = TabInfo(tab_id=tab.get("tabId", ""), name=tab.get("name", "Untitled Tab"))
-            tab_info_list.append(tab_info)
-
-        return tab_info_list
-
-    def get_document_title(self, document_id: str) -> str:
-        """
-        Get the title of a document.
-
-        Args:
-            document_id: The document ID
-
-        Returns:
-            Document title, or 'Untitled Document' if not found
-        """
-        doc = self.get_document(document_id, include_tabs_content=False)
-        title = doc.get("title", "Untitled Document")
-        assert isinstance(title, str)
-        return title
-
-    def create_document(self, title: str) -> dict[str, Any]:
+    def create_document(self, document: Document) -> Document:
         """
         Create a new blank document.
 
         Args:
-            title: The title for the new document
+            document: The document to create
 
         Returns:
-            Created document dictionary with document ID
+            The newly created document
         """
-        result = self._execute_with_retry(lambda: self.service.documents().create(body={"title": title}).execute())
-        assert isinstance(result, dict)
+        result = self.service.documents().create(body=document).execute(num_retries=MAX_RETRIES)
         return result
 
-    def batch_update(self, document_id: str, requests: list[dict[str, Any]]) -> dict[str, Any]:
+    def batch_update(self, document_id: str, requests: list[Request]) -> list[Response]:
         """
         Execute a batch update on a document.
 
         Args:
             document_id: The document ID
-            requests: List of request dictionaries for batchUpdate
+            requests: List of Request objects for batchUpdate
 
         Returns:
-            Response dictionary from the API
+            List of responses from the API
         """
         document_id = self.extract_document_id(document_id)
 
-        result = self._execute_with_retry(
-            lambda: self.service.documents().batchUpdate(documentId=document_id, body={"requests": requests}).execute()
+        result = (
+            self.service.documents()
+            .batchUpdate(documentId=document_id, body={"requests": requests})
+            .execute(num_retries=MAX_RETRIES)
         )
-        assert isinstance(result, dict)
-        return result
 
-    def _execute_with_retry(self, api_call: Any) -> Any:
-        """
-        Execute an API call with retry logic for transient failures.
-
-        Args:
-            api_call: Callable that returns an HttpRequest or executes an API call
-
-        Returns:
-            Result of the API call
-
-        Raises:
-            HttpError: If the API request fails after all retries
-        """
-        last_exception = None
-
-        for attempt in range(MAX_RETRIES):
-            try:
-                result = api_call()
-                # If it's an HttpRequest, execute it
-                if isinstance(result, HttpRequest):
-                    return result.execute()
-                return result
-            except HttpError as e:
-                last_exception = e
-                error_code = e.resp.status if e.resp else None
-
-                # Check if error is retryable
-                if error_code not in RETRYABLE_ERROR_CODES:
-                    # Non-retryable error, raise immediately
-                    raise
-
-                # If this is the last attempt, raise the exception
-                if attempt == MAX_RETRIES - 1:
-                    raise
-
-                # Wait before retrying (exponential backoff)
-                delay = RETRY_DELAY_SECONDS * (2**attempt)
-                time.sleep(delay)
-            except Exception:
-                # Non-HTTP errors are not retryable
-                raise
-
-        # Should never reach here, but just in case
-        if last_exception:
-            raise last_exception
+        # result is a BatchUpdateDocumentResponse TypedDict
+        response_list = result.get("replies", [])
+        return response_list
