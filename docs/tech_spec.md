@@ -1,7 +1,8 @@
 # Google Docs Markdown - Technical Specification
 
-**Document Version:** 1.0.0  
+**Document Version:** 1.1.0  
 **Date:** 2026-01-08  
+**Last Updated:** 2026-01-08  
 **Authors:** Mark Koh  
 **Status:** Draft
 
@@ -29,19 +30,17 @@ The primary goals of this project are:
 - **FR-1**: Download Google Docs as Markdown
   - Convert Google Docs documents to Markdown format
   - Preserve document structure, formatting, and content
-  - Handle documents with multiple tabs by creating separate markdown files per tab
+  - Treat every document as a multi-tab document (even single-tab ones)
+  - Handle nested tab structures recursively (tabs can contain both content and child tabs)
+  - Download each tab into a separate markdown file
+  - Create a folder based on the document title (or user-provided output directory)
+  - Save markdown files as `{Doc Title}/{Tab Name}.md` (e.g., `My Doc/Tab 1.md` for single-tab, `My Doc/Tab 1.md` and `My Doc/Tab 2.md` for multi-tab)
+  - Support selective tab download via CLI flags
 
 - **FR-2**: Upload Markdown to Google Docs
   - Convert Markdown content back to Google Docs format
   - Support both updating existing documents and creating new documents
   - Preserve Markdown structure and formatting in Google Docs
-
-- **FR-3**: Tab Support
-  - Detect documents with multiple tabs
-  - Download each tab into a separate markdown file
-  - Create a folder based on the document title (or user-provided output directory)
-  - Save markdown files as `{Doc Title}/{Tab Name}.md` (e.g., `My Doc/Tab 1.md` for single-tab, `My Doc/Tab 1.md` and `My Doc/Tab 2.md` for multi-tab)
-  - Support selective tab download via CLI flags
 
 - **FR-4**: Image Management
   - Extract images from Google Docs during download
@@ -116,7 +115,7 @@ The tool is organized into several distinct components that work together to pro
 - **Uploader**: Converts Markdown to Google Docs API batch update requests
 - **Diff Engine**: Compares Markdown content with Google Docs content and generates minimal update operations
 - **Image Manager**: Extracts images from documents, uploads to storage, manages local/public URL mapping
-- **Data Models**: Python dataclass representations of Google Docs API objects for type safety and easier manipulation
+- **Data Models**: Type-hinted TypedDict representations of Google Docs API response objects using `google-api-python-client-stubs` for type safety and IDE support
 
 ## 5. Detailed Design
 
@@ -150,6 +149,7 @@ The diff engine is critical for efficient updates and conflict resolution:
 - **Diff Algorithm**: 
   - Convert both Markdown and Google Docs content to a normalized intermediate representation
   - Use appropriate diffing algorithms (e.g., Myers diff algorithm) to identify changes
+  - For Google Docs API objects, leverage TypedDict comparison capabilities for efficient structural diffing
   - Generate minimal set of update operations needed to transform online content to match local content
 
 - **Conflict Handling**:
@@ -180,28 +180,26 @@ The diff engine is critical for efficient updates and conflict resolution:
 
 ### 5.4 Data Models
 
-- **Purpose**: Create Python dataclass mirrors of Google Docs API request/response objects
+- **Purpose**: Use Google Docs API response objects directly as TypedDicts with type hints from `google-api-python-client-stubs`
 - **Benefits**:
-  - Type safety and IDE support
-  - Easier manipulation and comparison
-  - Simplified serialization/deserialization
-  - Better testability
+  - Type safety and IDE support via type hints (even though types aren't available at runtime)
+  - No conversion overhead - work directly with API response objects
+  - TypedDict comparison enables efficient diffing strategies
+  - Reduced code maintenance (no need to maintain parallel dataclass structures)
 
-- **Implementation**:
-  - Use a modular structure with separate modules for reusable components:
-    - `text_style.py` - TextStyle dataclass and conversion logic
-    - `paragraph_style.py` - ParagraphStyle dataclass and conversion logic
-    - `color.py` - Color object handling
-    - `size.py` - Size object handling
-    - `location.py` - Location and Range utilities (with tabId and segmentId support)
-    - `table.py` - Table, TableRow, TableCell structures
-    - `structural_elements.py` - Paragraph, Table, SectionBreak, TableOfContents, Equation
-    - `paragraph_elements.py` - TextRun, InlineObjectElement, and other paragraph elements
-    - `document.py` - Document, Body, Tab structures, Header, Footer, Footnote segments
-  - Define dataclasses matching the structure of API objects (as documented in API_ELEMENT_ANALYSIS.md)
-  - Implement conversion methods between dataclasses and API response dictionaries
-  - Use dataclasses for internal representation throughout the codebase
-  - This modular approach ensures consistency and reduces code duplication
+- **Implementation Strategy**:
+  - Import type hints from `google-api-python-client-stubs` using `TYPE_CHECKING` (as demonstrated in `api_client.py`)
+  - Use `from __future__ import annotations` at the top of files to enable forward references
+  - Type hint API response objects using types like `Document`, `DocumentTab`, `Paragraph`, `Table`, etc. from `googleapiclient._apis.docs.v1`
+  - Work directly with the TypedDict objects returned by the API client
+  - For markdown conversion, dataclasses may be created if needed for intermediate representation, but this is optional and not prescribed
+
+- **Key Types**:
+  - `Document` - Container for all tabs in a document
+  - `DocumentTab` - Fundamental document object representing a single tab (can contain both content and child tabs)
+  - Other API types (`Paragraph`, `Table`, `TextRun`, etc.) are used as needed for type hints
+
+- **Note**: These types are only available for type checking and IDE support. At runtime, the API returns regular Python dictionaries (TypedDicts), which can be compared directly for diffing purposes.
 
 ### 5.5 Image Management Workflow
 
@@ -224,12 +222,31 @@ The image management system handles images throughout the document lifecycle:
 
 ### 5.6 Tab Handling and Output Directory Structure
 
+- **Fundamental Approach**: Treat every Google Doc as a multi-tab document, even if it only has a single tab
+  - The API client always requests `includeTabsContent=True` to ensure consistent tab structure
+  - Single-tab documents are handled the same way as multi-tab documents (just with one tab)
+
+- **Tab Structure**: Google Doc tabs are nested - tabs can have both content AND child tabs simultaneously
+  - Each `DocumentTab` contains:
+    - `body` - The main content of the tab
+    - `headers[]` - Header segments for the tab
+    - `footers[]` - Footer segments for the tab
+    - `footnotes[]` - Footnote segments for the tab
+    - `tabs[]` (optional) - Child tabs nested within this tab
+  - This nested structure must be handled recursively when processing documents
+
+- **Data Model**: Use `DocumentTab` as the fundamental document object
+  - `Document` serves as the container for all top-level tabs
+  - Each `DocumentTab` represents a single tab and can be processed independently
+  - When processing nested tabs, recursively handle child tabs within each parent tab
+
 - **Download Strategy**: 
   - Create a directory named after the document title (or user-provided output directory)
-  - Download each tab as a separate markdown file named after the tab within this directory
+  - Download each tab (including nested tabs) as a separate markdown file named after the tab within this directory
   - Example: Document "My Doc" with tabs "Tab 1", "Tab 2" → `My Doc/Tab 1.md`, `My Doc/Tab 2.md`
+  - For nested tabs, use a naming convention that reflects the hierarchy (e.g., `Tab 1/Subtab A.md`)
 - **Selective Download**: Support `--tabs` flag to download specific tabs
-- **Upload Strategy**: When uploading, determine if target is multi-tab document and handle accordingly
+- **Upload Strategy**: When uploading, handle tab structure (including nested tabs) appropriately
 - **Tab Context**: Maintain `tabId` in Location/Range objects when working with multi-tab documents
 
 ### 5.7 Headers, Footers, and Footnotes
