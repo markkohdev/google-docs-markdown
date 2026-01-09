@@ -1,3 +1,12 @@
+# Ignore all dotfiles by default, then explicitly allow the ones we want to track
+.*
+!.gitignore
+!.python-version
+!.vscode/
+!.vscode/**
+!.github/
+!.github/**
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
