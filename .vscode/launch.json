@@ -1,0 +1,77 @@
+{
+  "version": "0.2.0",
+  "inputs": [
+    {
+      "id": "googleDocUrl",
+      "type": "promptString",
+      "description": "Enter Google Docs URL",
+      "default": "https://docs.google.com/document/d/DOC_ID/edit"
+    },
+    {
+      "id": "outputFilename",
+      "type": "promptString",
+      "description": "Output filename (optional, enter \" \" to use document title)",
+      "default": " "
+    },
+    {
+      "id": "outputDir",
+      "type": "promptString",
+      "description": "Output directory (optional, enter \" \" for default)",
+      "default": " "
+    },
+    {
+      "id": "prettyPrint",
+      "type": "pickString",
+      "description": "Pretty print JSON?",
+      "options": [
+        {
+          "label": "Yes",
+          "value": "yes"
+        },
+        {
+          "label": "No",
+          "value": "no"
+        }
+      ],
+      "default": "yes"
+    },
+    {
+      "id": "overwrite",
+      "type": "pickString",
+      "description": "Overwrite existing file?",
+      "options": [
+        {
+          "label": "Ask (prompt if file exists)",
+          "value": "ask"
+        },
+        {
+          "label": "Yes (overwrite without asking)",
+          "value": "yes"
+        },
+        {
+          "label": "No (skip if file exists)",
+          "value": "no"
+        }
+      ],
+      "default": "ask"
+    }
+  ],
+  "configurations": [
+    {
+      "name": "Download Test Document",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/download_test_doc.py",
+      "args": [
+        "${input:googleDocUrl}",
+        "--output=${input:outputFilename}",
+        "--output-dir=${input:outputDir}",
+        "--pretty=${input:prettyPrint}",
+        "--overwrite=${input:overwrite}"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ]
+}
+

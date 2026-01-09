@@ -29,19 +29,16 @@ Unit tests and documentation should be written for each component and function a
    - [x] Implement authentication using Application Default Credentials
    - [x] Create wrapper for Google Docs API (`documents().get()`)
    - [x] Handle authentication errors gracefully
-   - [x] Add retry logic for transient failures
+   - [x] Include retry logic for transient failures
    - [x] Extract document ID from URLs
-   - [x] Detect multi-tab documents via API
    - [x] Retrieve tab information (names, IDs) for multi-tab documents
-   - [x] Ensure Location/Range objects include `tabId` when working with multi-tab documents (API client ready; objects created in later tasks)
-   - [x] Handle `segmentId` in Location/Range objects for headers/footers/footnotes (API client ready; objects created in later tasks)
 
 3. **Basic Downloader (Docs → Markdown)**
    - [ ] Create `google_docs_markdown/downloader.py`
    - [ ] Treat every document as multi-tab (use `DocumentTab` as fundamental object)
    - [ ] Handle nested tab structures recursively (tabs can contain both content and child tabs)
    - [ ] Implement basic text extraction
-   - [ ] Handle headings (H1-H6)
+   - [ ] Handle headings (up to arbitrary depth)
    - [ ] Handle paragraphs
    - [ ] Handle basic formatting (bold, italic)
    - [ ] Handle line breaks
@@ -50,6 +47,8 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Download each tab (including nested tabs) as a separate markdown file named after the tab (e.g., `My Doc/Tab 1.md`)
    - [ ] Name markdown files after tab names (sanitize filenames)
    - [ ] Handle nested tabs with appropriate naming convention (e.g., `Tab 1/Subtab A.md`)
+   - [ ] Ensure Location/Range objects include `tabId` when working with multi-tab documents (API client ready; objects created in later tasks)
+   - [ ] Handle `segmentId` in Location/Range objects for headers/footers/footnotes (API client ready; objects created in later tasks)
 
 4. **CLI - Download Command**
    - [ ] Create `google_docs_markdown/cli.py` using `click` or `argparse`
