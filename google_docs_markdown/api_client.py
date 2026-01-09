@@ -7,7 +7,7 @@ Handles authentication, API requests, and multi-tab document support.
 import re
 import time
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from google.auth.exceptions import DefaultCredentialsError
 from google.oauth2.credentials import Credentials
@@ -39,7 +39,7 @@ class GoogleDocsAPIClient:
     Handles authentication, API requests, retry logic, and multi-tab document support.
     """
 
-    def __init__(self, credentials: Optional[Credentials] = None):
+    def __init__(self, credentials: Credentials | None = None):
         """
         Initialize the API client.
 
@@ -126,7 +126,7 @@ class GoogleDocsAPIClient:
 
         raise ValueError(f"Could not extract document ID from: {url_or_id}. Expected a Google Docs URL or document ID.")
 
-    def get_document(self, document_id: str, include_tabs_content: bool = True) -> Dict[str, Any]:
+    def get_document(self, document_id: str, include_tabs_content: bool = True) -> dict[str, Any]:
         """
         Retrieve a document from Google Docs API.
 
@@ -168,7 +168,7 @@ class GoogleDocsAPIClient:
             # If we can't determine, assume single-tab
             return False
 
-    def get_tabs(self, document_id: str) -> List[TabInfo]:
+    def get_tabs(self, document_id: str) -> list[TabInfo]:
         """
         Get information about all tabs in a document.
 
@@ -201,7 +201,7 @@ class GoogleDocsAPIClient:
         doc = self.get_document(document_id, include_tabs_content=False)
         return doc.get("title", "Untitled Document")
 
-    def create_document(self, title: str) -> Dict[str, Any]:
+    def create_document(self, title: str) -> dict[str, Any]:
         """
         Create a new blank document.
 
@@ -213,7 +213,7 @@ class GoogleDocsAPIClient:
         """
         return self._execute_with_retry(lambda: self.service.documents().create(body={"title": title}).execute())
 
-    def batch_update(self, document_id: str, requests: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def batch_update(self, document_id: str, requests: list[dict[str, Any]]) -> dict[str, Any]:
         """
         Execute a batch update on a document.
 
