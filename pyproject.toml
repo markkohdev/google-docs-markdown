@@ -60,8 +60,16 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.8"
+# Global options:
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false
+ignore_missing_imports = false
+disallow_untyped_defs = true
+check_untyped_defs = true
+strict = false # Enable all strict checks (overrides many individual flags)
 
+# You can also use per-module overrides
+[[tool.mypy.overrides]]
+module = "googleapiclient.*"
+ignore_missing_imports = true

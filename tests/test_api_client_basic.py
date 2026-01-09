@@ -5,7 +5,7 @@ These tests verify the code structure without requiring API credentials.
 """
 
 
-def test_import():
+def test_import() -> None:
     """Test that the API client can be imported."""
     from google_docs_markdown.api_client import (
         MAX_RETRIES,
@@ -20,7 +20,7 @@ def test_import():
     assert MAX_RETRIES == 3
 
 
-def test_extract_document_id():
+def test_extract_document_id() -> None:
     """Test document ID extraction logic."""
     from google_docs_markdown.api_client import GoogleDocsAPIClient
 

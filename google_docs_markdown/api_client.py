@@ -9,8 +9,8 @@ import time
 from dataclasses import dataclass
 from typing import Any
 
+from google.auth.credentials import Credentials
 from google.auth.exceptions import DefaultCredentialsError
-from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from googleapiclient.http import HttpRequest
@@ -51,13 +51,13 @@ class GoogleDocsAPIClient:
         self._service = None
 
     @property
-    def service(self):
+    def service(self) -> Any:
         """Lazy-load the Google Docs API service."""
         if self._service is None:
             self._service = self._build_service()
         return self._service
 
-    def _build_service(self):
+    def _build_service(self) -> Any:
         """Build and return the Google Docs API service."""
         if self.credentials is None:
             self.credentials = self._get_credentials()
@@ -144,11 +144,13 @@ class GoogleDocsAPIClient:
         """
         document_id = self.extract_document_id(document_id)
 
-        return self._execute_with_retry(
+        result = self._execute_with_retry(
             lambda: self.service.documents()
             .get(documentId=document_id, includeTabsContent=include_tabs_content)
             .execute()
         )
+        assert isinstance(result, dict)
+        return result
 
     def is_multi_tab(self, document_id: str) -> bool:
         """
@@ -199,7 +201,9 @@ class GoogleDocsAPIClient:
             Document title, or 'Untitled Document' if not found
         """
         doc = self.get_document(document_id, include_tabs_content=False)
-        return doc.get("title", "Untitled Document")
+        title = doc.get("title", "Untitled Document")
+        assert isinstance(title, str)
+        return title
 
     def create_document(self, title: str) -> dict[str, Any]:
         """
@@ -211,7 +215,9 @@ class GoogleDocsAPIClient:
         Returns:
             Created document dictionary with document ID
         """
-        return self._execute_with_retry(lambda: self.service.documents().create(body={"title": title}).execute())
+        result = self._execute_with_retry(lambda: self.service.documents().create(body={"title": title}).execute())
+        assert isinstance(result, dict)
+        return result
 
     def batch_update(self, document_id: str, requests: list[dict[str, Any]]) -> dict[str, Any]:
         """
@@ -226,11 +232,13 @@ class GoogleDocsAPIClient:
         """
         document_id = self.extract_document_id(document_id)
 
-        return self._execute_with_retry(
+        result = self._execute_with_retry(
             lambda: self.service.documents().batchUpdate(documentId=document_id, body={"requests": requests}).execute()
         )
+        assert isinstance(result, dict)
+        return result
 
-    def _execute_with_retry(self, api_call):
+    def _execute_with_retry(self, api_call: Any) -> Any:
         """
         Execute an API call with retry logic for transient failures.
 
