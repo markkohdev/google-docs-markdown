@@ -37,7 +37,7 @@ pip install -e .
 
 1. **Authenticate using `gcloud`:**
    ```bash
-   gcloud auth application-default login --scopes=https://www.googleapis.com/auth/documents
+   gcloud auth application-default login 
    ```
    
    This will:
