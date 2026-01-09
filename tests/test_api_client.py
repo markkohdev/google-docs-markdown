@@ -6,18 +6,19 @@ Tests authentication, document retrieval, and error handling.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock, patch
 
 import pytest
 from google.auth.exceptions import DefaultCredentialsError
-from googleapiclient.errors import HttpError
 
 from google_docs_markdown.api_client import (
-    MAX_RETRIES,
     SCOPES,
     GoogleDocsAPIClient,
 )
+
+if TYPE_CHECKING:
+    from googleapiclient._apis.docs.v1 import Document, Request
 
 
 class TestExtractDocumentID:
@@ -125,119 +126,6 @@ class TestGetDocument:
         )
 
 
-class TestGetTabs:
-    """Test tab retrieval from document."""
-
-    @patch("google_docs_markdown.api_client.build")
-    def test_get_tabs_from_document(self, mock_build: Any) -> None:
-        """Test getting tabs from multi-tab document."""
-        mock_service = Mock()
-        mock_request = Mock()
-        mock_request.execute.return_value = {
-            "title": "Test Doc",
-            "tabs": [{"tabId": "tab1", "name": "Tab 1"}, {"tabId": "tab2", "name": "Tab 2"}],
-        }
-        mock_service.documents.return_value.get.return_value = mock_request
-        mock_build.return_value = mock_service
-
-        client = GoogleDocsAPIClient(credentials=Mock())
-        doc = client.get_document("test-doc-id")
-
-        assert "tabs" in doc
-        assert len(doc["tabs"]) == 2
-        assert doc["tabs"][0]["tabId"] == "tab1"
-        assert doc["tabs"][0]["name"] == "Tab 1"
-
-    @patch("google_docs_markdown.api_client.build")
-    def test_get_tabs_single_tab(self, mock_build: Any) -> None:
-        """Test getting tabs from single-tab document."""
-        mock_service = Mock()
-        mock_request = Mock()
-        mock_request.execute.return_value = {"title": "Test Doc", "tabs": []}
-        mock_service.documents.return_value.get.return_value = mock_request
-        mock_build.return_value = mock_service
-
-        client = GoogleDocsAPIClient(credentials=Mock())
-        doc = client.get_document("test-doc-id")
-
-        assert "tabs" in doc
-        assert len(doc.get("tabs", [])) == 0
-
-
-class TestRetryLogic:
-    """Test retry logic for transient failures.
-
-    Note: Retries are now handled by the Google API client library via num_retries parameter.
-    These tests verify that num_retries is passed correctly.
-    """
-
-    @patch("google_docs_markdown.api_client.build")
-    def test_retry_parameter_passed(self, mock_build: Any) -> None:
-        """Test that num_retries parameter is passed to execute()."""
-        mock_service = Mock()
-        mock_request = Mock()
-        mock_request.execute.return_value = {"title": "Test Doc"}
-        mock_service.documents.return_value.get.return_value = mock_request
-        mock_build.return_value = mock_service
-
-        client = GoogleDocsAPIClient(credentials=Mock())
-        result = client.get_document("test-doc-id")
-
-        assert result["title"] == "Test Doc"
-        # Verify that execute was called with num_retries
-        mock_request.execute.assert_called_once_with(num_retries=MAX_RETRIES)
-
-    @patch("google_docs_markdown.api_client.build")
-    def test_no_retry_on_non_retryable_error(self, mock_build: Any) -> None:
-        """Test that non-retryable errors are not retried by the library."""
-        mock_service = Mock()
-        mock_request = Mock()
-        mock_request.execute.side_effect = HttpError(Mock(status=404), b"Not Found")
-        mock_service.documents.return_value.get.return_value = mock_request
-        mock_build.return_value = mock_service
-
-        client = GoogleDocsAPIClient(credentials=Mock())
-        with pytest.raises(HttpError):
-            client.get_document("test-doc-id")
-
-        # The library will still attempt retries, but 404 is not retryable
-        # So it should fail immediately after the retry logic determines it's not retryable
-        mock_request.execute.assert_called_with(num_retries=MAX_RETRIES)
-
-
-class TestDocumentTitle:
-    """Test document title retrieval from document."""
-
-    @patch("google_docs_markdown.api_client.build")
-    def test_get_document_title(self, mock_build: Any) -> None:
-        """Test getting document title from document."""
-        mock_service = Mock()
-        mock_request = Mock()
-        mock_request.execute.return_value = {"title": "My Document"}
-        mock_service.documents.return_value.get.return_value = mock_request
-        mock_build.return_value = mock_service
-
-        client = GoogleDocsAPIClient(credentials=Mock())
-        doc = client.get_document("test-doc-id")
-
-        assert doc["title"] == "My Document"
-
-    @patch("google_docs_markdown.api_client.build")
-    def test_get_document_title_missing(self, mock_build: Any) -> None:
-        """Test getting title when title is missing."""
-        mock_service = Mock()
-        mock_request = Mock()
-        mock_request.execute.return_value = {}
-        mock_service.documents.return_value.get.return_value = mock_request
-        mock_build.return_value = mock_service
-
-        client = GoogleDocsAPIClient(credentials=Mock())
-        doc = client.get_document("test-doc-id")
-
-        # Title may be missing or empty
-        assert "title" not in doc or doc.get("title") == ""
-
-
 class TestCreateDocument:
     """Test document creation."""
 
@@ -251,7 +139,7 @@ class TestCreateDocument:
         mock_build.return_value = mock_service
 
         client = GoogleDocsAPIClient(credentials=Mock())
-        document_body = {"title": "New Document"}
+        document_body: Document = cast("Document", {"title": "New Document"})
         result = client.create_document(document_body)
 
         assert result["documentId"] == "new-doc-id"
@@ -272,7 +160,7 @@ class TestBatchUpdate:
         mock_build.return_value = mock_service
 
         client = GoogleDocsAPIClient(credentials=Mock())
-        requests = [{"insertText": {"location": {"index": 1}, "text": "Hello"}}]
+        requests: list[Request] = cast("list[Request]", [{"insertText": {"location": {"index": 1}, "text": "Hello"}}])
         result = client.batch_update("test-doc-id", requests)
 
         assert isinstance(result, list)

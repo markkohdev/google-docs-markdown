@@ -53,7 +53,7 @@ class GoogleDocsAPIClient:
                         Application Default Credentials.
         """
         self.credentials = credentials
-        self._service = None
+        self._service: DocsResource | None = None
 
     @property
     def service(self) -> DocsResource:

@@ -3,9 +3,7 @@
 !.gitignore
 !.python-version
 !.vscode/
-!.vscode/**
 !.github/
-!.github/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
