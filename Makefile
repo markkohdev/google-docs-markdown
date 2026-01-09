@@ -40,7 +40,7 @@ type-check:
 	uv run mypy google_docs_markdown tests
 
 # Run all checks
-test: lint format-check type-check run-tests
+test: lint-fix format-fix lint-check format-check type-check run-tests
 
 # Run all fixers
 fix: lint-fix format-fix

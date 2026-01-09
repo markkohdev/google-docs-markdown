@@ -6,9 +6,9 @@ Tests authentication checks, project configuration, and API enablement.
 
 from __future__ import annotations
 
+import subprocess
 from unittest.mock import Mock, patch
 
-import pytest
 from google.auth.exceptions import DefaultCredentialsError
 
 from google_docs_markdown.setup import (
@@ -24,6 +24,13 @@ from google_docs_markdown.setup import (
     set_project,
     setup,
 )
+
+
+class MockCalledProcessError(subprocess.CalledProcessError):
+    """Mocked CalledProcessError."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(returncode=1, cmd=[], output=message.encode())
 
 
 class TestCheckGcloudInstalled:
@@ -50,7 +57,7 @@ class TestCheckGcloudInstalled:
     @patch("google_docs_markdown.setup.subprocess.run")
     def test_gcloud_not_installed_called_process_error(self, mock_run: Mock) -> None:
         """Test when gcloud command fails."""
-        mock_run.side_effect = Exception()
+        mock_run.side_effect = MockCalledProcessError("Command failed: gcloud not installed")
         assert check_gcloud_installed() is False
 
 
@@ -74,7 +81,7 @@ class TestCheckCredentialsExist:
     @patch("google_docs_markdown.setup.default")
     def test_credentials_error(self, mock_default: Mock) -> None:
         """Test when credentials check raises other exception."""
-        mock_default.side_effect = Exception("Some error")
+        mock_default.side_effect = MockCalledProcessError("Command failed: Credentials error")
         assert check_credentials_exist() is False
 
 
@@ -107,7 +114,7 @@ class TestGetCurrentProject:
     @patch("google_docs_markdown.setup.subprocess.run")
     def test_get_project_error(self, mock_run: Mock) -> None:
         """Test when getting project fails."""
-        mock_run.side_effect = Exception()
+        mock_run.side_effect = MockCalledProcessError("Command failed: Failed to get project")
         assert get_current_project() is None
 
 
@@ -141,7 +148,7 @@ class TestListAvailableProjects:
     @patch("google_docs_markdown.setup.subprocess.run")
     def test_list_projects_error(self, mock_run: Mock) -> None:
         """Test when listing projects fails."""
-        mock_run.side_effect = Exception()
+        mock_run.side_effect = MockCalledProcessError("Command failed: Failed to list projects")
         assert list_available_projects() == []
 
 
@@ -162,7 +169,7 @@ class TestSetProject:
     @patch("google_docs_markdown.setup.subprocess.run")
     def test_set_project_error(self, mock_run: Mock) -> None:
         """Test when setting project fails."""
-        mock_run.side_effect = Exception()
+        mock_run.side_effect = MockCalledProcessError("Command failed: Failed to set project")
         assert set_project("my-project-id") is False
 
 
@@ -188,7 +195,7 @@ class TestCheckApiEnabled:
     @patch("google_docs_markdown.setup.subprocess.run")
     def test_check_api_error(self, mock_run: Mock) -> None:
         """Test when checking API fails."""
-        mock_run.side_effect = Exception()
+        mock_run.side_effect = MockCalledProcessError("Command failed: API check error")
         assert check_api_enabled("my-project") is False
 
 
@@ -215,7 +222,7 @@ class TestEnableDocsApi:
     @patch("google_docs_markdown.setup.subprocess.run")
     def test_enable_api_error(self, mock_run: Mock) -> None:
         """Test when enabling API fails."""
-        mock_run.side_effect = Exception()
+        mock_run.side_effect = MockCalledProcessError("Command failed: Failed to enable API")
         assert enable_docs_api("my-project") is False
 
 
@@ -243,7 +250,7 @@ class TestRunAuthLogin:
     @patch("google_docs_markdown.setup.subprocess.run")
     def test_auth_login_error(self, mock_run: Mock) -> None:
         """Test when auth login fails."""
-        mock_run.side_effect = Exception()
+        mock_run.side_effect = MockCalledProcessError("Command failed: Failed to login")
         assert run_auth_login() is False
 
 
@@ -435,8 +442,13 @@ class TestSetup:
         mock_check_creds.return_value = True
         mock_get_project.return_value = None
         mock_list_projects.return_value = []
+        # Make sys.exit raise SystemExit to stop execution, just like real sys.exit
+        mock_exit.side_effect = SystemExit(1)
 
-        setup()
+        try:
+            setup()
+        except SystemExit:
+            pass  # Expected when sys.exit is called
 
         mock_exit.assert_called_once_with(1)
 
@@ -493,4 +505,3 @@ class TestSetup:
         setup()
 
         mock_exit.assert_called_once_with(1)
-

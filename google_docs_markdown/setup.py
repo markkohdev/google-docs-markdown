@@ -6,10 +6,8 @@ Handles authentication, project configuration, and API enablement.
 
 import subprocess
 import sys
-from typing import Optional
 
 import typer
-
 from google.auth import default
 from google.auth.exceptions import DefaultCredentialsError
 
@@ -36,7 +34,19 @@ def check_gcloud_installed() -> bool:
             timeout=10,
         )
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except FileNotFoundError:
+        return False
+    except subprocess.CalledProcessError as e:
+        typer.echo(
+            f"❌ Error running gcloud command: {e}\ngcloud CLI may be installed but not working correctly.",
+            err=True,
+        )
+        return False
+    except subprocess.TimeoutExpired:
+        typer.echo(
+            "❌ gcloud command timed out. Please check your system.",
+            err=True,
+        )
         return False
 
 
@@ -48,12 +58,16 @@ def check_credentials_exist() -> bool:
         return credentials is not None
     except DefaultCredentialsError:
         return False
-    except Exception:
-        # Any other exception means credentials might exist but aren't valid
+    except Exception as e:
+        typer.echo(
+            f"⚠️  Warning: Error checking credentials: {e}\n"
+            "Credentials may exist but may not be valid for the required scopes.",
+            err=True,
+        )
         return False
 
 
-def get_current_project() -> Optional[str]:
+def get_current_project() -> str | None:
     """Get the current default GCP project."""
     try:
         result = subprocess.run(
@@ -65,7 +79,23 @@ def get_current_project() -> Optional[str]:
         )
         project = result.stdout.strip()
         return project if project else None
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except FileNotFoundError:
+        typer.echo(
+            "⚠️  Warning: gcloud CLI not found. Cannot get current project.",
+            err=True,
+        )
+        return None
+    except subprocess.CalledProcessError as e:
+        typer.echo(
+            f"⚠️  Warning: Failed to get current project: {e}\nThis may be normal if no default project is set.",
+            err=True,
+        )
+        return None
+    except subprocess.TimeoutExpired:
+        typer.echo(
+            "⚠️  Warning: gcloud command timed out while getting current project.",
+            err=True,
+        )
         return None
 
 
@@ -81,7 +111,26 @@ def list_available_projects() -> list[str]:
         )
         projects = [p.strip() for p in result.stdout.strip().split("\n") if p.strip()]
         return projects
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except FileNotFoundError:
+        typer.echo(
+            "❌ Error: gcloud CLI not found. Cannot list projects.",
+            err=True,
+        )
+        return []
+    except subprocess.CalledProcessError as e:
+        typer.echo(
+            f"❌ Error listing projects: {e}\n"
+            "Make sure you're authenticated and have permission to list projects.\n"
+            "Try running: gcloud auth login",
+            err=True,
+        )
+        return []
+    except subprocess.TimeoutExpired:
+        typer.echo(
+            "❌ Error: gcloud command timed out while listing projects.\n"
+            "This may indicate network issues or authentication problems.",
+            err=True,
+        )
         return []
 
 
@@ -94,7 +143,25 @@ def set_project(project_id: str) -> bool:
             timeout=10,
         )
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except FileNotFoundError:
+        typer.echo(
+            "❌ Error: gcloud CLI not found. Cannot set project.",
+            err=True,
+        )
+        return False
+    except subprocess.CalledProcessError as e:
+        typer.echo(
+            f"❌ Error setting project '{project_id}': {e}\n"
+            f"Make sure the project ID '{project_id}' is valid and you have access to it.\n"
+            "Try running: gcloud projects list",
+            err=True,
+        )
+        return False
+    except subprocess.TimeoutExpired:
+        typer.echo(
+            f"❌ Error: gcloud command timed out while setting project '{project_id}'.",
+            err=True,
+        )
         return False
 
 
@@ -118,7 +185,24 @@ def check_api_enabled(project_id: str) -> bool:
         )
         enabled_services = result.stdout.strip().split("\n")
         return any(DOCS_API_SERVICE in service for service in enabled_services if service)
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except FileNotFoundError:
+        typer.echo(
+            "❌ Error: gcloud CLI not found. Cannot check API status.",
+            err=True,
+        )
+        return False
+    except subprocess.CalledProcessError as e:
+        typer.echo(
+            f"⚠️  Warning: Failed to check if API is enabled for project '{project_id}': {e}\n"
+            "This may be normal if you don't have permission to list services.",
+            err=True,
+        )
+        return False
+    except subprocess.TimeoutExpired:
+        typer.echo(
+            f"⚠️  Warning: gcloud command timed out while checking API status for project '{project_id}'.",
+            err=True,
+        )
         return False
 
 
@@ -137,7 +221,26 @@ def enable_docs_api(project_id: str) -> bool:
             timeout=60,
         )
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except FileNotFoundError:
+        typer.echo(
+            "❌ Error: gcloud CLI not found. Cannot enable API.",
+            err=True,
+        )
+        return False
+    except subprocess.CalledProcessError as e:
+        typer.echo(
+            f"❌ Error enabling Google Docs API for project '{project_id}': {e}\n"
+            "Make sure you have the 'Service Usage Admin' role or equivalent permissions.\n"
+            f"Try running manually: gcloud services enable {DOCS_API_SERVICE} --project={project_id}",
+            err=True,
+        )
+        return False
+    except subprocess.TimeoutExpired:
+        typer.echo(
+            f"❌ Error: gcloud command timed out while enabling API for project '{project_id}'.\n"
+            "This may indicate network issues. The API may still be enabling in the background.",
+            err=True,
+        )
         return False
 
 
@@ -157,7 +260,25 @@ def run_auth_login() -> bool:
             timeout=300,  # 5 minutes timeout for interactive login
         )
         return True
-    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired):
+    except FileNotFoundError:
+        typer.echo(
+            "❌ Error: gcloud CLI not found. Cannot run authentication.",
+            err=True,
+        )
+        return False
+    except subprocess.CalledProcessError as e:
+        typer.echo(
+            f"❌ Error during authentication: {e}\n"
+            "Authentication may have been cancelled or failed.\n"
+            f"Try running manually: gcloud auth application-default login --scopes={scopes_str}",
+            err=True,
+        )
+        return False
+    except subprocess.TimeoutExpired:
+        typer.echo(
+            "❌ Error: Authentication timed out after 5 minutes.\nPlease try again or run the authentication manually.",
+            err=True,
+        )
         return False
 
 
@@ -199,7 +320,7 @@ def setup() -> None:
             typer.echo(
                 "❌ Failed to set up Application Default Credentials.\n"
                 "Please run manually:\n"
-                f"  gcloud auth application-default login --scopes=\"{','.join(REQUIRED_SCOPES)}\"",
+                f'  gcloud auth application-default login --scopes="{",".join(REQUIRED_SCOPES)}"',
                 err=True,
             )
             sys.exit(1)
@@ -227,9 +348,7 @@ def setup() -> None:
 
         while True:
             try:
-                choice = typer.prompt(
-                    f"\nSelect a project (1-{len(projects)}) or enter project ID"
-                ).strip()
+                choice = typer.prompt(f"\nSelect a project (1-{len(projects)}) or enter project ID").strip()
                 # Try to parse as number first
                 if choice.isdigit():
                     idx = int(choice) - 1
@@ -276,4 +395,3 @@ def setup() -> None:
         typer.echo("✅ Google Docs API enabled\n")
 
     typer.echo("🎉 Setup complete! You're ready to use google-docs-markdown.")
-

@@ -14,9 +14,7 @@ app = typer.Typer(
 def download(
     document_url: Annotated[
         str,
-        typer.Option(
-            prompt=True, help="Google Doc URL or document ID (you will be prompted for this if not provided)"
-        ),
+        typer.Option(prompt=True, help="Google Doc URL or document ID (you will be prompted for this if not provided)"),
     ],
     output: Annotated[
         str | None,
@@ -46,9 +44,7 @@ def list_tabs(
 
 @app.command()
 def upload(
-    document_url: Annotated[
-        str, typer.Option(prompt=True, help="Google Doc URL or document ID (for update mode)")
-    ],
+    document_url: Annotated[str, typer.Option(prompt=True, help="Google Doc URL or document ID (for update mode)")],
     local_document_path: Annotated[
         str | None,
         typer.Option(
@@ -60,9 +56,7 @@ def upload(
         bool,
         typer.Option("--create", help="Create a new Google Doc instead of updating the existing one"),
     ] = False,
-    overwrite: Annotated[
-        bool, typer.Option("--overwrite", help="Force upload even when no changes detected")
-    ] = False,
+    overwrite: Annotated[bool, typer.Option("--overwrite", help="Force upload even when no changes detected")] = False,
 ) -> None:
     """Upload Markdown to a Google Doc."""
     typer.echo("Uploading Markdown to a Google Doc...")

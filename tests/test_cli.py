@@ -6,9 +6,9 @@ Tests that commands exist and are properly configured.
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-import pytest
+from pytest import raises
 
 from google_docs_markdown import cli
 
@@ -18,26 +18,26 @@ class TestCLICommands:
 
     def test_download_command_exists(self) -> None:
         """Test that download command exists and raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="This command is not implemented yet"):
+        with raises(NotImplementedError, match="This command is not implemented yet"):
             cli.download(document_url="test-doc-id")
 
     def test_list_tabs_command_exists(self) -> None:
         """Test that list-tabs command exists and raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="This command is not implemented yet"):
+        with raises(NotImplementedError, match="This command is not implemented yet"):
             cli.list_tabs(document_url="test-doc-id")
 
     def test_upload_command_exists(self) -> None:
         """Test that upload command exists and raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="This command is not implemented yet"):
+        with raises(NotImplementedError, match="This command is not implemented yet"):
             cli.upload(document_url="test-doc-id")
 
     def test_diff_command_exists(self) -> None:
         """Test that diff command exists and raises NotImplementedError."""
-        with pytest.raises(NotImplementedError, match="This command is not implemented yet"):
+        with raises(NotImplementedError, match="This command is not implemented yet"):
             cli.diff(document_url="test-doc-id")
 
     @patch("google_docs_markdown.setup.setup")
-    def test_setup_command_exists(self, mock_setup_module: pytest.Mock) -> None:
+    def test_setup_command_exists(self, mock_setup_module: Mock) -> None:
         """Test that setup command exists and calls the setup module."""
         cli.setup()
         mock_setup_module.assert_called_once()
@@ -47,7 +47,7 @@ class TestMain:
     """Test main entry point."""
 
     @patch("google_docs_markdown.cli.app")
-    def test_main_calls_app(self, mock_app: pytest.Mock) -> None:
+    def test_main_calls_app(self, mock_app: Mock) -> None:
         """Test that main() calls the typer app."""
         cli.main()
         mock_app.assert_called_once()
@@ -70,4 +70,3 @@ class TestAppConfiguration:
                 command_names.add(name)
         expected_commands = {"download", "list-tabs", "upload", "diff", "setup"}
         assert expected_commands.issubset(command_names)
-
