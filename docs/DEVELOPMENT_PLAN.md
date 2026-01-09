@@ -1,14 +1,14 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-01-08  
+**Last Updated:** 2026-01-08 (Updated to reflect TypedDict approach and nested tab structure)  
 **Status:** Phase 1 - In Progress (Tasks 1 & 2 Complete ✅)
 
 ## Overview
 
 This document outlines the development plan for building the Google Docs Markdown tool. The plan is organized into phases, starting with a Minimum Viable Product (MVP) and progressively adding features.
 
-**Important:** Multi-tab Google Docs support is integrated from Phase 1. All documents (single-tab and multi-tab) create directory structures named after the document title, with each tab saved as a separate markdown file.
+**Important:** Multi-tab Google Docs support is integrated from Phase 1. All documents are treated as multi-tab documents (even single-tab ones), creating directory structures named after the document title, with each tab saved as a separate markdown file. Tabs can be nested (contain both content and child tabs), and this nested structure must be handled recursively.
 
 Unit tests and documentation should be written for each component and function as they are implemented.
 
@@ -36,24 +36,10 @@ Unit tests and documentation should be written for each component and function a
    - [x] Ensure Location/Range objects include `tabId` when working with multi-tab documents (API client ready; objects created in later tasks)
    - [x] Handle `segmentId` in Location/Range objects for headers/footers/footnotes (API client ready; objects created in later tasks)
 
-3. **Data Models**
-   - [ ] Create `google_docs_markdown/models/` directory structure
-   - [ ] Create modular data model files:
-     - `text_style.py` - TextStyle dataclass and conversion logic
-     - `paragraph_style.py` - ParagraphStyle dataclass and conversion logic
-     - `color.py` - Color object handling
-     - `size.py` - Size object handling
-     - `location.py` - Location and Range utilities (with tabId and segmentId support)
-     - `table.py` - Table, TableRow, TableCell structures
-     - `structural_elements.py` - Paragraph, Table, SectionBreak, TableOfContents, Equation
-     - `paragraph_elements.py` - TextRun, InlineObjectElement, PageBreak, ColumnBreak, HorizontalRule, FootnoteReference, DateElement, Person, RichLink, AutoText, Equation
-     - `document.py` - Document, Body, Tab structures, Header, Footer, Footnote segments
-   - [ ] Define dataclasses for Google Docs API structures matching API_ELEMENT_ANALYSIS.md
-   - [ ] Implement conversion from API dict → dataclass
-   - [ ] Add type hints throughout
-
-4. **Basic Downloader (Docs → Markdown)**
+3. **Basic Downloader (Docs → Markdown)**
    - [ ] Create `google_docs_markdown/downloader.py`
+   - [ ] Treat every document as multi-tab (use `DocumentTab` as fundamental object)
+   - [ ] Handle nested tab structures recursively (tabs can contain both content and child tabs)
    - [ ] Implement basic text extraction
    - [ ] Handle headings (H1-H6)
    - [ ] Handle paragraphs
@@ -61,10 +47,11 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Handle line breaks
    - [ ] Ensure deterministic output (normalize whitespace)
    - [ ] Create directory structure named after document title (or user-provided output directory)
-   - [ ] Download each tab as a separate markdown file named after the tab (e.g., `My Doc/Tab 1.md`)
+   - [ ] Download each tab (including nested tabs) as a separate markdown file named after the tab (e.g., `My Doc/Tab 1.md`)
    - [ ] Name markdown files after tab names (sanitize filenames)
+   - [ ] Handle nested tabs with appropriate naming convention (e.g., `Tab 1/Subtab A.md`)
 
-5. **CLI - Download Command**
+4. **CLI - Download Command**
    - [ ] Create `google_docs_markdown/cli.py` using `click` or `argparse`
    - [ ] Implement `download` command
    - [ ] Support document URL/ID input
@@ -73,16 +60,16 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Add interactive prompts for missing arguments
    - [ ] Update `pyproject.toml` entry point
 
-6. **Python API - Basic Interface**
+5. **Python API - Basic Interface**
    - [ ] Create `GoogleDocMarkdown` class in `downloader.py`
-   - [ ] Implement `download(document_id)` → returns markdown string (single-tab) or dict of tab_name → markdown (multi-tab)
+   - [ ] Implement `download(document_id)` → returns dict of tab_name → markdown (all docs treated as multi-tab)
    - [ ] Implement `download_to_file(document_id, output_path)` → saves to directory
    - [ ] Implement `get_document_title(document_id)` → returns title
-   - [ ] Implement `get_tabs(document_id)` → returns list of tab names/IDs (empty for single-tab docs)
-   - [ ] Implement `is_multi_tab(document_id)` → returns boolean
+   - [ ] Implement `get_tabs(document_id)` → returns list of tab names/IDs (always returns at least one tab)
+   - [ ] Implement `get_nested_tabs(document_id, tab_id)` → returns nested tabs within a tab
    - [ ] Implement `extract_document_id(url)` → static method
 
-7. **Testing**
+6. **Testing**
    - [ ] Test with example Google Doc from `example_markdown/google_doc_urls.txt`
    - [ ] Test with multi-tab Google Doc (if available)
    - [x] Create unit tests for API client (including tab detection) ✅
@@ -184,10 +171,11 @@ Unit tests and documentation should be written for each component and function a
      - Rich links → RichLink elements
      - Section breaks → SectionBreak elements
      - Footnotes → FootnoteReference and footnote segments
-   - [ ] Detect directory structure and determine if document is single-tab (one markdown file) or multi-tab (multiple markdown files)
+   - [ ] Handle directory structure (all documents treated as multi-tab)
    - [ ] Handle uploading to specific tabs in multi-tab documents
+   - [ ] Handle nested tab structures when uploading
    - [ ] Support creating documents from directory structure
-   - [ ] Map directory structure to tab structure (directory name → document, files → tabs)
+   - [ ] Map directory structure to tab structure (directory name → document, files → tabs, subdirectories → nested tabs)
    - [ ] Handle `segmentId` in Location/Range objects for headers/footers/footnotes
    - [ ] Process batch updates in correct order:
      1. Deletions (from end to start to preserve indices)
@@ -201,24 +189,28 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Support `--create` flag for new documents
    - [ ] Support `--overwrite` flag
    - [ ] Handle directory path input
-   - [ ] Auto-detect single-tab vs multi-tab structure from directory contents (one file vs multiple files)
+   - [ ] Auto-detect tab structure from directory contents (files → tabs, subdirectories → nested tabs)
    - [ ] Handle document URL/ID for updates
    - [ ] Add `--tab` flag to specify which tab to update (for multi-tab docs)
+   - [ ] Support nested tab paths (e.g., `--tab "Tab 1/Subtab A"`)
 
 4. **Python API - Upload Methods**
    - [ ] Add `upload(document_id, markdown_content, tab_name=None)` method
-   - [ ] Add `upload_from_directory(document_id, directory_path)` method for multi-tab
-   - [ ] Add `create(markdown_content, title=None)` method (single-tab)
-   - [ ] Add `create_multi_tab(directory_path, document_title=None)` method
+   - [ ] Add `upload_from_directory(document_id, directory_path)` method for multi-tab (handles nested tabs)
+   - [ ] Add `create(markdown_content, title=None)` method (creates single-tab document)
+   - [ ] Add `create_from_directory(directory_path, document_title=None)` method (handles multi-tab and nested tabs)
    - [ ] Return created/updated document ID
 
 5. **Testing**
-   - [ ] Test round-trip: download → upload → download (should match) for single-tab
+   - [ ] Test round-trip: download → upload → download (should match) for single-tab (treated as multi-tab with one tab)
    - [ ] Test round-trip: download → upload → download (should match) for multi-tab
+   - [ ] Test round-trip with nested tabs
    - [ ] Test creating new single-tab documents
    - [ ] Test creating new multi-tab documents from directory
+   - [ ] Test creating documents with nested tabs
    - [ ] Test updating existing single-tab documents
    - [ ] Test updating existing multi-tab documents (all tabs and specific tabs)
+   - [ ] Test updating nested tabs
    - [ ] Verify deterministic upload (same markdown → same doc structure)
    - [ ] Test tab-specific updates
    - [ ] Test headers/footers/footnotes upload and round-trip
@@ -484,12 +476,11 @@ This document should be used for testing throughout development.
 - ✅ Phase 1, Task 2: Google Docs API Client (with comprehensive unit tests)
 
 **In Progress:**
-- Phase 1, Task 3: Data Models (next up)
+- Phase 1, Task 3: Basic Downloader (Docs → Markdown) (next up)
 
 **Remaining Phase 1 Tasks:**
-- Task 3: Data Models
-- Task 4: Basic Downloader (Docs → Markdown)
-- Task 5: CLI - Download Command
-- Task 6: Python API - Basic Interface
-- Task 7: Testing (API client tests complete; remaining tests depend on downloader)
+- Task 3: Basic Downloader (Docs → Markdown)
+- Task 4: CLI - Download Command
+- Task 5: Python API - Basic Interface
+- Task 6: Testing (API client tests complete; remaining tests depend on downloader)
 

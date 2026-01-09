@@ -2,17 +2,16 @@
 Google Docs Markdown - Tools for downloading and editing Google Docs as Markdown.
 
 This package provides:
-- GoogleDocMarkdown: Download and upload Google Docs as Markdown
+- GoogleDocsAPIClient: Low-level API client for Google Docs
+- GoogleDocMarkdown: Download and upload Google Docs as Markdown (coming soon)
 - Image extraction and inlining utilities for Markdown files
 """
 
-from google_docs_markdown.downloader import GoogleDocMarkdown
-from google_docs_markdown.image_extractor import extract_images, inline_images
+from google_docs_markdown.api_client import GoogleDocsAPIClient, TabInfo
 
 __all__ = [
-    "GoogleDocMarkdown",
-    "extract_images",
-    "inline_images",
+    "GoogleDocsAPIClient",
+    "TabInfo",
 ]
 
 __version__ = "0.2.0"

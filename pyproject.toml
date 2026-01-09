@@ -8,6 +8,7 @@ dependencies = [
     "google-api-python-client>=2.100.0",
     "google-auth>=2.23.0",
     "click>=8.1.0",
+    "google-api-python-client-stubs>=1.31.0",
 ]
 
 [dependency-groups]
@@ -17,6 +18,7 @@ dev = [
     "black>=23.0",
     "ruff>=0.1.0",
     "mypy>=1.0",
+    "ipython>=8.12.3",
 ]
 
 [project.scripts]
@@ -60,8 +62,11 @@ quote-style = "double"
 indent-style = "space"
 
 [tool.mypy]
-python_version = "3.8"
+# Global options:
+python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = false
-
+ignore_missing_imports = false
+disallow_untyped_defs = true
+check_untyped_defs = true
+strict = false # Enable all strict checks (overrides many individual flags)
