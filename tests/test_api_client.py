@@ -6,6 +6,8 @@ Tests authentication, document retrieval, and error handling.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 from unittest.mock import Mock, patch
 
@@ -19,6 +21,13 @@ from google_docs_markdown.api_client import (
 
 if TYPE_CHECKING:
     from googleapiclient._apis.docs.v1 import Document, Request
+
+
+def load_example_document_json() -> dict[str, Any]:
+    """Load the example document JSON from test resources."""
+    json_path = Path(__file__).parent / "resources" / "document_jsons" / "Markdown_Conversion_Example.json"
+    with json_path.open(encoding="utf-8") as f:
+        return json.load(f)  # type: ignore[no-any-return]
 
 
 class TestExtractDocumentID:
@@ -124,6 +133,102 @@ class TestGetDocument:
         mock_service.documents.return_value.get.assert_called_once_with(
             documentId="test-doc-id", includeTabsContent=True
         )
+
+    @patch("google_docs_markdown.api_client.build")
+    def test_get_document_with_real_api_response(self, mock_build: Any) -> None:
+        """Test document retrieval with real Google Docs API response structure."""
+        example_doc = load_example_document_json()
+        mock_service = Mock()
+        mock_request = Mock()
+        mock_request.execute.return_value = example_doc
+        mock_service.documents.return_value.get.return_value = mock_request
+        mock_build.return_value = mock_service
+
+        client = GoogleDocsAPIClient(credentials=Mock())
+        result = client.get_document(example_doc["documentId"])
+
+        # Validate the response structure matches real API response
+        assert result["title"] == "Markdown Conversion Example"
+        assert result["documentId"] == "1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M"
+        assert "tabs" in result
+        assert len(result["tabs"]) > 0
+
+        # Validate tab structure
+        first_tab = result["tabs"][0]
+        assert "tabProperties" in first_tab
+        assert "documentTab" in first_tab
+        assert first_tab["tabProperties"]["tabId"] == "t.0"
+        assert first_tab["tabProperties"]["title"] == "First tab"
+
+        # Validate document tab has body content
+        assert "body" in first_tab["documentTab"]
+        assert "content" in first_tab["documentTab"]["body"]
+
+        # Validate includes multi-tab structure (nested tabs)
+        assert len(result["tabs"]) > 1
+        second_tab = result["tabs"][1]
+        assert "childTabs" in second_tab
+        assert len(second_tab["childTabs"]) > 0
+
+        mock_service.documents.return_value.get.assert_called_once_with(
+            documentId=example_doc["documentId"], includeTabsContent=True
+        )
+
+    @patch("google_docs_markdown.api_client.build")
+    def test_get_document_real_response_structure_validation(self, mock_build: Any) -> None:
+        """Validate that the API client correctly handles complex real document structures."""
+        example_doc = load_example_document_json()
+        mock_service = Mock()
+        mock_request = Mock()
+        mock_request.execute.return_value = example_doc
+        mock_service.documents.return_value.get.return_value = mock_request
+        mock_build.return_value = mock_service
+
+        client = GoogleDocsAPIClient(credentials=Mock())
+        result = client.get_document(example_doc["documentId"])
+
+        # Validate document metadata
+        assert "title" in result
+        assert "documentId" in result
+        assert "suggestionsViewMode" in result
+
+        # Validate tabs array exists and has expected structure
+        assert isinstance(result["tabs"], list)
+        assert len(result["tabs"]) >= 1
+
+        # Validate first tab has all expected fields
+        first_tab = result["tabs"][0]
+        assert "tabProperties" in first_tab
+        assert "documentTab" in first_tab
+
+        tab_props = first_tab["tabProperties"]
+        assert "tabId" in tab_props
+        assert "title" in tab_props
+        assert "index" in tab_props
+
+        doc_tab = first_tab["documentTab"]
+        assert "body" in doc_tab
+        assert "documentStyle" in doc_tab
+
+        # Validate body content structure
+        body = doc_tab["body"]
+        assert "content" in body
+        assert isinstance(body["content"], list)
+
+        # Validate document style structure
+        doc_style = doc_tab["documentStyle"]
+        assert "pageSize" in doc_style
+        assert "marginTop" in doc_style
+
+        # Validate named styles exist
+        assert "namedStyles" in doc_tab
+        assert "styles" in doc_tab["namedStyles"]
+
+        # Validate inline objects exist (for images)
+        assert "inlineObjects" in doc_tab
+
+        # Validate lists exist
+        assert "lists" in doc_tab
 
 
 class TestCreateDocument:
