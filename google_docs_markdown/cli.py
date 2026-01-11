@@ -80,11 +80,20 @@ def diff(
 
 
 @app.command()
-def setup() -> None:
+def setup(
+    revoke: Annotated[
+        bool,
+        typer.Option("--revoke", help="Revoke existing Application Default Credentials before setting up new ones"),
+    ] = False,
+    extra_scopes: Annotated[
+        str,
+        typer.Option("--extra-scopes", help="Additional scopes to append to the required scopes (comma-separated)"),
+    ] = "",
+) -> None:
     """Set up authentication and configuration."""
     from google_docs_markdown.setup import setup as run_setup
 
-    run_setup()
+    run_setup(revoke=revoke, extra_scopes=extra_scopes)
 
 
 def main() -> None:

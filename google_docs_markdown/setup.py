@@ -244,9 +244,55 @@ def enable_docs_api(project_id: str) -> bool:
         return False
 
 
-def run_auth_login() -> bool:
-    """Run gcloud auth application-default login with required scopes."""
-    scopes_str = ",".join(REQUIRED_SCOPES)
+def revoke_credentials() -> bool:
+    """Revoke existing Application Default Credentials."""
+    try:
+        subprocess.run(
+            [
+                "gcloud",
+                "auth",
+                "application-default",
+                "revoke",
+            ],
+            check=True,
+            timeout=30,
+        )
+        return True
+    except FileNotFoundError:
+        typer.echo(
+            "❌ Error: gcloud CLI not found. Cannot revoke credentials.",
+            err=True,
+        )
+        return False
+    except subprocess.CalledProcessError as e:
+        typer.echo(
+            f"❌ Error revoking credentials: {e}\n"
+            "Credentials may not exist or revocation failed.\n"
+            "Try running manually: gcloud auth application-default revoke",
+            err=True,
+        )
+        return False
+    except subprocess.TimeoutExpired:
+        typer.echo(
+            "❌ Error: Revoke command timed out.",
+            err=True,
+        )
+        return False
+
+
+def run_auth_login(extra_scopes: str = "") -> bool:
+    """Run gcloud auth application-default login with required scopes.
+
+    Args:
+        extra_scopes: Additional comma-separated scopes to append to REQUIRED_SCOPES.
+    """
+    scopes = REQUIRED_SCOPES.copy()
+    if extra_scopes:
+        # Split by comma, strip whitespace, and add non-empty scopes
+        additional = [s.strip() for s in extra_scopes.split(",") if s.strip()]
+        scopes.extend(additional)
+
+    scopes_str = ",".join(scopes)
     try:
         subprocess.run(
             [
@@ -282,7 +328,7 @@ def run_auth_login() -> bool:
         return False
 
 
-def setup() -> None:
+def setup(revoke: bool = False, extra_scopes: str = "") -> None:
     """
     Set up authentication and configuration for Google Docs Markdown tool.
 
@@ -293,6 +339,10 @@ def setup() -> None:
     4. Enables the Google Docs API for that project
 
     Skips steps that are already configured correctly.
+
+    Args:
+        revoke: If True, revoke existing Application Default Credentials before setting up new ones.
+        extra_scopes: Additional comma-separated scopes to append to REQUIRED_SCOPES.
     """
     typer.echo("🔧 Setting up Google Docs Markdown tool...\n")
 
@@ -311,16 +361,34 @@ def setup() -> None:
 
     # Step 2: Check and set up credentials
     typer.echo("Checking Application Default Credentials...")
-    if check_credentials_exist():
+
+    # Revoke existing credentials if requested
+    if revoke:
+        typer.echo("Revoking existing Application Default Credentials...")
+        if revoke_credentials():
+            typer.echo("✅ Application Default Credentials revoked\n")
+        else:
+            typer.echo(
+                "⚠️  Warning: Failed to revoke credentials. Continuing with setup...\n",
+                err=True,
+            )
+
+    if check_credentials_exist() and not revoke:
         typer.echo("✅ Application Default Credentials are already configured\n")
     else:
         typer.echo("Setting up Application Default Credentials...")
+        if extra_scopes:
+            typer.echo(f"Including additional scopes: {extra_scopes}")
         typer.echo("This will open a browser window for authentication...")
-        if not run_auth_login():
+        if not run_auth_login(extra_scopes):
+            scopes = REQUIRED_SCOPES.copy()
+            if extra_scopes:
+                additional = [s.strip() for s in extra_scopes.split(",") if s.strip()]
+                scopes.extend(additional)
             typer.echo(
                 "❌ Failed to set up Application Default Credentials.\n"
                 "Please run manually:\n"
-                f'  gcloud auth application-default login --scopes="{",".join(REQUIRED_SCOPES)}"',
+                f'  gcloud auth application-default login --scopes="{",".join(scopes)}"',
                 err=True,
             )
             sys.exit(1)

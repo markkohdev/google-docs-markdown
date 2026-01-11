@@ -20,6 +20,7 @@ from google_docs_markdown.setup import (
     enable_docs_api,
     get_current_project,
     list_available_projects,
+    revoke_credentials,
     run_auth_login,
     set_project,
     setup,
@@ -248,10 +249,96 @@ class TestRunAuthLogin:
         )
 
     @patch("google_docs_markdown.setup.subprocess.run")
+    def test_auth_login_with_extra_scopes(self, mock_run: Mock) -> None:
+        """Test auth login with extra scopes."""
+        mock_run.return_value = Mock(returncode=0)
+        extra_scopes = "https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/spreadsheets"
+        assert run_auth_login(extra_scopes) is True
+
+        expected_scopes = REQUIRED_SCOPES + [
+            "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/spreadsheets",
+        ]
+        scopes_str = ",".join(expected_scopes)
+        mock_run.assert_called_once_with(
+            [
+                "gcloud",
+                "auth",
+                "application-default",
+                "login",
+                f"--scopes={scopes_str}",
+            ],
+            check=True,
+            timeout=300,
+        )
+
+    @patch("google_docs_markdown.setup.subprocess.run")
+    def test_auth_login_with_extra_scopes_whitespace(self, mock_run: Mock) -> None:
+        """Test auth login with extra scopes containing whitespace."""
+        mock_run.return_value = Mock(returncode=0)
+        extra_scopes = "  https://www.googleapis.com/auth/drive  ,  https://www.googleapis.com/auth/spreadsheets  "
+        assert run_auth_login(extra_scopes) is True
+
+        expected_scopes = REQUIRED_SCOPES + [
+            "https://www.googleapis.com/auth/drive",
+            "https://www.googleapis.com/auth/spreadsheets",
+        ]
+        scopes_str = ",".join(expected_scopes)
+        mock_run.assert_called_once_with(
+            [
+                "gcloud",
+                "auth",
+                "application-default",
+                "login",
+                f"--scopes={scopes_str}",
+            ],
+            check=True,
+            timeout=300,
+        )
+
+    @patch("google_docs_markdown.setup.subprocess.run")
     def test_auth_login_error(self, mock_run: Mock) -> None:
         """Test when auth login fails."""
-        mock_run.side_effect = MockCalledProcessError("Command failed: Failed to login")
+        mock_run.side_effect = MockCalledProcessError("Command failed: Auth login failed")
         assert run_auth_login() is False
+
+
+class TestRevokeCredentials:
+    """Test revoking credentials."""
+
+    @patch("google_docs_markdown.setup.subprocess.run")
+    def test_revoke_success(self, mock_run: Mock) -> None:
+        """Test successfully revoking credentials."""
+        mock_run.return_value = Mock(returncode=0)
+        assert revoke_credentials() is True
+        mock_run.assert_called_once_with(
+            [
+                "gcloud",
+                "auth",
+                "application-default",
+                "revoke",
+            ],
+            check=True,
+            timeout=30,
+        )
+
+    @patch("google_docs_markdown.setup.subprocess.run")
+    def test_revoke_not_installed(self, mock_run: Mock) -> None:
+        """Test when gcloud is not installed."""
+        mock_run.side_effect = FileNotFoundError()
+        assert revoke_credentials() is False
+
+    @patch("google_docs_markdown.setup.subprocess.run")
+    def test_revoke_error(self, mock_run: Mock) -> None:
+        """Test when revoke fails."""
+        mock_run.side_effect = MockCalledProcessError("Command failed: Revoke failed")
+        assert revoke_credentials() is False
+
+    @patch("google_docs_markdown.setup.subprocess.run")
+    def test_revoke_timeout(self, mock_run: Mock) -> None:
+        """Test when revoke times out."""
+        mock_run.side_effect = subprocess.TimeoutExpired(cmd=[], timeout=30)
+        assert revoke_credentials() is False
 
 
 class TestSetup:
@@ -509,3 +596,129 @@ class TestSetup:
         setup()
 
         mock_exit.assert_called_once_with(1)
+
+    @patch("google_docs_markdown.setup.run_auth_login")
+    @patch("google_docs_markdown.setup.revoke_credentials")
+    @patch("google_docs_markdown.setup.enable_docs_api")
+    @patch("google_docs_markdown.setup.check_api_enabled")
+    @patch("google_docs_markdown.setup.get_current_project")
+    @patch("google_docs_markdown.setup.check_credentials_exist")
+    @patch("google_docs_markdown.setup.check_gcloud_installed")
+    @patch("google_docs_markdown.setup.typer.echo")
+    def test_setup_with_revoke(
+        self,
+        mock_echo: Mock,
+        mock_check_gcloud: Mock,
+        mock_check_creds: Mock,
+        mock_get_project: Mock,
+        mock_check_api: Mock,
+        mock_enable_api: Mock,
+        mock_revoke: Mock,
+        mock_auth_login: Mock,
+    ) -> None:
+        """Test setup with revoke parameter."""
+        mock_check_gcloud.return_value = True
+        mock_check_creds.return_value = True
+        mock_get_project.return_value = "my-project"
+        mock_check_api.return_value = True
+        mock_revoke.return_value = True
+        mock_auth_login.return_value = True
+
+        setup(revoke=True)
+
+        mock_revoke.assert_called_once()
+        mock_auth_login.assert_called_once_with("")
+
+    @patch("google_docs_markdown.setup.run_auth_login")
+    @patch("google_docs_markdown.setup.revoke_credentials")
+    @patch("google_docs_markdown.setup.enable_docs_api")
+    @patch("google_docs_markdown.setup.check_api_enabled")
+    @patch("google_docs_markdown.setup.get_current_project")
+    @patch("google_docs_markdown.setup.check_credentials_exist")
+    @patch("google_docs_markdown.setup.check_gcloud_installed")
+    @patch("google_docs_markdown.setup.typer.echo")
+    def test_setup_with_revoke_failure(
+        self,
+        mock_echo: Mock,
+        mock_check_gcloud: Mock,
+        mock_check_creds: Mock,
+        mock_get_project: Mock,
+        mock_check_api: Mock,
+        mock_enable_api: Mock,
+        mock_revoke: Mock,
+        mock_auth_login: Mock,
+    ) -> None:
+        """Test setup when revoke fails but continues."""
+        mock_check_gcloud.return_value = True
+        mock_check_creds.return_value = True
+        mock_get_project.return_value = "my-project"
+        mock_check_api.return_value = True
+        mock_revoke.return_value = False
+        mock_auth_login.return_value = True
+
+        setup(revoke=True)
+
+        mock_revoke.assert_called_once()
+        mock_auth_login.assert_called_once_with("")
+
+    @patch("google_docs_markdown.setup.run_auth_login")
+    @patch("google_docs_markdown.setup.enable_docs_api")
+    @patch("google_docs_markdown.setup.check_api_enabled")
+    @patch("google_docs_markdown.setup.get_current_project")
+    @patch("google_docs_markdown.setup.check_credentials_exist")
+    @patch("google_docs_markdown.setup.check_gcloud_installed")
+    @patch("google_docs_markdown.setup.typer.echo")
+    def test_setup_with_extra_scopes(
+        self,
+        mock_echo: Mock,
+        mock_check_gcloud: Mock,
+        mock_check_creds: Mock,
+        mock_get_project: Mock,
+        mock_check_api: Mock,
+        mock_enable_api: Mock,
+        mock_auth_login: Mock,
+    ) -> None:
+        """Test setup with extra scopes."""
+        mock_check_gcloud.return_value = True
+        mock_check_creds.return_value = False
+        mock_get_project.return_value = "my-project"
+        mock_check_api.return_value = True
+        mock_auth_login.return_value = True
+
+        extra_scopes = "https://www.googleapis.com/auth/drive"
+        setup(extra_scopes=extra_scopes)
+
+        mock_auth_login.assert_called_once_with(extra_scopes)
+
+    @patch("google_docs_markdown.setup.run_auth_login")
+    @patch("google_docs_markdown.setup.revoke_credentials")
+    @patch("google_docs_markdown.setup.enable_docs_api")
+    @patch("google_docs_markdown.setup.check_api_enabled")
+    @patch("google_docs_markdown.setup.get_current_project")
+    @patch("google_docs_markdown.setup.check_credentials_exist")
+    @patch("google_docs_markdown.setup.check_gcloud_installed")
+    @patch("google_docs_markdown.setup.typer.echo")
+    def test_setup_with_revoke_and_extra_scopes(
+        self,
+        mock_echo: Mock,
+        mock_check_gcloud: Mock,
+        mock_check_creds: Mock,
+        mock_get_project: Mock,
+        mock_check_api: Mock,
+        mock_enable_api: Mock,
+        mock_revoke: Mock,
+        mock_auth_login: Mock,
+    ) -> None:
+        """Test setup with both revoke and extra scopes."""
+        mock_check_gcloud.return_value = True
+        mock_check_creds.return_value = True
+        mock_get_project.return_value = "my-project"
+        mock_check_api.return_value = True
+        mock_revoke.return_value = True
+        mock_auth_login.return_value = True
+
+        extra_scopes = "https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/spreadsheets"
+        setup(revoke=True, extra_scopes=extra_scopes)
+
+        mock_revoke.assert_called_once()
+        mock_auth_login.assert_called_once_with(extra_scopes)
