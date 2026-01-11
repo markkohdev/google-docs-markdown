@@ -10,39 +10,48 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Annotated
 
-import click
+import typer
 
 from google_docs_markdown.api_client import GoogleDocsAPIClient
 
+app = typer.Typer()
 
-@click.command()
-@click.argument("document", required=True)
-@click.option(
-    "-o",
-    "--output",
-    default=" ",
-    help="Output filename (default: uses document title)",
-)
-@click.option(
-    "--output-dir",
-    type=click.Path(path_type=Path),
-    default=" ",
-    help="Output directory (default: tests/resources/document_jsons)",
-)
-@click.option(
-    "--pretty",
-    type=bool,
-    default=False,
-    help="Pretty-print JSON with indentation",
-)
-@click.option(
-    "--overwrite",
-    type=bool,
-    default=False,
-    help="Overwrite existing file without prompting",
-)
-def main(document: str, output: str | None, output_dir: Path | None, pretty: bool, overwrite: bool) -> None:
+
+@app.command()
+def main(
+    document: Annotated[str, typer.Argument(help="Google Docs URL or document ID")],
+    output: Annotated[
+        str,
+        typer.Option(
+            "-o",
+            "--output",
+            help="Output filename (default: uses document title)",
+        ),
+    ] = " ",
+    output_dir: Annotated[
+        Path | None,
+        typer.Option(
+            "--output-dir",
+            help="Output directory (default: tests/resources/document_jsons)",
+        ),
+    ] = None,
+    pretty: Annotated[
+        bool,
+        typer.Option(
+            "--pretty/--no-pretty",
+            help="Pretty-print JSON with indentation",
+        ),
+    ] = False,
+    overwrite: Annotated[
+        bool,
+        typer.Option(
+            "--overwrite/--no-overwrite",
+            help="Overwrite existing file without prompting",
+        ),
+    ] = False,
+) -> None:
     """
     Download a Google Doc as JSON file.
 
@@ -56,16 +65,10 @@ def main(document: str, output: str | None, output_dir: Path | None, pretty: boo
         download_doc_json.py DOC_ID --output-dir /path/to/output
     """
     # Normalize empty strings to None
-    output = output.strip()
-    output_dir = str(output_dir).strip()
-
-    if not output:
-        output = None
-    if not output_dir:
-        output_dir = None
+    output = output.strip() if output else None
 
     # Determine output directory
-    if output_dir:
+    if str(output_dir).strip():
         output_dir_path = output_dir
     else:
         # Default to test resources directory
@@ -78,14 +81,14 @@ def main(document: str, output: str | None, output_dir: Path | None, pretty: boo
 
     try:
         # Initialize client and fetch document
-        click.echo("Connecting to Google Docs API...")
+        typer.echo("Connecting to Google Docs API...")
         client = GoogleDocsAPIClient()
 
-        click.echo(f"Extracting document ID from: {document}")
+        typer.echo(f"Extracting document ID from: {document}")
         doc_id = client.extract_document_id(document)
-        click.echo(f"Document ID: {doc_id}")
+        typer.echo(f"Document ID: {doc_id}")
 
-        click.echo("Fetching document...")
+        typer.echo("Fetching document...")
         doc = client.get_document(doc_id)
 
         # Determine output filename
@@ -104,31 +107,31 @@ def main(document: str, output: str | None, output_dir: Path | None, pretty: boo
         # Check if file exists and handle overwrite logic
         if output_path.exists():
             if not overwrite:
-                if not click.confirm(f"File already exists at {output_path}. Overwrite?"):
-                    click.echo("Aborted. File not overwritten.")
-                    return
+                if not typer.confirm(f"File already exists at {output_path}. Overwrite?"):
+                    typer.echo("Aborted. File not overwritten.")
+                    raise typer.Exit()
 
         # Write JSON file
-        click.echo(f"Saving to: {output_path}")
+        typer.echo(f"Saving to: {output_path}")
         with output_path.open("w", encoding="utf-8") as f:
             if pretty:
                 json.dump(doc, f, indent=2, ensure_ascii=False)
             else:
                 json.dump(doc, f, ensure_ascii=False)
 
-        click.echo(f"✓ Successfully downloaded document: {doc.get('title', 'Untitled')}")
-        click.echo(f"  Saved to: {output_path}")
-        click.echo(f"  Document ID: {doc.get('documentId', 'N/A')}")
+        typer.echo(f"✓ Successfully downloaded document: {doc.get('title', 'Untitled')}")
+        typer.echo(f"  Saved to: {output_path}")
+        typer.echo(f"  Document ID: {doc.get('documentId', 'N/A')}")
         if "tabs" in doc:
-            click.echo(f"  Tabs: {len(doc['tabs'])}")
+            typer.echo(f"  Tabs: {len(doc['tabs'])}")
 
     except ValueError as e:
-        click.echo(f"Error: {e}", err=True)
-        raise click.Abort() from e
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
     except Exception as e:
-        click.echo(f"Error downloading document: {e}", err=True)
-        raise click.Abort() from e
+        typer.echo(f"Error downloading document: {e}", err=True)
+        raise typer.Exit(1) from e
 
 
 if __name__ == "__main__":
-    main()
+    app()

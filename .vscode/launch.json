@@ -26,11 +26,11 @@
       "options": [
         {
           "label": "Yes",
-          "value": "yes"
+          "value": "--pretty"
         },
         {
           "label": "No",
-          "value": "no"
+          "value": "--no-pretty"
         }
       ],
       "default": "yes"
@@ -38,22 +38,18 @@
     {
       "id": "overwrite",
       "type": "pickString",
-      "description": "Overwrite existing file?",
+      "description": "Automatically overwrite existing file?",
       "options": [
         {
-          "label": "Ask (prompt if file exists)",
-          "value": "ask"
-        },
-        {
           "label": "Yes (overwrite without asking)",
-          "value": "yes"
+          "value": "--overwrite"
         },
         {
-          "label": "No (skip if file exists)",
-          "value": "no"
+          "label": "Ask (prompt if file exists)",
+          "value": "--no-overwrite"
         }
       ],
-      "default": "ask"
+      "default": "--no-overwrite"
     }
   ],
   "configurations": [
@@ -66,8 +62,8 @@
         "${input:googleDocUrl}",
         "--output=${input:outputFilename}",
         "--output-dir=${input:outputDir}",
-        "--pretty=${input:prettyPrint}",
-        "--overwrite=${input:overwrite}"
+        "${input:prettyPrint}",
+        "${input:overwrite}"
       ],
       "console": "integratedTerminal",
       "justMyCode": false

@@ -4,6 +4,7 @@
 !.python-version
 !.vscode/
 !.github/
+!.cursor/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
