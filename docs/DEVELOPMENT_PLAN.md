@@ -51,7 +51,7 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Handle `segmentId` in Location/Range objects for headers/footers/footnotes (API client ready; objects created in later tasks)
 
 4. **CLI - Download Command**
-   - [ ] Create `google_docs_markdown/cli.py` using `click` or `argparse`
+   - [ ] Create `google_docs_markdown/cli.py` using `typer`
    - [ ] Implement `download` command
    - [ ] Support document URL/ID input
    - [ ] Support output directory path
@@ -428,7 +428,8 @@ Unit tests and documentation should be written for each component and function a
 
 2. **CLI Framework**: Choose CLI framework
    - Options: `click`, `argparse`, `typer`
-   - Recommendation: `click` (mature, well-documented)
+   - Decision: `typer` (modern, type-safe, leverages Python type hints)
+     - We should use `Annotated` from `typing` to type the CLI arguments and options since it's the recommended way to do so by the library.
 
 3. **Diff Algorithm**: Choose diffing library
    - Options: `difflib` (built-in), `diff-match-patch`, custom implementation
