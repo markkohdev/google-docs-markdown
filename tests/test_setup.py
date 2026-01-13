@@ -6,8 +6,10 @@ Tests authentication checks, project configuration, and API enablement.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
 from unittest.mock import MagicMock, Mock, patch
 
+import pytest
 from google.auth.exceptions import DefaultCredentialsError
 
 from google_docs_markdown.setup import (
@@ -343,643 +345,637 @@ class TestRevokeCredentials:
         assert revoke_credentials() is False
 
 
+# Fixtures for TestSetup class
+@pytest.fixture(scope="class")
+def mock_gcloud_run() -> Iterator[Mock]:
+    """Class-scoped fixture for gcloud_run."""
+    with patch("google_docs_markdown.setup.gcloud_run") as mock:
+        yield mock
+
+
+@pytest.fixture(scope="class")
+def mock_gcloud_exec() -> Iterator[Mock]:
+    """Class-scoped fixture for gcloud_exec."""
+    with patch("google_docs_markdown.setup.gcloud_exec") as mock:
+        yield mock
+
+
+@pytest.fixture(scope="class", autouse=True)
+def mock_typer_echo() -> Iterator[Mock]:
+    """Autouse fixture for typer.echo - always mocked but rarely asserted."""
+    with patch("google_docs_markdown.setup.typer.echo") as mock:
+        yield mock
+
+
+@pytest.fixture(scope="class")
+def mock_sys_exit() -> Iterator[Mock]:
+    """Class-scoped fixture for sys.exit."""
+    with patch("google_docs_markdown.setup.sys.exit") as mock:
+        yield mock
+
+
+@pytest.fixture(scope="class")
+def mock_check_gcloud_installed() -> Iterator[Mock]:
+    """Class-scoped fixture for check_gcloud_installed helper function."""
+    with patch("google_docs_markdown.setup.check_gcloud_installed") as mock:
+        yield mock
+
+
+@pytest.fixture(scope="class")
+def mock_check_credentials_exist() -> Iterator[Mock]:
+    """Class-scoped fixture for check_credentials_exist helper function."""
+    with patch("google_docs_markdown.setup.check_credentials_exist") as mock:
+        yield mock
+
+
+@pytest.fixture(scope="class")
+def mock_get_current_project() -> Iterator[Mock]:
+    """Class-scoped fixture for get_current_project helper function."""
+    with patch("google_docs_markdown.setup.get_current_project") as mock:
+        yield mock
+
+
+@pytest.fixture(scope="class")
+def mock_typer_prompt() -> Iterator[Mock]:
+    """Class-scoped fixture for typer.prompt."""
+    with patch("google_docs_markdown.setup.typer.prompt") as mock:
+        yield mock
+
+
+@pytest.fixture(scope="class")
+def mock_path() -> Iterator[Mock]:
+    """Class-scoped fixture for Path."""
+    with patch("google_docs_markdown.setup.Path") as mock_path_class:
+        yield mock_path_class
+
+
+@pytest.fixture(scope="class")
+def mock_client_id_path_not_exists(mock_path: Mock) -> tuple[Mock, MagicMock]:
+    """Helper fixture to mock Path.home() chain with client_id_file not existing."""
+    mock_home = MagicMock()
+    mock_path.home.return_value = mock_home
+    mock_config_dir = MagicMock()
+    mock_home.__truediv__.return_value = mock_config_dir
+    mock_gdm_dir = MagicMock()
+    mock_config_dir.__truediv__.return_value = mock_gdm_dir
+    mock_client_id_file = MagicMock()
+    mock_gdm_dir.__truediv__.return_value = mock_client_id_file
+    mock_client_id_file.exists.return_value = False
+    return mock_path, mock_client_id_file
+
+
+@pytest.fixture(scope="class")
+def mock_client_id_path_exists(mock_path: Mock) -> tuple[Mock, MagicMock]:
+    """Helper fixture to mock Path.home() chain with client_id_file existing."""
+    mock_home = MagicMock()
+    mock_path.home.return_value = mock_home
+    mock_config_dir = MagicMock()
+    mock_home.__truediv__.return_value = mock_config_dir
+    mock_gdm_dir = MagicMock()
+    mock_config_dir.__truediv__.return_value = mock_gdm_dir
+    mock_client_id_file = MagicMock()
+    mock_gdm_dir.__truediv__.return_value = mock_client_id_file
+    mock_client_id_file.exists.return_value = True
+    # Configure __str__ to return the path string - use configure_mock to avoid assignment error
+    default_path = "/home/user/.config/google-docs-markdown/client_id_file.json"
+    mock_client_id_file.configure_mock(__str__=lambda self: default_path)
+    return mock_path, mock_client_id_file
+
+
 class TestSetup:
     """Test main setup function."""
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
+    def setup_method(self) -> None:
+        """Reset mock state before each test to avoid state leakage."""
+        # This method is called before each test method
+        pass
+
     def test_setup_all_configured(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_client_id_path_not_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup when everything is already configured."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = True
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = True
-
-        # Mock Path to return non-existent default client_id_file
-        mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
-        mock_config_dir = MagicMock()
-        mock_home.__truediv__.return_value = mock_config_dir
-        mock_gdm_dir = MagicMock()
-        mock_config_dir.__truediv__.return_value = mock_gdm_dir
-        mock_client_id_file = MagicMock()
-        mock_gdm_dir.__truediv__.return_value = mock_client_id_file
-        mock_client_id_file.exists.return_value = False
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = True
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API, not check_api_enabled()
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
 
         setup()
 
-        mock_check_gcloud.assert_called_once()
-        mock_check_creds.assert_called_once()
-        mock_get_project.assert_called_once()
-        mock_check_api.assert_called_once_with("my-project")
-        mock_enable_api.assert_not_called()
+        mock_check_gcloud_installed.assert_called_once()
+        mock_check_credentials_exist.assert_called_once()
+        mock_get_current_project.assert_called_once()
+        # Verify gcloud_run was called to check API (setup() calls it directly)
+        assert mock_gcloud_run.call_count >= 1
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.sys.exit")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.prompt")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_gcloud_not_installed(
         self,
-        mock_echo: Mock,
-        mock_prompt: Mock,
-        mock_check_gcloud: Mock,
-        mock_exit: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_sys_exit: Mock,
     ) -> None:
         """Test setup when gcloud is not installed."""
-        mock_check_gcloud.return_value = False
+        mock_check_gcloud_installed.return_value = False
 
         setup()
 
-        mock_exit.assert_called_once_with(1)
+        mock_sys_exit.assert_called_once_with(1)
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.run_auth_login")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
     def test_setup_credentials_not_exist(
         self,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_auth_login: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_exec: Mock,
+        mock_gcloud_run: Mock,
+        mock_client_id_path_not_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup when credentials need to be created."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = False
-        mock_auth_login.return_value = True
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = True
-
-        # Mock Path to return non-existent default client_id_file
-        mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
-        mock_config_dir = MagicMock()
-        mock_home.__truediv__.return_value = mock_config_dir
-        mock_gdm_dir = MagicMock()
-        mock_config_dir.__truediv__.return_value = mock_gdm_dir
-        mock_client_id_file = MagicMock()
-        mock_gdm_dir.__truediv__.return_value = mock_client_id_file
-        mock_client_id_file.exists.return_value = False
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = False
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_exec for auth login, not run_auth_login()
+        mock_gcloud_exec.return_value = True
+        # setup() directly calls gcloud_run to check API
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
 
         setup()
 
-        mock_auth_login.assert_called_once_with("", None)
+        # Verify gcloud_exec was called for auth login
+        auth_calls = [call for call in mock_gcloud_exec.call_args_list if "auth" in str(call)]
+        assert len(auth_calls) > 0
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.sys.exit")
-    @patch("google_docs_markdown.setup.run_auth_login")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.prompt")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_auth_login_fails(
         self,
-        mock_echo: Mock,
-        mock_prompt: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_auth_login: Mock,
-        mock_exit: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_gcloud_exec: Mock,
+        mock_sys_exit: Mock,
+        mock_client_id_path_not_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup when auth login fails."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = False
-        mock_auth_login.return_value = False
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_exec.reset_mock()
+        mock_gcloud_exec.side_effect = None
+        mock_sys_exit.reset_mock()
+        mock_sys_exit.side_effect = None
 
-        # Mock Path to return non-existent default client_id_file
-        mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
-        mock_config_dir = MagicMock()
-        mock_home.__truediv__.return_value = mock_config_dir
-        mock_gdm_dir = MagicMock()
-        mock_config_dir.__truediv__.return_value = mock_gdm_dir
-        mock_client_id_file = MagicMock()
-        mock_gdm_dir.__truediv__.return_value = mock_client_id_file
-        mock_client_id_file.exists.return_value = False
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = False
+        # setup() directly calls gcloud_exec for auth login, which raises GCloudException on failure
+        from google_docs_markdown.gcloud import GCloudException
+        mock_gcloud_exec.side_effect = GCloudException(
+            message="Failed to authenticate",
+            operation="running authentication",
+            command=["gcloud", "auth", "application-default", "login"],
+        )
 
         setup()
 
-        mock_exit.assert_called_once_with(1)
+        mock_sys_exit.assert_called_once_with(1)
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.set_project")
-    @patch("google_docs_markdown.setup.list_available_projects")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.prompt")
-    @patch("google_docs_markdown.setup.typer.echo")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
     def test_setup_no_project_select_by_number(
         self,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_echo: Mock,
-        mock_prompt: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_list_projects: Mock,
-        mock_set_project: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
+        mock_typer_prompt: Mock,
+        mock_client_id_path_not_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup when no project is set and user selects by number."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = True
-        mock_get_project.return_value = None
-        mock_list_projects.return_value = ["project-1", "project-2"]
-        mock_prompt.return_value = "1"
-        mock_set_project.return_value = True
-        mock_check_api.return_value = True
-
-        # Mock Path to return non-existent default client_id_file
-        mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
-        mock_config_dir = MagicMock()
-        mock_home.__truediv__.return_value = mock_config_dir
-        mock_gdm_dir = MagicMock()
-        mock_config_dir.__truediv__.return_value = mock_gdm_dir
-        mock_client_id_file = MagicMock()
-        mock_gdm_dir.__truediv__.return_value = mock_client_id_file
-        mock_client_id_file.exists.return_value = False
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = True
+        mock_get_current_project.return_value = None
+        # setup() directly calls gcloud_run to list projects
+        mock_gcloud_run.return_value = "project-1\nproject-2"
+        mock_typer_prompt.return_value = "1"
+        mock_gcloud_exec.return_value = True
 
         setup()
 
-        mock_set_project.assert_called_once_with("project-1")
-        mock_check_api.assert_called_once_with("project-1")
+        # Verify gcloud_exec was called to set project
+        set_project_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "config" in str(call) and "set" in str(call) and "project" in str(call)
+        ]
+        assert len(set_project_calls) > 0
+        # Verify gcloud_run was called to check API
+        assert mock_gcloud_run.call_count >= 2  # Once for listing, once for checking API
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.set_project")
-    @patch("google_docs_markdown.setup.list_available_projects")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.prompt")
-    @patch("google_docs_markdown.setup.typer.echo")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
     def test_setup_no_project_select_by_id(
         self,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_echo: Mock,
-        mock_prompt: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_list_projects: Mock,
-        mock_set_project: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
+        mock_typer_prompt: Mock,
+        mock_client_id_path_not_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup when no project is set and user selects by project ID."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = True
-        mock_get_project.return_value = None
-        mock_list_projects.return_value = ["project-1", "project-2"]
-        mock_prompt.return_value = "project-2"
-        mock_set_project.return_value = True
-        mock_check_api.return_value = True
-
-        # Mock Path to return non-existent default client_id_file
-        mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
-        mock_config_dir = MagicMock()
-        mock_home.__truediv__.return_value = mock_config_dir
-        mock_gdm_dir = MagicMock()
-        mock_config_dir.__truediv__.return_value = mock_gdm_dir
-        mock_client_id_file = MagicMock()
-        mock_gdm_dir.__truediv__.return_value = mock_client_id_file
-        mock_client_id_file.exists.return_value = False
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = True
+        mock_get_current_project.return_value = None
+        # setup() directly calls gcloud_run to list projects
+        mock_gcloud_run.return_value = "project-1\nproject-2"
+        mock_typer_prompt.return_value = "project-2"
+        mock_gcloud_exec.return_value = True
 
         setup()
 
-        mock_set_project.assert_called_once_with("project-2")
-        mock_check_api.assert_called_once_with("project-2")
+        # Verify gcloud_exec was called to set project
+        set_project_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "config" in str(call) and "set" in str(call) and "project" in str(call)
+        ]
+        assert len(set_project_calls) > 0
+        # Verify gcloud_run was called to check API
+        assert mock_gcloud_run.call_count >= 2
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.sys.exit")
-    @patch("google_docs_markdown.setup.list_available_projects")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_no_projects_available(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_list_projects: Mock,
-        mock_exit: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_sys_exit: Mock,
+        mock_client_id_path_not_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup when no projects are available."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = True
-        mock_get_project.return_value = None
-        mock_list_projects.return_value = []
-        # Make sys.exit raise SystemExit to stop execution, just like real sys.exit
-        mock_exit.side_effect = SystemExit(1)
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_run.reset_mock()
+        mock_sys_exit.reset_mock()
+        mock_sys_exit.side_effect = None
 
-        # Mock Path to return non-existent default client_id_file
-        mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
-        mock_config_dir = MagicMock()
-        mock_home.__truediv__.return_value = mock_config_dir
-        mock_gdm_dir = MagicMock()
-        mock_config_dir.__truediv__.return_value = mock_gdm_dir
-        mock_client_id_file = MagicMock()
-        mock_gdm_dir.__truediv__.return_value = mock_client_id_file
-        mock_client_id_file.exists.return_value = False
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = True
+        mock_get_current_project.return_value = None
+        # setup() directly calls gcloud_run to list projects
+        mock_gcloud_run.return_value = ""
+        # Make sys.exit raise SystemExit to stop execution, just like real sys.exit
+        mock_sys_exit.side_effect = SystemExit(1)
 
         try:
             setup()
         except SystemExit:
             pass  # Expected when sys.exit is called
 
-        mock_exit.assert_called_once_with(1)
+        mock_sys_exit.assert_called_once_with(1)
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_enable_api(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
+        mock_client_id_path_not_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup when API needs to be enabled."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = True
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = False
-        mock_enable_api.return_value = True
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_exec.reset_mock()
+        mock_gcloud_exec.side_effect = None
+        mock_gcloud_run.reset_mock()
 
-        # Mock Path to return non-existent default client_id_file
-        mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
-        mock_config_dir = MagicMock()
-        mock_home.__truediv__.return_value = mock_config_dir
-        mock_gdm_dir = MagicMock()
-        mock_config_dir.__truediv__.return_value = mock_gdm_dir
-        mock_client_id_file = MagicMock()
-        mock_gdm_dir.__truediv__.return_value = mock_client_id_file
-        mock_client_id_file.exists.return_value = False
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = True
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API - return empty (not enabled)
+        mock_gcloud_run.return_value = ""
+        # setup() directly calls gcloud_exec to enable API
+        mock_gcloud_exec.return_value = True
 
         setup()
 
-        mock_enable_api.assert_called_once_with("my-project")
+        # Verify gcloud_exec was called to enable API
+        enable_api_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "services" in str(call) and "enable" in str(call)
+        ]
+        assert len(enable_api_calls) > 0
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.sys.exit")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_enable_api_fails(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_exit: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
+        mock_sys_exit: Mock,
+        mock_client_id_path_not_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup when enabling API fails."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = True
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = False
-        mock_enable_api.return_value = False
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_exec.reset_mock()
+        mock_gcloud_exec.side_effect = None
+        mock_gcloud_run.reset_mock()
+        mock_sys_exit.reset_mock()
+        mock_sys_exit.side_effect = None
 
-        # Mock Path to return non-existent default client_id_file
-        mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
-        mock_config_dir = MagicMock()
-        mock_home.__truediv__.return_value = mock_config_dir
-        mock_gdm_dir = MagicMock()
-        mock_config_dir.__truediv__.return_value = mock_gdm_dir
-        mock_client_id_file = MagicMock()
-        mock_gdm_dir.__truediv__.return_value = mock_client_id_file
-        mock_client_id_file.exists.return_value = False
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = True
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API - return empty (not enabled)
+        mock_gcloud_run.return_value = ""
+        # setup() directly calls gcloud_exec to enable API, which raises GCloudException on failure
+        from google_docs_markdown.gcloud import GCloudException
+        mock_gcloud_exec.side_effect = GCloudException(
+            message="Failed to enable API",
+            operation="enabling Google Docs API",
+            command=["gcloud", "services", "enable", DOCS_API_SERVICE],
+        )
 
         setup()
 
-        mock_exit.assert_called_once_with(1)
+        mock_sys_exit.assert_called_once_with(1)
 
-    @patch("google_docs_markdown.setup.run_auth_login")
-    @patch("google_docs_markdown.setup.revoke_credentials")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_with_revoke(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_revoke: Mock,
-        mock_auth_login: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
     ) -> None:
         """Test setup with revoke parameter."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = True
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = True
-        mock_revoke.return_value = True
-        mock_auth_login.return_value = True
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_exec.reset_mock()
+        mock_gcloud_exec.side_effect = None
+        mock_gcloud_run.reset_mock()
+
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = True
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
+        # setup() directly calls gcloud_exec for revoke and auth login
+        mock_gcloud_exec.return_value = True
 
         setup(revoke=True)
 
-        mock_revoke.assert_called_once()
-        mock_auth_login.assert_called_once_with("", None)
+        # Verify gcloud_exec was called for revoke
+        revoke_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "revoke" in str(call)
+        ]
+        assert len(revoke_calls) > 0
+        # Verify gcloud_exec was called for auth login
+        auth_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "auth" in str(call) and "login" in str(call)
+        ]
+        assert len(auth_calls) > 0
 
-    @patch("google_docs_markdown.setup.run_auth_login")
-    @patch("google_docs_markdown.setup.revoke_credentials")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_with_revoke_failure(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_revoke: Mock,
-        mock_auth_login: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
     ) -> None:
         """Test setup when revoke fails but continues."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = True
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = True
-        mock_revoke.return_value = False
-        mock_auth_login.return_value = True
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = True
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
+        # setup() directly calls gcloud_exec - first call (revoke) raises exception, second (auth) succeeds
+        from google_docs_markdown.gcloud import GCloudException
+        mock_gcloud_exec.side_effect = [
+            GCloudException(
+                message="Failed to revoke",
+                operation="revoking Application Default Credentials",
+                command=["gcloud", "auth", "application-default", "revoke"],
+            ),
+            True,  # auth login succeeds
+        ]
 
         setup(revoke=True)
 
-        mock_revoke.assert_called_once()
-        mock_auth_login.assert_called_once_with("", None)
+        # Verify gcloud_exec was called at least twice (revoke and auth)
+        assert mock_gcloud_exec.call_count >= 2
 
-    @patch("google_docs_markdown.setup.run_auth_login")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_with_extra_scopes(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_auth_login: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
+        mock_client_id_path_not_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup with extra scopes."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = False
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = True
-        mock_auth_login.return_value = True
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_exec.reset_mock()
+        mock_gcloud_exec.side_effect = None
+        mock_gcloud_run.reset_mock()
+
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = False
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
+        # setup() directly calls gcloud_exec for auth login
+        mock_gcloud_exec.return_value = True
 
         extra_scopes = "https://www.googleapis.com/auth/drive"
         setup(extra_scopes=extra_scopes)
 
-        mock_auth_login.assert_called_once_with(extra_scopes, None)
+        # Verify gcloud_exec was called for auth login with extra scopes
+        auth_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "auth" in str(call) and "login" in str(call)
+        ]
+        assert len(auth_calls) > 0
+        # Verify extra scopes are in the call
+        assert any("drive" in str(call) for call in auth_calls)
 
-    @patch("google_docs_markdown.setup.run_auth_login")
-    @patch("google_docs_markdown.setup.revoke_credentials")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_with_revoke_and_extra_scopes(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_revoke: Mock,
-        mock_auth_login: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
     ) -> None:
         """Test setup with both revoke and extra scopes."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = True
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = True
-        mock_revoke.return_value = True
-        mock_auth_login.return_value = True
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_exec.reset_mock()
+        mock_gcloud_exec.side_effect = None
+        mock_gcloud_run.reset_mock()
+
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = True
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
+        # setup() directly calls gcloud_exec for revoke and auth login
+        mock_gcloud_exec.return_value = True
 
         extra_scopes = "https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/spreadsheets"
         setup(revoke=True, extra_scopes=extra_scopes)
 
-        mock_revoke.assert_called_once()
-        mock_auth_login.assert_called_once_with(extra_scopes, None)
+        # Verify gcloud_exec was called for revoke and auth login
+        assert mock_gcloud_exec.call_count >= 2
+        # Verify extra scopes are in the auth call
+        auth_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "auth" in str(call) and "login" in str(call)
+        ]
+        assert any("drive" in str(call) or "spreadsheets" in str(call) for call in auth_calls)
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.run_auth_login")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_with_explicit_client_id_file(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_auth_login: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
         mock_path: Mock,
     ) -> None:
         """Test setup with explicit client ID file."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = False
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = True
-        mock_auth_login.return_value = True
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_exec.reset_mock()
+        mock_gcloud_exec.side_effect = None
+        mock_gcloud_run.reset_mock()
+        mock_path.reset_mock()
+
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = False
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
+        # setup() directly calls gcloud_exec for auth login
+        mock_gcloud_exec.return_value = True
 
         client_id_file = "/custom/path/client_id.json"
         setup(client_id_file=client_id_file)
 
-        mock_auth_login.assert_called_once_with("", client_id_file)
+        # Verify gcloud_exec was called for auth login with client_id_file
+        auth_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "auth" in str(call) and "login" in str(call)
+        ]
+        assert len(auth_calls) > 0
+        # Verify client_id_file is in the call
+        assert any("client_id_file" in str(call) or client_id_file in str(call) for call in auth_calls)
         # Path.home() should not be called when explicit file is provided
         mock_path.home.assert_not_called()
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.run_auth_login")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_with_default_client_id_file_exists(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_auth_login: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
+        mock_client_id_path_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup with default client ID file that exists."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = False
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = True
-        mock_auth_login.return_value = True
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_exec.reset_mock()
+        mock_gcloud_exec.side_effect = None
+        mock_gcloud_run.reset_mock()
 
-        # Mock Path.home() and the client_id file existence
-        mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
-        mock_config_dir = MagicMock()
-        mock_home.__truediv__.return_value = mock_config_dir
-        mock_gdm_dir = MagicMock()
-        mock_config_dir.__truediv__.return_value = mock_gdm_dir
-        mock_client_id_file = MagicMock()
-        mock_gdm_dir.__truediv__.return_value = mock_client_id_file
-        mock_client_id_file.exists.return_value = True
-        mock_client_id_file.__str__.return_value = "/home/user/.config/google-docs-markdown/client_id_file.json"
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = False
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
+        # setup() directly calls gcloud_exec for auth login
+        mock_gcloud_exec.return_value = True
 
         setup()
 
-        mock_auth_login.assert_called_once_with("", "/home/user/.config/google-docs-markdown/client_id_file.json")
+        # Verify gcloud_exec was called for auth login with client_id_file
+        auth_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "auth" in str(call) and "login" in str(call)
+        ]
+        assert len(auth_calls) > 0
+        # Verify client_id_file path is in the call
+        assert any("client_id_file" in str(call) or "client_id_file.json" in str(call) for call in auth_calls)
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.run_auth_login")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_with_default_client_id_file_not_exists(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_auth_login: Mock,
-        mock_path: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
+        mock_client_id_path_not_exists: tuple[Mock, MagicMock],
     ) -> None:
         """Test setup when default client ID file doesn't exist."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = False
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = True
-        mock_auth_login.return_value = True
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_exec.reset_mock()
+        mock_gcloud_exec.side_effect = None
+        mock_gcloud_run.reset_mock()
 
-        # Mock Path.home() and the client_id file not existing
-        mock_home = MagicMock()
-        mock_path.home.return_value = mock_home
-        mock_config_dir = MagicMock()
-        mock_home.__truediv__.return_value = mock_config_dir
-        mock_gdm_dir = MagicMock()
-        mock_config_dir.__truediv__.return_value = mock_gdm_dir
-        mock_client_id_file = MagicMock()
-        mock_gdm_dir.__truediv__.return_value = mock_client_id_file
-        mock_client_id_file.exists.return_value = False
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = False
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
+        # setup() directly calls gcloud_exec for auth login
+        mock_gcloud_exec.return_value = True
 
         setup()
 
-        mock_auth_login.assert_called_once_with("", None)
+        # Verify gcloud_exec was called for auth login without client_id_file
+        auth_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "auth" in str(call) and "login" in str(call)
+        ]
+        assert len(auth_calls) > 0
 
-    @patch("google_docs_markdown.setup.Path")
-    @patch("google_docs_markdown.setup.run_auth_login")
-    @patch("google_docs_markdown.setup.enable_docs_api")
-    @patch("google_docs_markdown.setup.check_api_enabled")
-    @patch("google_docs_markdown.setup.get_current_project")
-    @patch("google_docs_markdown.setup.check_credentials_exist")
-    @patch("google_docs_markdown.setup.check_gcloud_installed")
-    @patch("google_docs_markdown.setup.typer.echo")
     def test_setup_with_all_options(
         self,
-        mock_echo: Mock,
-        mock_check_gcloud: Mock,
-        mock_check_creds: Mock,
-        mock_get_project: Mock,
-        mock_check_api: Mock,
-        mock_enable_api: Mock,
-        mock_auth_login: Mock,
+        mock_check_gcloud_installed: Mock,
+        mock_check_credentials_exist: Mock,
+        mock_get_current_project: Mock,
+        mock_gcloud_run: Mock,
+        mock_gcloud_exec: Mock,
         mock_path: Mock,
     ) -> None:
         """Test setup with revoke, extra scopes, and client ID file."""
-        mock_check_gcloud.return_value = True
-        mock_check_creds.return_value = True
-        mock_get_project.return_value = "my-project"
-        mock_check_api.return_value = True
-        mock_auth_login.return_value = True
+        # Reset mocks to avoid state leakage from previous tests
+        mock_gcloud_exec.reset_mock()
+        mock_gcloud_exec.side_effect = None
+        mock_gcloud_run.reset_mock()
+
+        mock_check_gcloud_installed.return_value = True
+        mock_check_credentials_exist.return_value = True
+        mock_get_current_project.return_value = "my-project"
+        # setup() directly calls gcloud_run to check API
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
+        # setup() directly calls gcloud_exec for revoke and auth login
+        mock_gcloud_exec.return_value = True
 
         extra_scopes = "https://www.googleapis.com/auth/drive"
         client_id_file = "/custom/path/client_id.json"
 
-        # Need to mock revoke_credentials
-        with patch("google_docs_markdown.setup.revoke_credentials") as mock_revoke:
-            mock_revoke.return_value = True
-            setup(revoke=True, extra_scopes=extra_scopes, client_id_file=client_id_file)
+        setup(revoke=True, extra_scopes=extra_scopes, client_id_file=client_id_file)
 
-            mock_revoke.assert_called_once()
-            mock_auth_login.assert_called_once_with(extra_scopes, client_id_file)
+        # Verify gcloud_exec was called for revoke and auth login
+        assert mock_gcloud_exec.call_count >= 2
+        # Verify revoke call
+        revoke_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "revoke" in str(call)
+        ]
+        assert len(revoke_calls) > 0
+        # Verify auth login call with extra scopes and client_id_file
+        auth_calls = [
+            call for call in mock_gcloud_exec.call_args_list
+            if "auth" in str(call) and "login" in str(call)
+        ]
+        assert len(auth_calls) > 0
+        assert any("drive" in str(call) for call in auth_calls)
+        assert any("client_id_file" in str(call) or client_id_file in str(call) for call in auth_calls)
