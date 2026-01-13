@@ -1,0 +1,6 @@
+{
+  "setup-worktree": [
+    "uv sync",
+    "source .venv/bin/activate"
+  ]
+}
