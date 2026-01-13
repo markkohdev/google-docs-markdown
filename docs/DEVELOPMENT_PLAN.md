@@ -33,7 +33,7 @@ Unit tests and documentation should be written for each component and function a
    - [x] Extract document ID from URLs
    - [x] Retrieve tab information (names, IDs) for multi-tab documents
 
-2.5. **Pydantic Model Generation** (Foundational Work)
+3. **Pydantic Model Generation** (Foundational Work)
    - [ ] Create `scripts/generate_models.py` script
    - [ ] Implement parser to extract TypedDict definitions from `google-api-python-client-stubs` schemas.pyi
    - [ ] Convert TypedDict classes to Pydantic models following conversion patterns
@@ -46,7 +46,7 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Update `api_client.py` to accept Pydantic models for batch updates
    - [ ] Test API round-trip (dict → Pydantic → dict)
 
-3. **Basic Downloader (Docs → Markdown)**
+4. **Basic Downloader (Docs → Markdown)**
    - [ ] Create `google_docs_markdown/downloader.py`
    - [ ] Create `google_docs_markdown/markdown_serializer.py` implementing Visitor Pattern for Pydantic → Markdown conversion
    - [ ] Implement `MarkdownSerializer` visitor class to traverse Pydantic models
@@ -65,7 +65,7 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Ensure Location/Range objects include `tabId` when working with multi-tab documents (API client ready; objects created in later tasks)
    - [ ] Handle `segmentId` in Location/Range objects for headers/footers/footnotes (API client ready; objects created in later tasks)
 
-4. **CLI - Download Command**
+5. **CLI - Download Command**
    - [ ] Create `google_docs_markdown/cli.py` using `typer`
    - [ ] Implement `download` command
    - [ ] Support document URL/ID input
@@ -74,7 +74,7 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Add interactive prompts for missing arguments
    - [ ] Update `pyproject.toml` entry point
 
-5. **Python API - Basic Interface**
+6. **Python API - Basic Interface**
    - [ ] Create `GoogleDocMarkdown` class in `downloader.py`
    - [ ] Implement `download(document_id)` → returns dict of tab_name → markdown (all docs treated as multi-tab)
    - [ ] Implement `download_to_file(document_id, output_path)` → saves to directory
@@ -83,7 +83,7 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Implement `get_nested_tabs(document_id, tab_id)` → returns nested tabs within a tab
    - [ ] Implement `extract_document_id(url)` → static method
 
-6. **Testing**
+7. **Testing**
    - [ ] Test with example Google Doc from `example_markdown/google_doc_urls.txt`
    - [ ] Test with multi-tab Google Doc (if available)
    - [x] Create unit tests for API client (including tab detection) ✅
@@ -427,7 +427,7 @@ Unit tests and documentation should be written for each component and function a
 
 **Start with Phase 1** - Get basic download working first, including multi-tab support from the start. This provides immediate value and validates the approach. Multi-tab handling is a core requirement, not an add-on.
 
-**Important**: Before implementing the downloader (Phase 1, Task 3), complete the Pydantic model generation work (Phase 1, Task 2.5). This foundational work enables attribute-based access to API responses and provides the models needed for markdown serialization.
+**Important**: Before implementing the downloader (Phase 1, Task 4), complete the Pydantic model generation work (Phase 1, Task 3). This foundational work enables attribute-based access to API responses and provides the models needed for markdown serialization.
 
 **Then Phase 2** - Enhance download to handle complex documents.
 
@@ -503,12 +503,12 @@ This document should be used for testing throughout development.
 - ✅ Phase 1, Task 2: Google Docs API Client (with comprehensive unit tests)
 
 **In Progress:**
-- Phase 1, Task 2.5: Pydantic Model Generation (foundational work, next up)
+- Phase 1, Task 3: Pydantic Model Generation (foundational work, next up)
 
 **Remaining Phase 1 Tasks:**
-- Task 2.5: Pydantic Model Generation (foundational work)
-- Task 3: Basic Downloader (Docs → Markdown) - depends on Task 2.5
-- Task 4: CLI - Download Command
-- Task 5: Python API - Basic Interface
-- Task 6: Testing (API client tests complete; remaining tests depend on downloader and Pydantic models)
+- Task 3: Pydantic Model Generation (foundational work)
+- Task 4: Basic Downloader (Docs → Markdown) - depends on Task 3
+- Task 5: CLI - Download Command
+- Task 6: Python API - Basic Interface
+- Task 7: Testing (API client tests complete; remaining tests depend on downloader and Pydantic models)
 
