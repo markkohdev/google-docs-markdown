@@ -4,6 +4,8 @@ from typing import Annotated
 
 import typer
 
+from google_docs_markdown.api_client import GoogleDocsAPIClient
+
 app = typer.Typer(
     name="google-docs-markdown",
     help="Download and edit Google Docs as Markdown using the Google Docs API",
@@ -30,7 +32,10 @@ def download(
 ) -> None:
     """Download a Google Doc as Markdown."""
     typer.echo("Downloading a Google Doc as Markdown...")
-    raise NotImplementedError("This command is not implemented yet")
+    client = GoogleDocsAPIClient()
+    doc = client.get_document(document_url)
+    typer.echo(f"Downloaded document: {doc.get('title')}")
+    # raise NotImplementedError("This command is not implemented yet")
 
 
 @app.command("list-tabs")
@@ -89,11 +94,15 @@ def setup(
         str,
         typer.Option("--extra-scopes", help="Additional scopes to append to the required scopes (comma-separated)"),
     ] = "",
+    client_id_file: Annotated[
+        str | None,
+        typer.Option("--client-id-file", help="Path to client ID file for OAuth authentication"),
+    ] = None,
 ) -> None:
     """Set up authentication and configuration."""
     from google_docs_markdown.setup import setup as run_setup
 
-    run_setup(revoke=revoke, extra_scopes=extra_scopes)
+    run_setup(revoke=revoke, extra_scopes=extra_scopes, client_id_file=client_id_file)
 
 
 def main() -> None:

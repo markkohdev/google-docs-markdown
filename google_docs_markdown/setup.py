@@ -6,6 +6,7 @@ Handles authentication, project configuration, and API enablement.
 
 import subprocess
 import sys
+from pathlib import Path
 
 import typer
 from google.auth import default
@@ -280,11 +281,12 @@ def revoke_credentials() -> bool:
         return False
 
 
-def run_auth_login(extra_scopes: str = "") -> bool:
+def run_auth_login(extra_scopes: str = "", client_id_file: str | None = None) -> bool:
     """Run gcloud auth application-default login with required scopes.
 
     Args:
         extra_scopes: Additional comma-separated scopes to append to REQUIRED_SCOPES.
+        client_id_file: Path to client ID file for OAuth authentication.
     """
     scopes = REQUIRED_SCOPES.copy()
     if extra_scopes:
@@ -293,15 +295,21 @@ def run_auth_login(extra_scopes: str = "") -> bool:
         scopes.extend(additional)
 
     scopes_str = ",".join(scopes)
+
+    cmd = [
+        "gcloud",
+        "auth",
+        "application-default",
+        "login",
+        f"--scopes={scopes_str}",
+    ]
+
+    if client_id_file:
+        cmd.append(f"--client-id-file={client_id_file}")
+
     try:
         subprocess.run(
-            [
-                "gcloud",
-                "auth",
-                "application-default",
-                "login",
-                f"--scopes={scopes_str}",
-            ],
+            cmd,
             check=True,
             timeout=300,  # 5 minutes timeout for interactive login
         )
@@ -313,10 +321,13 @@ def run_auth_login(extra_scopes: str = "") -> bool:
         )
         return False
     except subprocess.CalledProcessError as e:
+        cmd_str = f"gcloud auth application-default login --scopes={scopes_str}"
+        if client_id_file:
+            cmd_str += f" --client-id-file={client_id_file}"
         typer.echo(
             f"❌ Error during authentication: {e}\n"
             "Authentication may have been cancelled or failed.\n"
-            f"Try running manually: gcloud auth application-default login --scopes={scopes_str}",
+            f"Try running manually: {cmd_str}",
             err=True,
         )
         return False
@@ -328,7 +339,7 @@ def run_auth_login(extra_scopes: str = "") -> bool:
         return False
 
 
-def setup(revoke: bool = False, extra_scopes: str = "") -> None:
+def setup(revoke: bool = False, extra_scopes: str = "", client_id_file: str | None = None) -> None:
     """
     Set up authentication and configuration for Google Docs Markdown tool.
 
@@ -343,7 +354,15 @@ def setup(revoke: bool = False, extra_scopes: str = "") -> None:
     Args:
         revoke: If True, revoke existing Application Default Credentials before setting up new ones.
         extra_scopes: Additional comma-separated scopes to append to REQUIRED_SCOPES.
+        client_id_file: Path to client ID file for OAuth authentication. If not provided,
+                       checks for file at ~/.config/google-docs-markdown/client_id_file.json.
     """
+    # Check for client ID file at default location if not provided
+    if not client_id_file:
+        default_client_id_path = Path.home() / ".config" / "google-docs-markdown" / "client_id_file.json"
+        if default_client_id_path.exists():
+            client_id_file = str(default_client_id_path)
+            typer.echo(f"📄 Found client ID file at: {client_id_file}\n")
     typer.echo("🔧 Setting up Google Docs Markdown tool...\n")
 
     # Step 1: Check if gcloud is installed
@@ -379,8 +398,10 @@ def setup(revoke: bool = False, extra_scopes: str = "") -> None:
         typer.echo("Setting up Application Default Credentials...")
         if extra_scopes:
             typer.echo(f"Including additional scopes: {extra_scopes}")
+        if client_id_file:
+            typer.echo(f"Using client ID file: {client_id_file}")
         typer.echo("This will open a browser window for authentication...")
-        if not run_auth_login(extra_scopes):
+        if not run_auth_login(extra_scopes, client_id_file):
             scopes = REQUIRED_SCOPES.copy()
             if extra_scopes:
                 additional = [s.strip() for s in extra_scopes.split(",") if s.strip()]

@@ -23,7 +23,8 @@ dev = [
 
 [project.scripts]
 google-docs-markdown = "google_docs_markdown.cli:main"
-extract-images = "google_docs_markdown.image_extractor:main"
+# Alias for convenience
+gdm = "google_docs_markdown.cli:main"
 
 [build-system]
 requires = ["setuptools>=61.0", "wheel"]
