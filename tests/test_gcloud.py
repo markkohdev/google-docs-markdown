@@ -111,9 +111,7 @@ class TestGcloudRun:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_file_not_found_with_raise_exception_true(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_file_not_found_with_raise_exception_true(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test FileNotFoundError with raise_exception=True (default)."""
         mock_run.side_effect = FileNotFoundError("gcloud not found")
 
@@ -134,9 +132,7 @@ class TestGcloudRun:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_file_not_found_with_raise_exception_false(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_file_not_found_with_raise_exception_false(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test FileNotFoundError with raise_exception=False."""
         mock_run.side_effect = FileNotFoundError("gcloud not found")
 
@@ -154,13 +150,9 @@ class TestGcloudRun:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_called_process_error_with_raise_exception_true(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_called_process_error_with_raise_exception_true(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test CalledProcessError with raise_exception=True (default)."""
-        error = subprocess.CalledProcessError(
-            returncode=1, cmd=["gcloud", "config", "get-value", "project"]
-        )
+        error = subprocess.CalledProcessError(returncode=1, cmd=["gcloud", "config", "get-value", "project"])
         mock_run.side_effect = error
 
         with pytest.raises(GCloudException) as exc_info:
@@ -179,13 +171,9 @@ class TestGcloudRun:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_called_process_error_with_raise_exception_false(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_called_process_error_with_raise_exception_false(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test CalledProcessError with raise_exception=False."""
-        error = subprocess.CalledProcessError(
-            returncode=1, cmd=["gcloud", "config", "get-value", "project"]
-        )
+        error = subprocess.CalledProcessError(returncode=1, cmd=["gcloud", "config", "get-value", "project"])
         mock_run.side_effect = error
 
         result = gcloud_run(
@@ -202,13 +190,9 @@ class TestGcloudRun:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_timeout_expired_with_raise_exception_true(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_timeout_expired_with_raise_exception_true(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test TimeoutExpired with raise_exception=True (default)."""
-        error = subprocess.TimeoutExpired(
-            cmd=["gcloud", "projects", "list"], timeout=30
-        )
+        error = subprocess.TimeoutExpired(cmd=["gcloud", "projects", "list"], timeout=30)
         mock_run.side_effect = error
 
         with pytest.raises(GCloudException) as exc_info:
@@ -228,13 +212,9 @@ class TestGcloudRun:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_timeout_expired_with_raise_exception_false(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_timeout_expired_with_raise_exception_false(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test TimeoutExpired with raise_exception=False."""
-        error = subprocess.TimeoutExpired(
-            cmd=["gcloud", "projects", "list"], timeout=30
-        )
+        error = subprocess.TimeoutExpired(cmd=["gcloud", "projects", "list"], timeout=30)
         mock_run.side_effect = error
 
         result = gcloud_run(
@@ -304,9 +284,7 @@ class TestGcloudExec:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_file_not_found_with_raise_exception_true(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_file_not_found_with_raise_exception_true(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test FileNotFoundError with raise_exception=True (default)."""
         mock_run.side_effect = FileNotFoundError("gcloud not found")
 
@@ -326,9 +304,7 @@ class TestGcloudExec:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_file_not_found_with_raise_exception_false(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_file_not_found_with_raise_exception_false(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test FileNotFoundError with raise_exception=False."""
         mock_run.side_effect = FileNotFoundError("gcloud not found")
 
@@ -346,13 +322,9 @@ class TestGcloudExec:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_called_process_error_with_raise_exception_true(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_called_process_error_with_raise_exception_true(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test CalledProcessError with raise_exception=True (default)."""
-        error = subprocess.CalledProcessError(
-            returncode=1, cmd=["gcloud", "config", "set", "project", "my-project"]
-        )
+        error = subprocess.CalledProcessError(returncode=1, cmd=["gcloud", "config", "set", "project", "my-project"])
         mock_run.side_effect = error
 
         with pytest.raises(GCloudException) as exc_info:
@@ -371,13 +343,9 @@ class TestGcloudExec:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_called_process_error_with_raise_exception_false(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_called_process_error_with_raise_exception_false(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test CalledProcessError with raise_exception=False."""
-        error = subprocess.CalledProcessError(
-            returncode=1, cmd=["gcloud", "config", "set", "project", "my-project"]
-        )
+        error = subprocess.CalledProcessError(returncode=1, cmd=["gcloud", "config", "set", "project", "my-project"])
         mock_run.side_effect = error
 
         result = gcloud_exec(
@@ -394,13 +362,9 @@ class TestGcloudExec:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_timeout_expired_with_raise_exception_true(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_timeout_expired_with_raise_exception_true(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test TimeoutExpired with raise_exception=True (default)."""
-        error = subprocess.TimeoutExpired(
-            cmd=["gcloud", "services", "enable", "docs.googleapis.com"], timeout=60
-        )
+        error = subprocess.TimeoutExpired(cmd=["gcloud", "services", "enable", "docs.googleapis.com"], timeout=60)
         mock_run.side_effect = error
 
         with pytest.raises(GCloudException) as exc_info:
@@ -425,13 +389,9 @@ class TestGcloudExec:
 
     @patch("google_docs_markdown.gcloud.subprocess.run")
     @patch("google_docs_markdown.gcloud.typer.echo")
-    def test_timeout_expired_with_raise_exception_false(
-        self, mock_echo: Mock, mock_run: Mock
-    ) -> None:
+    def test_timeout_expired_with_raise_exception_false(self, mock_echo: Mock, mock_run: Mock) -> None:
         """Test TimeoutExpired with raise_exception=False."""
-        error = subprocess.TimeoutExpired(
-            cmd=["gcloud", "services", "enable", "docs.googleapis.com"], timeout=60
-        )
+        error = subprocess.TimeoutExpired(cmd=["gcloud", "services", "enable", "docs.googleapis.com"], timeout=60)
         mock_run.side_effect = error
 
         result = gcloud_exec(
@@ -457,4 +417,3 @@ class TestGcloudExec:
         mock_run.assert_called_once()
         call_args = mock_run.call_args
         assert call_args[0][0] == ["gcloud", "config", "set", "project", "my-project"]
-

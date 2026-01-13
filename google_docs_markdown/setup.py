@@ -210,8 +210,7 @@ def setup(revoke: bool = False, extra_scopes: str = "", client_id_file: str | No
             typer.echo("✅ Application Default Credentials revoked\n")
         except GCloudException as e:
             typer.echo(
-                f"⚠️  Warning: Failed to revoke credentials: {e.message}\n"
-                "Continuing with setup...\n",
+                f"⚠️  Warning: Failed to revoke credentials: {e.message}\nContinuing with setup...\n",
                 err=True,
             )
 

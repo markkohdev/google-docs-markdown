@@ -116,10 +116,7 @@ def gcloud_run(
         typer.echo(error_message, err=True)
         return None
     except subprocess.TimeoutExpired as e:
-        error_message = (
-            f"❌ Error: gcloud command timed out while {operation}.\n"
-            f"Command: {' '.join(full_command)}"
-        )
+        error_message = f"❌ Error: gcloud command timed out while {operation}.\nCommand: {' '.join(full_command)}"
         if raise_exception:
             raise GCloudException(
                 message=error_message,
@@ -208,10 +205,7 @@ def gcloud_exec(
         typer.echo(error_message, err=True)
         return False
     except subprocess.TimeoutExpired as e:
-        error_message = (
-            f"❌ Error: gcloud command timed out while {operation}.\n"
-            f"Command: {' '.join(full_command)}"
-        )
+        error_message = f"❌ Error: gcloud command timed out while {operation}.\nCommand: {' '.join(full_command)}"
         if raise_exception:
             raise GCloudException(
                 message=error_message,
@@ -221,4 +215,3 @@ def gcloud_exec(
             ) from e
         typer.echo(error_message, err=True)
         return False
-

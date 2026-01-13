@@ -528,6 +528,7 @@ class TestSetup:
         mock_check_credentials_exist.return_value = False
         # setup() directly calls gcloud_exec for auth login, which raises GCloudException on failure
         from google_docs_markdown.gcloud import GCloudException
+
         mock_gcloud_exec.side_effect = GCloudException(
             message="Failed to authenticate",
             operation="running authentication",
@@ -561,7 +562,8 @@ class TestSetup:
 
         # Verify gcloud_exec was called to set project
         set_project_calls = [
-            call for call in mock_gcloud_exec.call_args_list
+            call
+            for call in mock_gcloud_exec.call_args_list
             if "config" in str(call) and "set" in str(call) and "project" in str(call)
         ]
         assert len(set_project_calls) > 0
@@ -591,7 +593,8 @@ class TestSetup:
 
         # Verify gcloud_exec was called to set project
         set_project_calls = [
-            call for call in mock_gcloud_exec.call_args_list
+            call
+            for call in mock_gcloud_exec.call_args_list
             if "config" in str(call) and "set" in str(call) and "project" in str(call)
         ]
         assert len(set_project_calls) > 0
@@ -655,8 +658,7 @@ class TestSetup:
 
         # Verify gcloud_exec was called to enable API
         enable_api_calls = [
-            call for call in mock_gcloud_exec.call_args_list
-            if "services" in str(call) and "enable" in str(call)
+            call for call in mock_gcloud_exec.call_args_list if "services" in str(call) and "enable" in str(call)
         ]
         assert len(enable_api_calls) > 0
 
@@ -685,6 +687,7 @@ class TestSetup:
         mock_gcloud_run.return_value = ""
         # setup() directly calls gcloud_exec to enable API, which raises GCloudException on failure
         from google_docs_markdown.gcloud import GCloudException
+
         mock_gcloud_exec.side_effect = GCloudException(
             message="Failed to enable API",
             operation="enabling Google Docs API",
@@ -720,16 +723,10 @@ class TestSetup:
         setup(revoke=True)
 
         # Verify gcloud_exec was called for revoke
-        revoke_calls = [
-            call for call in mock_gcloud_exec.call_args_list
-            if "revoke" in str(call)
-        ]
+        revoke_calls = [call for call in mock_gcloud_exec.call_args_list if "revoke" in str(call)]
         assert len(revoke_calls) > 0
         # Verify gcloud_exec was called for auth login
-        auth_calls = [
-            call for call in mock_gcloud_exec.call_args_list
-            if "auth" in str(call) and "login" in str(call)
-        ]
+        auth_calls = [call for call in mock_gcloud_exec.call_args_list if "auth" in str(call) and "login" in str(call)]
         assert len(auth_calls) > 0
 
     def test_setup_with_revoke_failure(
@@ -748,6 +745,7 @@ class TestSetup:
         mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
         # setup() directly calls gcloud_exec - first call (revoke) raises exception, second (auth) succeeds
         from google_docs_markdown.gcloud import GCloudException
+
         mock_gcloud_exec.side_effect = [
             GCloudException(
                 message="Failed to revoke",
@@ -789,10 +787,7 @@ class TestSetup:
         setup(extra_scopes=extra_scopes)
 
         # Verify gcloud_exec was called for auth login with extra scopes
-        auth_calls = [
-            call for call in mock_gcloud_exec.call_args_list
-            if "auth" in str(call) and "login" in str(call)
-        ]
+        auth_calls = [call for call in mock_gcloud_exec.call_args_list if "auth" in str(call) and "login" in str(call)]
         assert len(auth_calls) > 0
         # Verify extra scopes are in the call
         assert any("drive" in str(call) for call in auth_calls)
@@ -825,10 +820,7 @@ class TestSetup:
         # Verify gcloud_exec was called for revoke and auth login
         assert mock_gcloud_exec.call_count >= 2
         # Verify extra scopes are in the auth call
-        auth_calls = [
-            call for call in mock_gcloud_exec.call_args_list
-            if "auth" in str(call) and "login" in str(call)
-        ]
+        auth_calls = [call for call in mock_gcloud_exec.call_args_list if "auth" in str(call) and "login" in str(call)]
         assert any("drive" in str(call) or "spreadsheets" in str(call) for call in auth_calls)
 
     def test_setup_with_explicit_client_id_file(
@@ -859,10 +851,7 @@ class TestSetup:
         setup(client_id_file=client_id_file)
 
         # Verify gcloud_exec was called for auth login with client_id_file
-        auth_calls = [
-            call for call in mock_gcloud_exec.call_args_list
-            if "auth" in str(call) and "login" in str(call)
-        ]
+        auth_calls = [call for call in mock_gcloud_exec.call_args_list if "auth" in str(call) and "login" in str(call)]
         assert len(auth_calls) > 0
         # Verify client_id_file is in the call
         assert any("client_id_file" in str(call) or client_id_file in str(call) for call in auth_calls)
@@ -895,10 +884,7 @@ class TestSetup:
         setup()
 
         # Verify gcloud_exec was called for auth login with client_id_file
-        auth_calls = [
-            call for call in mock_gcloud_exec.call_args_list
-            if "auth" in str(call) and "login" in str(call)
-        ]
+        auth_calls = [call for call in mock_gcloud_exec.call_args_list if "auth" in str(call) and "login" in str(call)]
         assert len(auth_calls) > 0
         # Verify client_id_file path is in the call
         assert any("client_id_file" in str(call) or "client_id_file.json" in str(call) for call in auth_calls)
@@ -929,10 +915,7 @@ class TestSetup:
         setup()
 
         # Verify gcloud_exec was called for auth login without client_id_file
-        auth_calls = [
-            call for call in mock_gcloud_exec.call_args_list
-            if "auth" in str(call) and "login" in str(call)
-        ]
+        auth_calls = [call for call in mock_gcloud_exec.call_args_list if "auth" in str(call) and "login" in str(call)]
         assert len(auth_calls) > 0
 
     def test_setup_with_all_options(
@@ -966,16 +949,10 @@ class TestSetup:
         # Verify gcloud_exec was called for revoke and auth login
         assert mock_gcloud_exec.call_count >= 2
         # Verify revoke call
-        revoke_calls = [
-            call for call in mock_gcloud_exec.call_args_list
-            if "revoke" in str(call)
-        ]
+        revoke_calls = [call for call in mock_gcloud_exec.call_args_list if "revoke" in str(call)]
         assert len(revoke_calls) > 0
         # Verify auth login call with extra scopes and client_id_file
-        auth_calls = [
-            call for call in mock_gcloud_exec.call_args_list
-            if "auth" in str(call) and "login" in str(call)
-        ]
+        auth_calls = [call for call in mock_gcloud_exec.call_args_list if "auth" in str(call) and "login" in str(call)]
         assert len(auth_calls) > 0
         assert any("drive" in str(call) for call in auth_calls)
         assert any("client_id_file" in str(call) or client_id_file in str(call) for call in auth_calls)
