@@ -35,7 +35,6 @@ def download(
     client = GoogleDocsAPIClient()
     doc = client.get_document(document_url)
     typer.echo(f"Downloaded document: {doc.get('title')}")
-    # raise NotImplementedError("This command is not implemented yet")
 
 
 @app.command("list-tabs")

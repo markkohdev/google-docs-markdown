@@ -6,7 +6,6 @@ Tests authentication checks, project configuration, and API enablement.
 
 from __future__ import annotations
 
-import subprocess
 from unittest.mock import MagicMock, Mock, patch
 
 from google.auth.exceptions import DefaultCredentialsError
@@ -27,38 +26,24 @@ from google_docs_markdown.setup import (
 )
 
 
-class MockCalledProcessError(subprocess.CalledProcessError):
-    """Mocked CalledProcessError."""
-
-    def __init__(self, message: str) -> None:
-        super().__init__(returncode=1, cmd=[], output=message.encode())
-
-
 class TestCheckGcloudInstalled:
     """Test gcloud installation check."""
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_gcloud_installed(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_gcloud_installed(self, mock_gcloud_run: Mock) -> None:
         """Test when gcloud is installed."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_gcloud_run.return_value = "gcloud version output"
         assert check_gcloud_installed() is True
-        mock_run.assert_called_once_with(
-            ["gcloud", "--version"],
-            capture_output=True,
-            check=True,
+        mock_gcloud_run.assert_called_once_with(
+            ["--version"],
+            operation="checking gcloud installation",
             timeout=10,
         )
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_gcloud_not_installed_file_not_found(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_gcloud_not_installed(self, mock_gcloud_run: Mock) -> None:
         """Test when gcloud is not found."""
-        mock_run.side_effect = FileNotFoundError()
-        assert check_gcloud_installed() is False
-
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_gcloud_not_installed_called_process_error(self, mock_run: Mock) -> None:
-        """Test when gcloud command fails."""
-        mock_run.side_effect = MockCalledProcessError("Command failed: gcloud not installed")
+        mock_gcloud_run.return_value = None
         assert check_gcloud_installed() is False
 
 
@@ -82,176 +67,158 @@ class TestCheckCredentialsExist:
     @patch("google_docs_markdown.setup.default")
     def test_credentials_error(self, mock_default: Mock) -> None:
         """Test when credentials check raises other exception."""
-        mock_default.side_effect = MockCalledProcessError("Command failed: Credentials error")
+        mock_default.side_effect = Exception("Credentials error")
         assert check_credentials_exist() is False
 
 
 class TestGetCurrentProject:
     """Test getting current project."""
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_get_project_success(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_get_project_success(self, mock_gcloud_run: Mock) -> None:
         """Test successfully getting project."""
-        mock_result = Mock()
-        mock_result.stdout = "my-project-id\n"
-        mock_run.return_value = mock_result
+        mock_gcloud_run.return_value = "my-project-id"
         assert get_current_project() == "my-project-id"
-        mock_run.assert_called_once_with(
-            ["gcloud", "config", "get-value", "project"],
-            capture_output=True,
-            text=True,
-            check=True,
+        mock_gcloud_run.assert_called_once_with(
+            ["config", "get-value", "project"],
+            operation="getting current default GCP project",
             timeout=10,
         )
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_get_project_empty(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_get_project_empty(self, mock_gcloud_run: Mock) -> None:
         """Test when project is not set."""
-        mock_result = Mock()
-        mock_result.stdout = "\n"
-        mock_run.return_value = mock_result
+        mock_gcloud_run.return_value = ""
         assert get_current_project() is None
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_get_project_error(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_get_project_error(self, mock_gcloud_run: Mock) -> None:
         """Test when getting project fails."""
-        mock_run.side_effect = MockCalledProcessError("Command failed: Failed to get project")
+        mock_gcloud_run.return_value = None
         assert get_current_project() is None
 
 
 class TestListAvailableProjects:
     """Test listing available projects."""
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_list_projects_success(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_list_projects_success(self, mock_gcloud_run: Mock) -> None:
         """Test successfully listing projects."""
-        mock_result = Mock()
-        mock_result.stdout = "project-1\nproject-2\nproject-3\n"
-        mock_run.return_value = mock_result
+        mock_gcloud_run.return_value = "project-1\nproject-2\nproject-3"
         projects = list_available_projects()
         assert projects == ["project-1", "project-2", "project-3"]
-        mock_run.assert_called_once_with(
-            ["gcloud", "projects", "list", "--format=value(projectId)"],
-            capture_output=True,
-            text=True,
-            check=True,
+        mock_gcloud_run.assert_called_once_with(
+            ["projects", "list", "--format=value(projectId)"],
+            operation="listing available GCP projects",
             timeout=30,
         )
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_list_projects_empty(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_list_projects_empty(self, mock_gcloud_run: Mock) -> None:
         """Test when no projects are available."""
-        mock_result = Mock()
-        mock_result.stdout = "\n"
-        mock_run.return_value = mock_result
+        mock_gcloud_run.return_value = ""
         assert list_available_projects() == []
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_list_projects_error(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_list_projects_error(self, mock_gcloud_run: Mock) -> None:
         """Test when listing projects fails."""
-        mock_run.side_effect = MockCalledProcessError("Command failed: Failed to list projects")
+        mock_gcloud_run.return_value = None
         assert list_available_projects() == []
 
 
 class TestSetProject:
     """Test setting project."""
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_set_project_success(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_set_project_success(self, mock_gcloud_exec: Mock) -> None:
         """Test successfully setting project."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_gcloud_exec.return_value = True
         assert set_project("my-project-id") is True
-        mock_run.assert_called_once_with(
-            ["gcloud", "config", "set", "project", "my-project-id"],
-            check=True,
+        mock_gcloud_exec.assert_called_once_with(
+            ["config", "set", "project", "my-project-id"],
+            operation="setting default GCP project to 'my-project-id'",
             timeout=10,
         )
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_set_project_error(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_set_project_error(self, mock_gcloud_exec: Mock) -> None:
         """Test when setting project fails."""
-        mock_run.side_effect = MockCalledProcessError("Command failed: Failed to set project")
+        mock_gcloud_exec.return_value = False
         assert set_project("my-project-id") is False
 
 
 class TestCheckApiEnabled:
     """Test checking if API is enabled."""
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_api_enabled(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_api_enabled(self, mock_gcloud_run: Mock) -> None:
         """Test when API is enabled."""
-        mock_result = Mock()
-        mock_result.stdout = f"projects/my-project/services/{DOCS_API_SERVICE}\n"
-        mock_run.return_value = mock_result
+        mock_gcloud_run.return_value = f"projects/my-project/services/{DOCS_API_SERVICE}"
         assert check_api_enabled("my-project") is True
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_api_not_enabled(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_api_not_enabled(self, mock_gcloud_run: Mock) -> None:
         """Test when API is not enabled."""
-        mock_result = Mock()
-        mock_result.stdout = "\n"
-        mock_run.return_value = mock_result
+        mock_gcloud_run.return_value = ""
         assert check_api_enabled("my-project") is False
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_check_api_error(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_run")
+    def test_check_api_error(self, mock_gcloud_run: Mock) -> None:
         """Test when checking API fails."""
-        mock_run.side_effect = MockCalledProcessError("Command failed: API check error")
+        mock_gcloud_run.return_value = None
         assert check_api_enabled("my-project") is False
 
 
 class TestEnableDocsApi:
     """Test enabling Docs API."""
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_enable_api_success(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_enable_api_success(self, mock_gcloud_exec: Mock) -> None:
         """Test successfully enabling API."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_gcloud_exec.return_value = True
         assert enable_docs_api("my-project") is True
-        mock_run.assert_called_once_with(
+        mock_gcloud_exec.assert_called_once_with(
             [
-                "gcloud",
                 "services",
                 "enable",
                 DOCS_API_SERVICE,
                 "--project=my-project",
             ],
-            check=True,
+            operation="enabling Google Docs API for project 'my-project'",
             timeout=60,
         )
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_enable_api_error(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_enable_api_error(self, mock_gcloud_exec: Mock) -> None:
         """Test when enabling API fails."""
-        mock_run.side_effect = MockCalledProcessError("Command failed: Failed to enable API")
+        mock_gcloud_exec.return_value = False
         assert enable_docs_api("my-project") is False
 
 
 class TestRunAuthLogin:
     """Test running auth login."""
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_auth_login_success(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_auth_login_success(self, mock_gcloud_exec: Mock) -> None:
         """Test successfully running auth login."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_gcloud_exec.return_value = True
         assert run_auth_login() is True
         scopes_str = ",".join(REQUIRED_SCOPES)
-        mock_run.assert_called_once_with(
+        mock_gcloud_exec.assert_called_once_with(
             [
-                "gcloud",
                 "auth",
                 "application-default",
                 "login",
                 f"--scopes={scopes_str}",
             ],
-            check=True,
+            operation="running authentication",
             timeout=300,
         )
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_auth_login_with_extra_scopes(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_auth_login_with_extra_scopes(self, mock_gcloud_exec: Mock) -> None:
         """Test auth login with extra scopes."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_gcloud_exec.return_value = True
         extra_scopes = "https://www.googleapis.com/auth/drive,https://www.googleapis.com/auth/spreadsheets"
         assert run_auth_login(extra_scopes) is True
 
@@ -260,22 +227,21 @@ class TestRunAuthLogin:
             "https://www.googleapis.com/auth/spreadsheets",
         ]
         scopes_str = ",".join(expected_scopes)
-        mock_run.assert_called_once_with(
+        mock_gcloud_exec.assert_called_once_with(
             [
-                "gcloud",
                 "auth",
                 "application-default",
                 "login",
                 f"--scopes={scopes_str}",
             ],
-            check=True,
+            operation="running authentication",
             timeout=300,
         )
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_auth_login_with_extra_scopes_whitespace(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_auth_login_with_extra_scopes_whitespace(self, mock_gcloud_exec: Mock) -> None:
         """Test auth login with extra scopes containing whitespace."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_gcloud_exec.return_value = True
         extra_scopes = "  https://www.googleapis.com/auth/drive  ,  https://www.googleapis.com/auth/spreadsheets  "
         assert run_auth_login(extra_scopes) is True
 
@@ -284,65 +250,62 @@ class TestRunAuthLogin:
             "https://www.googleapis.com/auth/spreadsheets",
         ]
         scopes_str = ",".join(expected_scopes)
-        mock_run.assert_called_once_with(
+        mock_gcloud_exec.assert_called_once_with(
             [
-                "gcloud",
                 "auth",
                 "application-default",
                 "login",
                 f"--scopes={scopes_str}",
             ],
-            check=True,
+            operation="running authentication",
             timeout=300,
         )
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_auth_login_error(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_auth_login_error(self, mock_gcloud_exec: Mock) -> None:
         """Test when auth login fails."""
-        mock_run.side_effect = MockCalledProcessError("Command failed: Auth login failed")
+        mock_gcloud_exec.return_value = False
         assert run_auth_login() is False
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_auth_login_with_client_id_file(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_auth_login_with_client_id_file(self, mock_gcloud_exec: Mock) -> None:
         """Test auth login with client ID file."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_gcloud_exec.return_value = True
         client_id_file = "/path/to/client_id.json"
         assert run_auth_login(client_id_file=client_id_file) is True
 
         scopes_str = ",".join(REQUIRED_SCOPES)
-        mock_run.assert_called_once_with(
+        mock_gcloud_exec.assert_called_once_with(
             [
-                "gcloud",
                 "auth",
                 "application-default",
                 "login",
                 f"--scopes={scopes_str}",
                 f"--client-id-file={client_id_file}",
             ],
-            check=True,
+            operation="running authentication",
             timeout=300,
         )
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_auth_login_with_extra_scopes_and_client_id_file(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_auth_login_with_extra_scopes_and_client_id_file(self, mock_gcloud_exec: Mock) -> None:
         """Test auth login with both extra scopes and client ID file."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_gcloud_exec.return_value = True
         extra_scopes = "https://www.googleapis.com/auth/drive"
         client_id_file = "/path/to/client_id.json"
         assert run_auth_login(extra_scopes=extra_scopes, client_id_file=client_id_file) is True
 
         expected_scopes = REQUIRED_SCOPES + ["https://www.googleapis.com/auth/drive"]
         scopes_str = ",".join(expected_scopes)
-        mock_run.assert_called_once_with(
+        mock_gcloud_exec.assert_called_once_with(
             [
-                "gcloud",
                 "auth",
                 "application-default",
                 "login",
                 f"--scopes={scopes_str}",
                 f"--client-id-file={client_id_file}",
             ],
-            check=True,
+            operation="running authentication",
             timeout=300,
         )
 
@@ -350,38 +313,33 @@ class TestRunAuthLogin:
 class TestRevokeCredentials:
     """Test revoking credentials."""
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_revoke_success(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_revoke_success(self, mock_gcloud_exec: Mock) -> None:
         """Test successfully revoking credentials."""
-        mock_run.return_value = Mock(returncode=0)
+        mock_gcloud_exec.return_value = True
         assert revoke_credentials() is True
-        mock_run.assert_called_once_with(
-            [
-                "gcloud",
-                "auth",
-                "application-default",
-                "revoke",
-            ],
-            check=True,
+        mock_gcloud_exec.assert_called_once_with(
+            ["auth", "application-default", "revoke"],
+            operation="revoking Application Default Credentials",
             timeout=30,
         )
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_revoke_not_installed(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_revoke_not_installed(self, mock_gcloud_exec: Mock) -> None:
         """Test when gcloud is not installed."""
-        mock_run.side_effect = FileNotFoundError()
+        mock_gcloud_exec.return_value = False
         assert revoke_credentials() is False
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_revoke_error(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_revoke_error(self, mock_gcloud_exec: Mock) -> None:
         """Test when revoke fails."""
-        mock_run.side_effect = MockCalledProcessError("Command failed: Revoke failed")
+        mock_gcloud_exec.return_value = False
         assert revoke_credentials() is False
 
-    @patch("google_docs_markdown.setup.subprocess.run")
-    def test_revoke_timeout(self, mock_run: Mock) -> None:
+    @patch("google_docs_markdown.setup.gcloud_exec")
+    def test_revoke_timeout(self, mock_gcloud_exec: Mock) -> None:
         """Test when revoke times out."""
-        mock_run.side_effect = subprocess.TimeoutExpired(cmd=[], timeout=30)
+        mock_gcloud_exec.return_value = False
         assert revoke_credentials() is False
 
 

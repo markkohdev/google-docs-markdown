@@ -16,11 +16,6 @@ from google_docs_markdown import cli
 class TestCLICommands:
     """Test that CLI commands exist and are callable."""
 
-    def test_download_command_exists(self) -> None:
-        """Test that download command exists and raises NotImplementedError."""
-        with raises(NotImplementedError, match="This command is not implemented yet"):
-            cli.download(document_url="test-doc-id")
-
     def test_list_tabs_command_exists(self) -> None:
         """Test that list-tabs command exists and raises NotImplementedError."""
         with raises(NotImplementedError, match="This command is not implemented yet"):
