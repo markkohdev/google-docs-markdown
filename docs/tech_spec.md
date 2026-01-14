@@ -1,8 +1,8 @@
 # Google Docs Markdown - Technical Specification
 
-**Document Version:** 1.1.0  
+**Document Version:** 1.2.0  
 **Date:** 2026-01-08  
-**Last Updated:** 2026-01-08  
+**Last Updated:** 2026-01-08 (Updated to reflect Pydantic models approach)  
 **Authors:** Mark Koh  
 **Status:** Draft
 
@@ -115,7 +115,7 @@ The tool is organized into several distinct components that work together to pro
 - **Uploader**: Converts Markdown to Google Docs API batch update requests
 - **Diff Engine**: Compares Markdown content with Google Docs content and generates minimal update operations
 - **Image Manager**: Extracts images from documents, uploads to storage, manages local/public URL mapping
-- **Data Models**: Type-hinted TypedDict representations of Google Docs API response objects using `google-api-python-client-stubs` for type safety and IDE support
+- **Data Models**: Pydantic models representing Google Docs API response objects, enabling attribute-based access (`doc.title`) and runtime validation
 
 ## 5. Detailed Design
 
@@ -149,7 +149,7 @@ The diff engine is critical for efficient updates and conflict resolution:
 - **Diff Algorithm**: 
   - Convert both Markdown and Google Docs content to a normalized intermediate representation
   - Use appropriate diffing algorithms (e.g., Myers diff algorithm) to identify changes
-  - For Google Docs API objects, leverage TypedDict comparison capabilities for efficient structural diffing
+  - For Google Docs API objects, leverage Pydantic model comparison capabilities for efficient structural diffing
   - Generate minimal set of update operations needed to transform online content to match local content
 
 - **Conflict Handling**:
@@ -180,26 +180,35 @@ The diff engine is critical for efficient updates and conflict resolution:
 
 ### 5.4 Data Models
 
-- **Purpose**: Use Google Docs API response objects directly as TypedDicts with type hints from `google-api-python-client-stubs`
+- **Purpose**: Use Pydantic models to represent Google Docs API response objects, enabling attribute-based access (`doc.title` instead of `doc.get("title")`) and runtime validation
+
 - **Benefits**:
-  - Type safety and IDE support via type hints (even though types aren't available at runtime)
-  - No conversion overhead - work directly with API response objects
-  - TypedDict comparison enables efficient diffing strategies
-  - Reduced code maintenance (no need to maintain parallel dataclass structures)
+  - **Better Developer Experience**: Attribute access (`doc.title`) instead of dictionary access (`doc.get("title")`)
+  - **Runtime Validation**: Pydantic validates API responses at runtime, catching schema mismatches early
+  - **Type Safety**: Full type checking support with IDE autocomplete
+  - **Flexibility**: Easy to add computed properties, validation logic, and helper methods
+  - **Serialization**: Built-in JSON/dict conversion for API compatibility
+  - **Model Comparison**: Pydantic models enable efficient structural diffing strategies
 
 - **Implementation Strategy**:
-  - Import type hints from `google-api-python-client-stubs` using `TYPE_CHECKING` (as demonstrated in `api_client.py`)
-  - Use `from __future__ import annotations` at the top of files to enable forward references
-  - Type hint API response objects using types like `Document`, `DocumentTab`, `Paragraph`, `Table`, etc. from `googleapiclient._apis.docs.v1`
-  - Work directly with the TypedDict objects returned by the API client
-  - For markdown conversion, dataclasses may be created if needed for intermediate representation, but this is optional and not prescribed
+  - **Model Generation**: Automatically generate all Pydantic models from `google-api-python-client-stubs` using a generation script (`scripts/generate_models.py`)
+  - **Model Organization**: Organize models in `google_docs_markdown/models/` module (document.py, elements.py, styles.py, etc.)
+  - **API Integration**: Convert API dict responses to Pydantic models using `model_validate()`, convert back to dicts using `model_dump(exclude_none=True)`
+  - **Base Configuration**: All models inherit from `GoogleDocsBaseModel` with shared Pydantic configuration
+  - **Field Names**: Preserve camelCase field names to match API exactly (e.g., `documentId`, `namedStyleType`)
 
 - **Key Types**:
   - `Document` - Container for all tabs in a document
   - `DocumentTab` - Fundamental document object representing a single tab (can contain both content and child tabs)
-  - Other API types (`Paragraph`, `Table`, `TextRun`, etc.) are used as needed for type hints
+  - `Body` - Document body containing structural elements
+  - `Paragraph`, `Table`, `TextRun`, etc. - Element types used throughout the document structure
 
-- **Note**: These types are only available for type checking and IDE support. At runtime, the API returns regular Python dictionaries (TypedDicts), which can be compared directly for diffing purposes.
+- **Markdown Conversion**:
+  - **Serialization (Pydantic → Markdown)**: Use Visitor Pattern to traverse Pydantic models and build Markdown strings directly (no markdown library needed)
+  - **Deserialization (Markdown → Pydantic)**: Use `markdown-it-py` to parse Markdown into tokens, then convert tokens to Pydantic models
+  - See `docs/PYDANTIC_STRATEGY.md` for detailed implementation patterns
+
+- **Note**: Pydantic models provide both type checking and runtime validation. API responses are converted to Pydantic models immediately upon receipt, enabling attribute access throughout the codebase.
 
 ### 5.5 Image Management Workflow
 

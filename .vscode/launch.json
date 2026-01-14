@@ -54,6 +54,18 @@
   ],
   "configurations": [
     {
+      "name": "Download with CLI",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/google_docs_markdown/cli.py",
+      "args": [
+        "download",
+        "--document-url=${input:googleDocUrl}"
+      ],
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
       "name": "Download Test Document",
       "type": "debugpy",
       "request": "launch",
