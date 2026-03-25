@@ -1,19 +1,27 @@
 """
-Google Docs API Client
+Google Docs API Transport
 
-Handles authentication, API requests, and basic calls to the Google Docs API.
+Low-level transport layer that handles authentication, API requests, and basic calls
+to the Google Docs API. Returns raw dicts as received from the API.
 """
 
 from __future__ import annotations
 
 import re
+import typing
 from dataclasses import dataclass
 
 from google.auth.credentials import Credentials
 from google.auth.exceptions import DefaultCredentialsError
 from googleapiclient.discovery import build
 
-from google_docs_markdown.models import Document, Request, Response
+# Google API python clients are very weirdly typed so we need to use stubs to get the correct types
+# since these aren't "real" types, we need to use TYPE_CHECKING to get the correct types
+# see https://pypi.org/project/google-api-python-client-stubs/ for more info
+# and make sure you always have `from __future__ import annotations` at the top of the file!
+if typing.TYPE_CHECKING:
+    from googleapiclient._apis.docs.v1 import DocsResource, Document, Request, Response
+
 
 # Google Docs API scope
 SCOPES = ["https://www.googleapis.com/auth/documents"]
@@ -30,32 +38,34 @@ class TabInfo:
     name: str
 
 
-class GoogleDocsAPIClient:
+class GoogleDocsTransport:
     """
-    Client for interacting with the Google Docs API.
+    Low-level transport for the Google Docs API.
 
-    Handles authentication, API requests, retry logic, and multi-tab document support.
+    Handles authentication, API requests, and retry logic. All methods accept and
+    return raw dicts (the TypedDicts from the Google API stubs). Use GoogleDocsClient
+    for typed Pydantic model access.
     """
 
     def __init__(self, credentials: Credentials | None = None):
         """
-        Initialize the API client.
+        Initialize the transport.
 
         Args:
             credentials: Optional pre-configured credentials. If None, uses
                         Application Default Credentials.
         """
         self.credentials = credentials
-        self._service = None  # type: ignore
+        self._service: DocsResource | None = None
 
     @property
-    def service(self):  # type: ignore
+    def service(self) -> DocsResource:
         """Lazy-load the Google Docs API service."""
         if self._service is None:
             self._service = self._build_service()
         return self._service
 
-    def _build_service(self):  # type: ignore
+    def _build_service(self) -> DocsResource:
         """Build and return the Google Docs API service."""
         if self.credentials is None:
             self.credentials = self._get_credentials()
@@ -136,7 +146,7 @@ class GoogleDocsAPIClient:
             document_id: The document ID
 
         Returns:
-            Document Pydantic model
+            Document object from the API
 
         Raises:
             HttpError: If the API request fails
@@ -149,22 +159,20 @@ class GoogleDocsAPIClient:
             .get(documentId=document_id, includeTabsContent=True)
             .execute(num_retries=MAX_RETRIES)
         )
-        return Document.model_validate(result)
+        return result
 
     def create_document(self, document: Document) -> Document:
         """
         Create a new blank document.
 
         Args:
-            document: The document Pydantic model to create
+            document: The document to create
 
         Returns:
-            The newly created document as a Pydantic model
+            The newly created document
         """
-        # Convert Pydantic model to dict for API
-        document_dict = document.model_dump(exclude_none=True)
-        result = self.service.documents().create(body=document_dict).execute(num_retries=MAX_RETRIES)
-        return Document.model_validate(result)
+        result = self.service.documents().create(body=document).execute(num_retries=MAX_RETRIES)
+        return result
 
     def batch_update(self, document_id: str, requests: list[Request]) -> list[Response]:
         """
@@ -172,22 +180,19 @@ class GoogleDocsAPIClient:
 
         Args:
             document_id: The document ID
-            requests: List of Request Pydantic models for batchUpdate
+            requests: List of Request objects for batchUpdate
 
         Returns:
-            List of Response Pydantic models from the API
+            List of responses from the API
         """
         document_id = self.extract_document_id(document_id)
 
-        # Convert Pydantic models to dicts for API
-        requests_dict = [r.model_dump(exclude_none=True) for r in requests]
-
         result = (
             self.service.documents()
-            .batchUpdate(documentId=document_id, body={"requests": requests_dict})
+            .batchUpdate(documentId=document_id, body={"requests": requests})
             .execute(num_retries=MAX_RETRIES)
         )
 
-        # Convert responses to Pydantic models
+        # result is a BatchUpdateDocumentResponse TypedDict
         response_list = result.get("replies", [])
-        return [Response.model_validate(r) for r in response_list]
+        return response_list

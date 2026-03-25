@@ -91,12 +91,13 @@ The tool is organized into several distinct components that work together to pro
 ┌──────▼──────────────────────────────────────┐
 │   Core Libraries                            │
 │   ┌──────────────────────────────────────┐ │
-│   │  Google Docs API Client              │ │  Low-level API wrapper
+│   │  GoogleDocsClient (client.py)        │ │  Typed client (Pydantic models)
+│   │  GoogleDocsTransport (transport.py)  │ │  Raw API transport (dicts)
 │   │  Downloader                          │ │  Converts Docs → Markdown
 │   │  Uploader                            │ │  Converts Markdown → Docs
 │   │  Diff Engine                         │ │  Compares content and generates updates
 │   │  Image Manager                       │ │  Handles image extraction/upload
-│   │  Data Models                         │ │  Python dataclasses for API objects
+│   │  Data Models (models/)               │ │  Pydantic models for API objects
 │   └──────────────────────────────────────┘ │
 └──────┬──────────────────────────────────────┘
        │
@@ -110,12 +111,13 @@ The tool is organized into several distinct components that work together to pro
 
 - **CLI**: Parses command-line arguments, orchestrates operations, provides user feedback
 - **Python API**: Provides high-level methods for common operations (download, upload, etc.)
-- **Google Docs API Client**: Handles authentication, API requests/responses, error handling
+- **GoogleDocsClient** (`client.py`): High-level typed client that returns Pydantic models. Composes `GoogleDocsTransport`. Most consumers (CLI, downloader, uploader) should use this.
+- **GoogleDocsTransport** (`transport.py`): Low-level transport that handles authentication, API requests/responses, error handling, and retry logic. Returns raw dicts as received from the API. Used directly for scripts that need unmodified API responses (e.g., downloading test fixtures).
 - **Downloader**: Converts Google Docs API responses to Markdown format
 - **Uploader**: Converts Markdown to Google Docs API batch update requests
 - **Diff Engine**: Compares Markdown content with Google Docs content and generates minimal update operations
 - **Image Manager**: Extracts images from documents, uploads to storage, manages local/public URL mapping
-- **Data Models**: Pydantic models representing Google Docs API response objects, enabling attribute-based access (`doc.title`) and runtime validation
+- **Data Models** (`models/`): Pydantic models representing Google Docs API response objects, enabling attribute-based access (`doc.title`) and runtime validation
 
 ## 5. Detailed Design
 
@@ -193,7 +195,7 @@ The diff engine is critical for efficient updates and conflict resolution:
 - **Implementation Strategy**:
   - **Model Generation**: Automatically generate all Pydantic models from `google-api-python-client-stubs` using a generation script (`scripts/generate_models.py`)
   - **Model Organization**: Organize models in `google_docs_markdown/models/` module (document.py, elements.py, styles.py, etc.)
-  - **API Integration**: Convert API dict responses to Pydantic models using `model_validate()`, convert back to dicts using `model_dump(exclude_none=True)`
+  - **Transport/Client Separation**: `GoogleDocsTransport` returns raw API dicts; `GoogleDocsClient` wraps the transport and converts to/from Pydantic models using `model_validate()` and `model_dump(exclude_none=True)`
   - **Base Configuration**: All models inherit from `GoogleDocsBaseModel` with shared Pydantic configuration
   - **Field Names**: Preserve camelCase field names to match API exactly (e.g., `documentId`, `namedStyleType`)
 
@@ -208,7 +210,7 @@ The diff engine is critical for efficient updates and conflict resolution:
   - **Deserialization (Markdown → Pydantic)**: Use `markdown-it-py` to parse Markdown into tokens, then convert tokens to Pydantic models
   - See `docs/PYDANTIC_STRATEGY.md` for detailed implementation patterns
 
-- **Note**: Pydantic models provide both type checking and runtime validation. API responses are converted to Pydantic models immediately upon receipt, enabling attribute access throughout the codebase.
+- **Note**: Pydantic models provide both type checking and runtime validation. When using `GoogleDocsClient`, API responses are converted to Pydantic models automatically, enabling attribute access throughout the codebase. When using `GoogleDocsTransport` directly, raw dicts are returned for maximum fidelity (useful for test fixtures, debugging, etc.).
 
 ### 5.5 Image Management Workflow
 

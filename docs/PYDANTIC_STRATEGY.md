@@ -152,20 +152,36 @@ google_docs_markdown/models/
 
 ## Part 2: Google Docs API Integration
 
-### 2.1 Converting API Responses to Pydantic Models
+### 2.1 Transport/Client Architecture
 
-**Pattern:**
+The API integration uses a two-layer architecture:
+
+- **`GoogleDocsTransport`** (`transport.py`): Low-level transport that returns raw API dicts. Uses `googleapiclient._apis.docs.v1` type stubs for typing. Useful for scripts that need unmodified API responses (e.g., downloading test fixture JSON).
+- **`GoogleDocsClient`** (`client.py`): High-level client that composes the transport and converts to/from Pydantic models. Most application code should use this.
+
+### 2.2 Converting API Responses to Pydantic Models
+
+**Via `GoogleDocsClient` (recommended for most consumers):**
 ```python
+from google_docs_markdown.client import GoogleDocsClient
+
+client = GoogleDocsClient()
+doc = client.get_document(document_id)
+title = doc.title  # Pydantic model — attribute access
+
+```
+
+**Via `GoogleDocsTransport` (for raw dict access):**
+```python
+from google_docs_markdown.transport import GoogleDocsTransport
 from google_docs_markdown.models import Document
 
-# API returns dict
-api_response: dict = client.get_document(document_id)
+transport = GoogleDocsTransport()
+raw = transport.get_document(document_id)
+title = raw["title"]  # raw dict
 
-# Convert to Pydantic model
-doc: Document = Document.model_validate(api_response)
-
-# Now use attribute access
-title = doc.title  # Instead of doc.get("title")
+# Manual conversion when needed:
+doc = Document.model_validate(raw)
 ```
 
 **Error Handling:**
@@ -173,16 +189,16 @@ title = doc.title  # Instead of doc.get("title")
 - Log validation errors for debugging
 - Consider `model_validate` with `strict=False` for forward compatibility
 
-### 2.2 Converting Pydantic Models Back to API Format
+### 2.3 Converting Pydantic Models Back to API Format
 
 **Pattern:**
 ```python
 # Convert Pydantic model to dict for API
 doc_dict: dict = doc.model_dump(exclude_none=True, by_alias=True)
 
-# Use in API calls
-client.create_document(body=doc_dict)
-client.batch_update(document_id, requests=requests_dict)
+# Use in API calls (via transport)
+transport.create_document(body=doc_dict)
+transport.batch_update(document_id, requests=requests_dict)
 ```
 
 **Key Considerations:**
@@ -190,30 +206,44 @@ client.batch_update(document_id, requests=requests_dict)
 - Use `by_alias=True` if using field aliases
 - Consider `mode='json'` for JSON serialization if needed
 
-### 2.3 Updating API Client
+### 2.4 Client and Transport Implementation
 
-**Changes to `api_client.py`:**
+**`GoogleDocsTransport` (`transport.py`) — returns raw dicts:**
 ```python
-from google_docs_markdown.models import Document, Request, Response
-
-class GoogleDocsAPIClient:
+class GoogleDocsTransport:
     def get_document(self, document_id: str) -> Document:
-        """Return Pydantic model instead of dict."""
+        """Return raw dict from the API."""
         result = self.service.documents().get(...).execute()
-        return Document.model_validate(result)
-    
-    def batch_update(
-        self, 
-        document_id: str, 
-        requests: list[Request]
-    ) -> list[Response]:
-        """Accept Pydantic models, convert to dicts for API."""
-        requests_dict = [r.model_dump(exclude_none=True) for r in requests]
+        return result
+
+    def batch_update(self, document_id: str, requests: list[Request]) -> list[Response]:
+        """Accept raw dicts, return raw dicts."""
         result = self.service.documents().batchUpdate(
             documentId=document_id,
-            body={"requests": requests_dict}
+            body={"requests": requests}
         ).execute()
-        return [Response.model_validate(r) for r in result.get("replies", [])]
+        return result.get("replies", [])
+```
+
+**`GoogleDocsClient` (`client.py`) — composes transport, returns Pydantic models:**
+```python
+from google_docs_markdown.transport import GoogleDocsTransport
+from google_docs_markdown.models import Document, Request, Response
+
+class GoogleDocsClient:
+    def __init__(self, transport: GoogleDocsTransport | None = None):
+        self.transport = transport or GoogleDocsTransport()
+
+    def get_document(self, document_id: str) -> Document:
+        """Return Pydantic model."""
+        raw = self.transport.get_document(document_id)
+        return Document.model_validate(raw)
+
+    def batch_update(self, document_id: str, requests: list[Request]) -> list[Response]:
+        """Accept Pydantic models, convert to dicts for transport."""
+        raw_requests = [r.model_dump(exclude_none=True) for r in requests]
+        raw_responses = self.transport.batch_update(document_id, raw_requests)
+        return [Response.model_validate(r) for r in raw_responses]
 ```
 
 ## Part 3: Markdown Serialization Strategy
@@ -543,9 +573,10 @@ def serialize_with_metadata_file(self, doc: Document, base_path: Path) -> None:
 1. Set up `google_docs_markdown/models/` module structure
 2. Create base model configuration (`base.py`)
 3. Run model generation script (Phase 0)
-4. Update `api_client.py` to use Pydantic models
-5. Test API round-trip (dict → Pydantic → dict)
-6. Verify essential models work: `Document`, `DocumentTab`, `Body`, `Paragraph`, `TextRun`
+4. Create `GoogleDocsClient` (`client.py`) that composes `GoogleDocsTransport` and returns Pydantic models
+5. Keep `GoogleDocsTransport` (`transport.py`) returning raw dicts for low-level access
+6. Test API round-trip (dict → Pydantic → dict)
+7. Verify essential models work: `Document`, `DocumentTab`, `Body`, `Paragraph`, `TextRun`
 
 **Phase 2: Markdown Serialization**
 1. Implement `MarkdownSerializer` visitor
@@ -686,8 +717,9 @@ class Document(GoogleDocsBaseModel):
 4. Create base model configuration (`base.py`)
 5. **Run model generation script** to generate all Pydantic models
 6. Review and test generated models
-7. Update API client to use Pydantic models
-8. Implement basic Markdown serializer (Visitor Pattern, no markdown library)
-9. Implement Markdown deserializer (using `markdown-it-py` for parsing)
-10. Test end-to-end workflow
+7. Create `GoogleDocsClient` (`client.py`) composing `GoogleDocsTransport` with Pydantic model conversion
+8. Keep `GoogleDocsTransport` (`transport.py`) as the raw-dict API layer
+9. Implement basic Markdown serializer (Visitor Pattern, no markdown library)
+10. Implement Markdown deserializer (using `markdown-it-py` for parsing)
+11. Test end-to-end workflow
 

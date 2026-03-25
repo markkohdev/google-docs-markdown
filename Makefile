@@ -1,4 +1,4 @@
-.PHONY: help test lint format type-check check all clean
+.PHONY: help test lint format type-check check all clean update-docs update-all
 
 help:
 	@echo "Available commands:"
@@ -10,6 +10,8 @@ help:
 	@echo "  make check       - Run all checks (lint, format, type-check, test)"
 	@echo "  make all         - Same as 'make check'"
 	@echo "  make clean       - Clean cache files"
+	@echo "  make update-docs - Re-download all test doc JSONs from Google Docs API"
+	@echo "  make update-all  - Update docs (and eventually models, etc.)"
 
 # Run tests
 run-tests:
@@ -48,6 +50,13 @@ test: format-fix lint-fix format-check lint-check type-check run-tests
 
 # Run all fixers
 fix: lint-fix format-fix
+
+# Update test fixture JSONs from Google Docs API
+update-docs:
+	uv run python scripts/download_test_doc.py --urls-file tests/resources/document_jsons/doc_urls.txt --overwrite
+
+# Update all generated fixtures (docs, models, etc.)
+update-all: update-docs
 
 # Alias for check
 all: check

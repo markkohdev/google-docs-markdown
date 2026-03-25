@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """
-Download a Google Doc as JSON.
+Download Google Docs as JSON.
 
-This script uses the GoogleDocsAPIClient to fetch a document from the Google Docs API
-and save it as a JSON file in the test resources directory.
+This script uses GoogleDocsTransport to fetch documents from the Google Docs API
+and save them as JSON files in the test resources directory.
+
+Supports downloading a single document by URL/ID, or batch-downloading all URLs
+listed in a file via --urls-file.
 """
 
 from __future__ import annotations
@@ -14,20 +17,79 @@ from typing import Annotated
 
 import typer
 
-from google_docs_markdown.api_client import GoogleDocsAPIClient
+from google_docs_markdown.transport import GoogleDocsTransport
 
 app = typer.Typer()
+
+DEFAULT_OUTPUT_DIR = Path(__file__).parent.parent / "tests" / "resources" / "document_jsons"
+
+
+def download_document(
+    client: GoogleDocsTransport,
+    document: str,
+    *,
+    output: str | None = None,
+    output_dir_path: Path = DEFAULT_OUTPUT_DIR,
+    pretty: bool = False,
+    overwrite: bool = False,
+) -> None:
+    """Download a single Google Doc and save it as JSON."""
+    typer.echo(f"Extracting document ID from: {document}")
+    doc_id = client.extract_document_id(document)
+    typer.echo(f"Document ID: {doc_id}")
+
+    typer.echo("Fetching document...")
+    doc = client.get_document(doc_id)
+
+    if output:
+        output_filename = output
+    else:
+        title = doc.get("title", "Untitled Document")
+        safe_title = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in title)
+        safe_title = safe_title.replace(" ", "_")
+        output_filename = f"{safe_title}.json"
+
+    output_path = output_dir_path / output_filename
+
+    if output_path.exists() and not overwrite:
+        if not typer.confirm(f"File already exists at {output_path}. Overwrite?"):
+            typer.echo("Aborted. File not overwritten.")
+            raise typer.Exit()
+
+    typer.echo(f"Saving to: {output_path}")
+    with output_path.open("w", encoding="utf-8") as f:
+        if pretty:
+            json.dump(doc, f, indent=2, ensure_ascii=False)
+        else:
+            json.dump(doc, f, ensure_ascii=False)
+
+    typer.echo(f"✓ Successfully downloaded document: {doc.get('title', 'Untitled')}")
+    typer.echo(f"  Saved to: {output_path}")
+    typer.echo(f"  Document ID: {doc.get('documentId', 'N/A')}")
+    if "tabs" in doc:
+        typer.echo(f"  Tabs: {len(doc['tabs'])}")
 
 
 @app.command()
 def main(
-    document: Annotated[str, typer.Argument(help="Google Docs URL or document ID")],
+    document: Annotated[
+        str | None,
+        typer.Argument(help="Google Docs URL or document ID", show_default=False),
+    ] = None,
+    urls_file: Annotated[
+        Path | None,
+        typer.Option(
+            "-f",
+            "--urls-file",
+            help="File containing Google Docs URLs (one per line). Overrides DOCUMENT.",
+        ),
+    ] = None,
     output: Annotated[
         str,
         typer.Option(
             "-o",
             "--output",
-            help="Output filename (default: uses document title)",
+            help="Output filename (default: uses document title). Ignored with --urls-file.",
         ),
     ] = " ",
     output_dir: Annotated[
@@ -53,84 +115,90 @@ def main(
     ] = False,
 ) -> None:
     """
-    Download a Google Doc as JSON file.
+    Download Google Docs as JSON files.
 
-    DOCUMENT can be a Google Docs URL or document ID.
+    Provide either a DOCUMENT (URL or ID) or --urls-file with a file of URLs.
 
     Examples:
 
     \b
-        download_doc_json.py https://docs.google.com/document/d/DOC_ID/edit
-        download_doc_json.py DOC_ID --output my-document.json
-        download_doc_json.py DOC_ID --output-dir /path/to/output
+        download_test_doc.py https://docs.google.com/document/d/DOC_ID/edit
+        download_test_doc.py DOC_ID --output my-document.json
+        download_test_doc.py --urls-file tests/resources/document_jsons/doc_urls.txt
     """
-    # Normalize empty strings to None
-    output = output.strip() if output else None
+    if document and urls_file:
+        typer.echo("Error: provide either DOCUMENT or --urls-file, not both.", err=True)
+        raise typer.Exit(1)
+    if not document and not urls_file:
+        typer.echo("Error: provide either DOCUMENT or --urls-file.", err=True)
+        raise typer.Exit(1)
 
-    # Determine output directory
-    if str(output_dir).strip():
-        output_dir_path = output_dir
-    else:
-        # Default to test resources directory
-        script_dir = Path(__file__).parent
-        project_root = script_dir.parent
-        output_dir_path = project_root / "tests" / "resources" / "document_jsons"
+    output_name = output.strip() if output else None
 
-    # Create output directory if it doesn't exist
+    output_dir_path = output_dir if output_dir is not None else DEFAULT_OUTPUT_DIR
     output_dir_path.mkdir(parents=True, exist_ok=True)
 
-    try:
-        # Initialize client and fetch document
-        typer.echo("Connecting to Google Docs API...")
-        client = GoogleDocsAPIClient()
+    typer.echo("Connecting to Google Docs API...")
+    client = GoogleDocsTransport()
 
-        typer.echo(f"Extracting document ID from: {document}")
-        doc_id = client.extract_document_id(document)
-        typer.echo(f"Document ID: {doc_id}")
+    if urls_file:
+        if not urls_file.exists():
+            typer.echo(f"Error: URLs file not found: {urls_file}", err=True)
+            raise typer.Exit(1)
 
-        typer.echo("Fetching document...")
-        doc = client.get_document(doc_id)
+        urls = [
+            line.strip()
+            for line in urls_file.read_text().splitlines()
+            if line.strip() and not line.strip().startswith("#")
+        ]
 
-        # Determine output filename
-        if output:
-            output_filename = output
-        else:
-            # Use document title, sanitized for filename
-            title = doc.get("title", "Untitled Document")
-            # Replace invalid filename characters
-            safe_title = "".join(c if c.isalnum() or c in (" ", "-", "_") else "_" for c in title)
-            safe_title = safe_title.replace(" ", "_")
-            output_filename = f"{safe_title}.json"
+        if not urls:
+            typer.echo("No URLs found in file.")
+            raise typer.Exit()
 
-        output_path = output_dir_path / output_filename
+        typer.echo(f"Found {len(urls)} URL(s) in {urls_file}\n")
+        succeeded, failed = 0, 0
 
-        # Check if file exists and handle overwrite logic
-        if output_path.exists():
-            if not overwrite:
-                if not typer.confirm(f"File already exists at {output_path}. Overwrite?"):
-                    typer.echo("Aborted. File not overwritten.")
-                    raise typer.Exit()
+        for i, url in enumerate(urls, 1):
+            typer.echo(f"[{i}/{len(urls)}] Processing: {url}")
+            try:
+                download_document(
+                    client,
+                    url,
+                    output_dir_path=output_dir_path,
+                    pretty=pretty,
+                    overwrite=True,
+                )
+                succeeded += 1
+            except typer.Exit:
+                raise
+            except Exception as e:
+                typer.echo(f"  ✗ Failed: {e}", err=True)
+                failed += 1
+            typer.echo()
 
-        # Write JSON file
-        typer.echo(f"Saving to: {output_path}")
-        with output_path.open("w", encoding="utf-8") as f:
-            if pretty:
-                json.dump(doc, f, indent=2, ensure_ascii=False)
-            else:
-                json.dump(doc, f, ensure_ascii=False)
-
-        typer.echo(f"✓ Successfully downloaded document: {doc.get('title', 'Untitled')}")
-        typer.echo(f"  Saved to: {output_path}")
-        typer.echo(f"  Document ID: {doc.get('documentId', 'N/A')}")
-        if "tabs" in doc:
-            typer.echo(f"  Tabs: {len(doc['tabs'])}")
-
-    except ValueError as e:
-        typer.echo(f"Error: {e}", err=True)
-        raise typer.Exit(1) from e
-    except Exception as e:
-        typer.echo(f"Error downloading document: {e}", err=True)
-        raise typer.Exit(1) from e
+        typer.echo(f"Done: {succeeded} succeeded, {failed} failed.")
+        if failed:
+            raise typer.Exit(1)
+    else:
+        assert document is not None
+        try:
+            download_document(
+                client,
+                document,
+                output=output_name,
+                output_dir_path=output_dir_path,
+                pretty=pretty,
+                overwrite=overwrite,
+            )
+        except ValueError as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1) from e
+        except typer.Exit:
+            raise
+        except Exception as e:
+            typer.echo(f"Error downloading document: {e}", err=True)
+            raise typer.Exit(1) from e
 
 
 if __name__ == "__main__":

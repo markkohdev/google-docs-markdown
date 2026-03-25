@@ -14,14 +14,15 @@ from pydantic import BaseModel
 
 from google_docs_markdown.models import Document
 
-
 RESOURCES_DIR = Path(__file__).parent / "resources" / "document_jsons"
+ALL_DOC_JSONS = sorted(p.name for p in RESOURCES_DIR.glob("*.json"))
 
 
 def load_document(name: str) -> dict[str, Any]:
     """Load a document JSON from test resources."""
     with (RESOURCES_DIR / name).open(encoding="utf-8") as f:
-        return json.load(f)
+        result: dict[str, Any] = json.load(f)
+    return result
 
 
 def find_extra_fields(obj: BaseModel, path: str = "") -> list[str]:
@@ -51,19 +52,44 @@ def find_extra_fields(obj: BaseModel, path: str = "") -> list[str]:
     return extras
 
 
-class TestDocumentParsing:
-    """Test that models can parse real Google Docs API JSON responses."""
+class TestAllDocumentJsonsParseable:
+    """Ensure every JSON fixture in document_jsons/ parses without error."""
 
-    def test_parse_markdown_conversion_example(self) -> None:
-        data = load_document("Markdown_Conversion_Example.json")
+    @pytest.mark.parametrize("filename", ALL_DOC_JSONS)
+    def test_parses_successfully(self, filename: str) -> None:
+        data = load_document(filename)
         doc = Document.model_validate(data)
 
-        assert doc.title == "Markdown Conversion Example"
+        assert doc.documentId is not None
+        assert doc.title is not None
+
+    @pytest.mark.parametrize("filename", ALL_DOC_JSONS)
+    def test_no_extra_fields(self, filename: str) -> None:
+        """Every fixture should be fully covered by our models."""
+        data = load_document(filename)
+        doc = Document.model_validate(data)
+        extras = find_extra_fields(doc)
+
+        if extras:
+            pytest.fail(
+                f"{filename}: {len(extras)} field(s) not defined in models:\n"
+                + "\n".join(f"  - {e}" for e in sorted(set(extras)))
+            )
+
+
+class TestDocumentParsing:
+    """Detailed structural tests against the multi-tab example document."""
+
+    def test_parse_markdown_conversion_example(self) -> None:
+        data = load_document("Markdown_Conversion_Example_-_Multi-Tab.json")
+        doc = Document.model_validate(data)
+
+        assert doc.title == "Markdown Conversion Example - Multi-Tab"
         assert doc.documentId == "1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M"
         assert doc.suggestionsViewMode == "SUGGESTIONS_INLINE"
 
     def test_tabs_parsed(self) -> None:
-        data = load_document("Markdown_Conversion_Example.json")
+        data = load_document("Markdown_Conversion_Example_-_Multi-Tab.json")
         doc = Document.model_validate(data)
 
         assert doc.tabs is not None
@@ -79,48 +105,62 @@ class TestDocumentParsing:
         assert tab1.tabProperties.title == "Tab with child tab"
 
     def test_body_structural_elements(self) -> None:
-        data = load_document("Markdown_Conversion_Example.json")
+        data = load_document("Markdown_Conversion_Example_-_Multi-Tab.json")
         doc = Document.model_validate(data)
 
         assert doc.tabs is not None
-        body = doc.tabs[0].documentTab.body
+        doc_tab = doc.tabs[0].documentTab
+        assert doc_tab is not None
+        body = doc_tab.body
         assert body is not None
-        assert body.content is not None
-        assert len(body.content) > 0
+        content = body.content
+        assert content is not None
+        assert len(content) > 0
 
-        first = body.content[0]
+        first = content[0]
         assert first.sectionBreak is not None
 
-        second = body.content[1]
+        second = content[1]
         assert second.paragraph is not None
-        assert second.paragraph.elements is not None
-        assert len(second.paragraph.elements) > 0
+        elements = second.paragraph.elements
+        assert elements is not None
+        assert len(elements) > 0
 
     def test_text_run_content(self) -> None:
-        data = load_document("Markdown_Conversion_Example.json")
+        data = load_document("Markdown_Conversion_Example_-_Multi-Tab.json")
         doc = Document.model_validate(data)
 
         assert doc.tabs is not None
-        body = doc.tabs[0].documentTab.body
+        doc_tab = doc.tabs[0].documentTab
+        assert doc_tab is not None
+        body = doc_tab.body
         assert body is not None
+        content = body.content
+        assert content is not None
 
-        para = body.content[1].paragraph
+        para = content[1].paragraph
         assert para is not None
-        text_run = para.elements[0].textRun
+        elements = para.elements
+        assert elements is not None
+        text_run = elements[0].textRun
         assert text_run is not None
         assert text_run.content is not None
         assert len(text_run.content) > 0
 
     def test_date_elements_parsed(self) -> None:
-        data = load_document("Markdown_Conversion_Example.json")
+        data = load_document("Markdown_Conversion_Example_-_Multi-Tab.json")
         doc = Document.model_validate(data)
 
         assert doc.tabs is not None
-        body = doc.tabs[0].documentTab.body
+        doc_tab = doc.tabs[0].documentTab
+        assert doc_tab is not None
+        body = doc_tab.body
         assert body is not None
+        content = body.content
+        assert content is not None
 
         date_elements = []
-        for elem in body.content:
+        for elem in content:
             if elem.paragraph and elem.paragraph.elements:
                 for pe in elem.paragraph.elements:
                     if pe.dateElement is not None:
@@ -131,15 +171,3 @@ class TestDocumentParsing:
         assert date_elements[0].dateElementProperties is not None
         assert date_elements[0].dateElementProperties.timestamp == "2026-01-08T12:00:00Z"
         assert date_elements[0].dateElementProperties.dateFormat == "DATE_FORMAT_ISO8601"
-
-    def test_no_extra_fields(self) -> None:
-        """Verify all JSON fields are covered by our models (no data falls to extras)."""
-        data = load_document("Markdown_Conversion_Example.json")
-        doc = Document.model_validate(data)
-        extras = find_extra_fields(doc)
-
-        if extras:
-            pytest.fail(
-                f"Found {len(extras)} field(s) not defined in models:\n"
-                + "\n".join(f"  - {e}" for e in sorted(set(extras)))
-            )

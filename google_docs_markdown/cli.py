@@ -4,7 +4,7 @@ from typing import Annotated
 
 import typer
 
-from google_docs_markdown.api_client import GoogleDocsAPIClient
+from google_docs_markdown.client import GoogleDocsClient
 
 app = typer.Typer(
     name="google-docs-markdown",
@@ -33,7 +33,7 @@ def download(
     """Download a Google Doc as Markdown."""
     typer.echo("Downloading a Google Doc as Markdown...")
     # Temporary implementation until we've implemented the downloader
-    client = GoogleDocsAPIClient()
+    client = GoogleDocsClient()
     doc = client.get_document(document_url)
     typer.echo(f"Downloaded document: {doc.title}")
 
