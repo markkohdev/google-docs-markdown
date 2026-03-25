@@ -426,7 +426,7 @@ def generate_file_content(
     return "\n".join(lines)
 
 
-def main():
+def main() -> None:
     """Main function to generate all Pydantic models."""
     # Paths
     project_root = Path(__file__).parent.parent

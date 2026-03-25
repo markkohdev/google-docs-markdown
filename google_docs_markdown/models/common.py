@@ -2,9 +2,32 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from google_docs_markdown.models.base import GoogleDocsBaseModel
+
+if TYPE_CHECKING:
+    from google_docs_markdown.models.document import (
+        DocumentStyle,
+        DocumentStyleSuggestionState,
+        NamedStyles,
+        NamedStylesSuggestionState,
+    )
+    from google_docs_markdown.models.elements import StructuralElement
+    from google_docs_markdown.models.styles import (
+        Bullet,
+        BulletSuggestionState,
+        NestingLevel,
+        NestingLevelSuggestionState,
+        ParagraphStyle,
+        ParagraphStyleSuggestionState,
+        TableCellStyle,
+        TableCellStyleSuggestionState,
+        TableRowStyle,
+        TableRowStyleSuggestionState,
+        TextStyle,
+        TextStyleSuggestionState,
+    )
 
 
 class Color(GoogleDocsBaseModel):
@@ -116,7 +139,7 @@ class InlineObject(GoogleDocsBaseModel):
 
     inlineObjectProperties: InlineObjectProperties | None = None
     objectId: str | None = None
-    suggestedDeletionIds: List[str] | None = None
+    suggestedDeletionIds: list[str] | None = None
     suggestedInlineObjectPropertiesChanges: dict[str, Any] | None = None
     suggestedInsertionId: str | None = None
 
@@ -132,7 +155,7 @@ class PositionedObject(GoogleDocsBaseModel):
 
     objectId: str | None = None
     positionedObjectProperties: PositionedObjectProperties | None = None
-    suggestedDeletionIds: List[str] | None = None
+    suggestedDeletionIds: list[str] | None = None
     suggestedInsertionId: str | None = None
     suggestedPositionedObjectPropertiesChanges: dict[str, Any] | None = None
 
@@ -161,6 +184,10 @@ class PositionedObjectProperties(GoogleDocsBaseModel):
 
     embeddedObject: EmbeddedObject | None = None
     positioning: PositionedObjectPositioning | None = None
+
+
+class EmbeddedDrawingProperties(GoogleDocsBaseModel):
+    """EmbeddedDrawingProperties model from Google Docs API (currently empty)."""
 
 
 class EmbeddedObject(GoogleDocsBaseModel):
@@ -216,14 +243,14 @@ class LinkedContentReference(GoogleDocsBaseModel):
 class ObjectReferences(GoogleDocsBaseModel):
     """ObjectReferences model from Google Docs API."""
 
-    objectIds: List[str] | None = None
+    objectIds: list[str] | None = None
 
 
 class List(GoogleDocsBaseModel):
     """List model from Google Docs API."""
 
     listProperties: ListProperties | None = None
-    suggestedDeletionIds: List[str] | None = None
+    suggestedDeletionIds: list[str] | None = None
     suggestedInsertionId: str | None = None
     suggestedListPropertiesChanges: dict[str, Any] | None = None
 
@@ -231,7 +258,7 @@ class List(GoogleDocsBaseModel):
 class ListProperties(GoogleDocsBaseModel):
     """ListProperties model from Google Docs API."""
 
-    nestingLevels: List[NestingLevel] | None = None
+    nestingLevels: list[NestingLevel] | None = None
 
 
 class NamedRange(GoogleDocsBaseModel):
@@ -239,20 +266,20 @@ class NamedRange(GoogleDocsBaseModel):
 
     name: str | None = None
     namedRangeId: str | None = None
-    ranges: List[Range] | None = None
+    ranges: list[Range] | None = None
 
 
 class NamedRanges(GoogleDocsBaseModel):
     """NamedRanges model from Google Docs API."""
 
     name: str | None = None
-    namedRanges: List[NamedRange] | None = None
+    namedRanges: list[NamedRange] | None = None
 
 
 class TabsCriteria(GoogleDocsBaseModel):
     """TabsCriteria model from Google Docs API."""
 
-    tabIds: List[str] | None = None
+    tabIds: list[str] | None = None
 
 
 class BookmarkLink(GoogleDocsBaseModel):
@@ -272,21 +299,21 @@ class HeadingLink(GoogleDocsBaseModel):
 class Header(GoogleDocsBaseModel):
     """Header model from Google Docs API."""
 
-    content: List[StructuralElement] | None = None
+    content: list[StructuralElement] | None = None
     headerId: str | None = None
 
 
 class Footer(GoogleDocsBaseModel):
     """Footer model from Google Docs API."""
 
-    content: List[StructuralElement] | None = None
+    content: list[StructuralElement] | None = None
     footerId: str | None = None
 
 
 class Footnote(GoogleDocsBaseModel):
     """Footnote model from Google Docs API."""
 
-    content: List[StructuralElement] | None = None
+    content: list[StructuralElement] | None = None
     footnoteId: str | None = None
 
 
@@ -358,6 +385,10 @@ class EmbeddedObjectBorderSuggestionState(GoogleDocsBaseModel):
     widthSuggested: bool | None = None
 
 
+class EmbeddedDrawingPropertiesSuggestionState(GoogleDocsBaseModel):
+    """EmbeddedDrawingPropertiesSuggestionState model from Google Docs API (currently empty)."""
+
+
 class EmbeddedObjectSuggestionState(GoogleDocsBaseModel):
     """EmbeddedObjectSuggestionState model from Google Docs API."""
 
@@ -405,7 +436,7 @@ class LinkedContentReferenceSuggestionState(GoogleDocsBaseModel):
 class ListPropertiesSuggestionState(GoogleDocsBaseModel):
     """ListPropertiesSuggestionState model from Google Docs API."""
 
-    nestingLevelsSuggestionStates: List[NestingLevelSuggestionState] | None = None
+    nestingLevelsSuggestionStates: list[NestingLevelSuggestionState] | None = None
 
 
 class SuggestedBullet(GoogleDocsBaseModel):

@@ -35,7 +35,7 @@ def download(
     # Temporary implementation until we've implemented the downloader
     client = GoogleDocsAPIClient()
     doc = client.get_document(document_url)
-    typer.echo(f"Downloaded document: {doc.get('title')}")
+    typer.echo(f"Downloaded document: {doc.title}")
 
 
 @app.command("list-tabs")

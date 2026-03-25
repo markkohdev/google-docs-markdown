@@ -2,7 +2,12 @@
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 from google_docs_markdown.models.base import GoogleDocsBaseModel
+
+if TYPE_CHECKING:
+    from google_docs_markdown.models.common import WriteControl
 
 
 class Response(GoogleDocsBaseModel):

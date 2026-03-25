@@ -2,9 +2,21 @@
 
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from google_docs_markdown.models.base import GoogleDocsBaseModel
+
+if TYPE_CHECKING:
+    from google_docs_markdown.models.common import PersonProperties, RichLinkProperties
+    from google_docs_markdown.models.styles import (
+        Bullet,
+        ParagraphStyle,
+        SectionStyle,
+        TableCellStyle,
+        TableRowStyle,
+        TableStyle,
+        TextStyle,
+    )
 
 
 class StructuralElement(GoogleDocsBaseModel):

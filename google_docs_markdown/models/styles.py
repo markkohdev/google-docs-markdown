@@ -2,9 +2,20 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from google_docs_markdown.models.base import GoogleDocsBaseModel
+
+if TYPE_CHECKING:
+    from google_docs_markdown.models.common import (
+        Dimension,
+        Link,
+        OptionalColor,
+        Shading,
+        ShadingSuggestionState,
+        TableColumnProperties,
+        WeightedFontFamily,
+    )
 
 
 class ParagraphStyle(GoogleDocsBaseModel):

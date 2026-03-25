@@ -2,9 +2,32 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import TYPE_CHECKING, Literal
 
 from google_docs_markdown.models.base import GoogleDocsBaseModel
+
+if TYPE_CHECKING:
+    from google_docs_markdown.models.common import (
+        EndOfSegmentLocation,
+        Location,
+        PersonProperties,
+        Range,
+        Size,
+        SubstringMatchCriteria,
+        TableCellLocation,
+        TableColumnProperties,
+        TableRange,
+        TabsCriteria,
+        WriteControl,
+    )
+    from google_docs_markdown.models.document import DocumentStyle
+    from google_docs_markdown.models.styles import (
+        ParagraphStyle,
+        SectionStyle,
+        TableCellStyle,
+        TableRowStyle,
+        TextStyle,
+    )
 
 
 class Request(GoogleDocsBaseModel):
