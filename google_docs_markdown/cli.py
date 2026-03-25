@@ -32,6 +32,7 @@ def download(
 ) -> None:
     """Download a Google Doc as Markdown."""
     typer.echo("Downloading a Google Doc as Markdown...")
+    # Temporary implementation until we've implemented the downloader
     client = GoogleDocsAPIClient()
     doc = client.get_document(document_url)
     typer.echo(f"Downloaded document: {doc.get('title')}")

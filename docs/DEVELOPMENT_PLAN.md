@@ -1,7 +1,7 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-01-08 (Updated to reflect TypedDict approach and nested tab structure)  
+**Last Updated:** 2026-01-08 (Updated to reflect Pydantic models approach and nested tab structure)  
 **Status:** Phase 1 - In Progress (Tasks 1 & 2 Complete ✅)
 
 ## Overview
@@ -33,14 +33,29 @@ Unit tests and documentation should be written for each component and function a
    - [x] Extract document ID from URLs
    - [x] Retrieve tab information (names, IDs) for multi-tab documents
 
+2.5. **Pydantic Model Generation** (Foundational Work)
+   - [ ] Create `scripts/generate_models.py` script
+   - [ ] Implement parser to extract TypedDict definitions from `google-api-python-client-stubs` schemas.pyi
+   - [ ] Convert TypedDict classes to Pydantic models following conversion patterns
+   - [ ] Handle forward references and circular dependencies
+   - [ ] Organize models into appropriate files (`google_docs_markdown/models/`)
+   - [ ] Create base model configuration (`base.py`)
+   - [ ] Generate all Pydantic models (100+ models)
+   - [ ] Review and test generated models with sample API responses
+   - [ ] Update `api_client.py` to return Pydantic models instead of dicts
+   - [ ] Update `api_client.py` to accept Pydantic models for batch updates
+   - [ ] Test API round-trip (dict → Pydantic → dict)
+
 3. **Basic Downloader (Docs → Markdown)**
    - [ ] Create `google_docs_markdown/downloader.py`
-   - [ ] Treat every document as multi-tab (use `DocumentTab` as fundamental object)
+   - [ ] Create `google_docs_markdown/markdown_serializer.py` implementing Visitor Pattern for Pydantic → Markdown conversion
+   - [ ] Implement `MarkdownSerializer` visitor class to traverse Pydantic models
+   - [ ] Treat every document as multi-tab (use `DocumentTab` Pydantic model as fundamental object)
    - [ ] Handle nested tab structures recursively (tabs can contain both content and child tabs)
-   - [ ] Implement basic text extraction
-   - [ ] Handle headings (up to arbitrary depth)
-   - [ ] Handle paragraphs
-   - [ ] Handle basic formatting (bold, italic)
+   - [ ] Implement basic text extraction from Pydantic `TextRun` models
+   - [ ] Handle headings (up to arbitrary depth) from `Paragraph` models with heading styles
+   - [ ] Handle paragraphs from `Paragraph` Pydantic models
+   - [ ] Handle basic formatting (bold, italic) from `TextStyle` models
    - [ ] Handle line breaks
    - [ ] Ensure deterministic output (normalize whitespace)
    - [ ] Create directory structure named after document title (or user-provided output directory)
@@ -150,18 +165,23 @@ Unit tests and documentation should be written for each component and function a
 **Goal:** Convert Markdown back to Google Docs, including multi-tab documents
 
 **Tasks:**
-1. **Markdown Parser**
-   - [ ] Choose/implement Markdown parser (consider `markdown-it-py` or `mistune`)
-   - [ ] Parse Markdown to intermediate representation
+1. **Markdown Parser & Deserializer**
+   - [ ] Create `google_docs_markdown/markdown_deserializer.py`
+   - [ ] Use `markdown-it-py` to parse Markdown into tokens (for deserialization only)
+   - [ ] Implement `MarkdownDeserializer` class to convert Markdown tokens to Pydantic models
+   - [ ] Traverse markdown-it-py token stream and build Pydantic models (`Document`, `Paragraph`, `TextRun`, etc.)
    - [ ] Handle all Markdown features from Phase 2
    - [ ] Detect directory structure indicating multi-tab document
+   - [ ] Extract metadata from HTML comments and JSON files
+   - [ ] Convert parsed content back to Pydantic models for API submission
 
 2. **Uploader**
    - [ ] Create `google_docs_markdown/uploader.py`
-   - [ ] Convert Markdown AST to Google Docs API `batchUpdate` requests
-   - [ ] Handle document creation (`documents().create()`)
-   - [ ] Handle document updates (`documents().batchUpdate()`)
-   - [ ] Map Markdown elements to Google Docs elements:
+   - [ ] Use `MarkdownDeserializer` to convert Markdown to Pydantic models
+   - [ ] Convert Pydantic models to Google Docs API `batchUpdate` requests using `model_dump(exclude_none=True)`
+   - [ ] Handle document creation (`documents().create()`) with Pydantic `Document` model
+   - [ ] Handle document updates (`documents().batchUpdate()`) with Pydantic `Request` models
+   - [ ] Map Markdown elements (via Pydantic models) to Google Docs API elements:
      - Headings → paragraph with heading style
      - Lists → list elements
      - Tables → table elements
@@ -407,6 +427,8 @@ Unit tests and documentation should be written for each component and function a
 
 **Start with Phase 1** - Get basic download working first, including multi-tab support from the start. This provides immediate value and validates the approach. Multi-tab handling is a core requirement, not an add-on.
 
+**Important**: Before implementing the downloader (Phase 1, Task 3), complete the Pydantic model generation work (Phase 1, Task 2.5). This foundational work enables attribute-based access to API responses and provides the models needed for markdown serialization.
+
 **Then Phase 2** - Enhance download to handle complex documents.
 
 **Then Phase 3** - Add upload capability, including multi-tab support. This completes the bidirectional conversion for both single and multi-tab documents.
@@ -420,24 +442,29 @@ Unit tests and documentation should be written for each component and function a
 
 **Phase 8** should be ongoing throughout development, but final polish happens at the end.
 
-## Technical Decisions Needed
+## Technical Decisions
 
-1. **Markdown Parser**: Choose library for parsing Markdown
-   - Options: `markdown-it-py`, `mistune`, `markdown`
-   - Recommendation: `markdown-it-py` (modern, extensible)
+1. **Data Models**: Use Pydantic models instead of TypedDicts
+   - **Decision**: Generate Pydantic models from `google-api-python-client-stubs` using automated script
+   - **Benefits**: Attribute access (`doc.title`), runtime validation, better developer experience
+   - **See**: `docs/PYDANTIC_STRATEGY.md` for detailed approach
 
-2. **CLI Framework**: Choose CLI framework
-   - Options: `click`, `argparse`, `typer`
-   - Decision: `typer` (modern, type-safe, leverages Python type hints)
-     - We should use `Annotated` from `typing` to type the CLI arguments and options since it's the recommended way to do so by the library.
+2. **Markdown Parser**: Choose library for parsing Markdown (deserialization only)
+   - **Decision**: `markdown-it-py` (modern, extensible)
+   - **Note**: Used only for deserialization (Markdown → Pydantic). Serialization (Pydantic → Markdown) builds strings directly using Visitor Pattern.
 
-3. **Diff Algorithm**: Choose diffing library
-   - Options: `difflib` (built-in), `diff-match-patch`, custom implementation
-   - Recommendation: Start with `difflib`, upgrade if needed
+3. **CLI Framework**: Choose CLI framework
+   - **Decision**: `typer` (modern, type-safe, leverages Python type hints)
+   - **Note**: Use `Annotated` from `typing` to type CLI arguments and options (recommended by typer)
 
-4. **Storage Libraries**: Choose libraries for S3/GCS
-   - S3: `boto3`
-   - GCS: `google-cloud-storage`
+4. **Diff Algorithm**: Choose diffing library
+   - **Decision**: Start with `difflib` (built-in), upgrade if needed
+   - **Note**: Can leverage Pydantic model comparison for structural diffing of Google Docs API objects
+
+5. **Storage Libraries**: Choose libraries for S3/GCS
+   - **Decision**: 
+     - S3: `boto3`
+     - GCS: `google-cloud-storage`
    - Both are standard choices
 
 ## Testing Strategy
@@ -476,11 +503,12 @@ This document should be used for testing throughout development.
 - ✅ Phase 1, Task 2: Google Docs API Client (with comprehensive unit tests)
 
 **In Progress:**
-- Phase 1, Task 3: Basic Downloader (Docs → Markdown) (next up)
+- Phase 1, Task 2.5: Pydantic Model Generation (foundational work, next up)
 
 **Remaining Phase 1 Tasks:**
-- Task 3: Basic Downloader (Docs → Markdown)
+- Task 2.5: Pydantic Model Generation (foundational work)
+- Task 3: Basic Downloader (Docs → Markdown) - depends on Task 2.5
 - Task 4: CLI - Download Command
 - Task 5: Python API - Basic Interface
-- Task 6: Testing (API client tests complete; remaining tests depend on downloader)
+- Task 6: Testing (API client tests complete; remaining tests depend on downloader and Pydantic models)
 
