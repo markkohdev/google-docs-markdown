@@ -98,6 +98,7 @@ class ParagraphElement(GoogleDocsBaseModel):
 
     autoText: AutoText | None = None
     columnBreak: ColumnBreak | None = None
+    dateElement: DateElement | None = None
     endIndex: int | None = None
     equation: Equation | None = None
     footnoteReference: FootnoteReference | None = None
@@ -205,3 +206,41 @@ class InlineObjectElement(GoogleDocsBaseModel):
     suggestedInsertionIds: list[str] | None = None
     suggestedTextStyleChanges: dict[str, Any] | None = None
     textStyle: TextStyle | None = None
+
+
+class DateElement(GoogleDocsBaseModel):
+    """DateElement model from Google Docs API."""
+
+    dateId: str | None = None
+    dateElementProperties: DateElementProperties | None = None
+    suggestedDeletionIds: list[str] | None = None
+    suggestedInsertionIds: list[str] | None = None
+    suggestedTextStyleChanges: dict[str, Any] | None = None
+    textStyle: TextStyle | None = None
+
+
+class DateElementProperties(GoogleDocsBaseModel):
+    """DateElementProperties model from Google Docs API."""
+
+    dateFormat: (
+        Literal[
+            "DATE_FORMAT_UNSPECIFIED",
+            "DATE_FORMAT_ISO8601",
+            "DATE_FORMAT_LONG",
+            "DATE_FORMAT_MEDIUM",
+            "DATE_FORMAT_SHORT",
+        ]
+        | None
+    ) = None
+    displayText: str | None = None
+    locale: str | None = None
+    timeFormat: (
+        Literal[
+            "TIME_FORMAT_UNSPECIFIED",
+            "TIME_FORMAT_DISABLED",
+            "TIME_FORMAT_12H",
+            "TIME_FORMAT_24H",
+        ]
+        | None
+    ) = None
+    timestamp: str | None = None
