@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Literal
 
 import pytest
 
@@ -30,6 +31,19 @@ RESOURCES_DIR = Path(__file__).parent / "resources" / "document_jsons"
 SINGLE_TAB_JSON = RESOURCES_DIR / "Markdown_Conversion_Example_-_Single-Tab.json"
 MULTI_TAB_JSON = RESOURCES_DIR / "Markdown_Conversion_Example_-_Multi-Tab.json"
 
+_NamedStyleType = Literal[
+    "NAMED_STYLE_TYPE_UNSPECIFIED",
+    "NORMAL_TEXT",
+    "TITLE",
+    "SUBTITLE",
+    "HEADING_1",
+    "HEADING_2",
+    "HEADING_3",
+    "HEADING_4",
+    "HEADING_5",
+    "HEADING_6",
+]
+
 
 @pytest.fixture
 def serializer() -> MarkdownSerializer:
@@ -43,7 +57,7 @@ def _load_document(path: Path) -> Document:
 
 
 def _make_doc_tab(
-    paragraphs: list[tuple[str, str | None]],
+    paragraphs: list[tuple[str, _NamedStyleType | None]],
 ) -> DocumentTab:
     """Build a minimal DocumentTab from (text, namedStyleType) pairs."""
     elements: list[StructuralElement] = []
@@ -152,15 +166,17 @@ class TestSerializerBasic:
         assert result == "*A subtitle*\n"
 
     def test_all_heading_levels(self, serializer: MarkdownSerializer) -> None:
-        doc_tab = _make_doc_tab([
-            ("Title", "TITLE"),
-            ("H1", "HEADING_1"),
-            ("H2", "HEADING_2"),
-            ("H3", "HEADING_3"),
-            ("H4", "HEADING_4"),
-            ("H5", "HEADING_5"),
-            ("H6", "HEADING_6"),
-        ])
+        doc_tab = _make_doc_tab(
+            [
+                ("Title", "TITLE"),
+                ("H1", "HEADING_1"),
+                ("H2", "HEADING_2"),
+                ("H3", "HEADING_3"),
+                ("H4", "HEADING_4"),
+                ("H5", "HEADING_5"),
+                ("H6", "HEADING_6"),
+            ]
+        )
         result = serializer.serialize(doc_tab)
         lines = result.strip().split("\n\n")
         assert lines[0] == "# Title"
@@ -198,9 +214,7 @@ class TestSerializerBasic:
     def test_bold_italic_text(self, serializer: MarkdownSerializer) -> None:
         para = Paragraph(
             elements=[
-                ParagraphElement(
-                    textRun=TextRun(content="bold italic", textStyle=TextStyle(bold=True, italic=True))
-                ),
+                ParagraphElement(textRun=TextRun(content="bold italic", textStyle=TextStyle(bold=True, italic=True))),
                 ParagraphElement(textRun=TextRun(content="\n")),
             ],
             paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
@@ -245,7 +259,7 @@ class TestSerializerBasic:
         assert result == "Hello\n"
 
     def test_skips_unsupported_paragraph_elements(self, serializer: MarkdownSerializer) -> None:
-        from google_docs_markdown.models.elements import InlineObjectElement, Person
+        from google_docs_markdown.models.elements import Person
 
         para = Paragraph(
             elements=[
@@ -260,20 +274,24 @@ class TestSerializerBasic:
         assert result == "Before  after\n"
 
     def test_empty_paragraph_becomes_blank_line(self, serializer: MarkdownSerializer) -> None:
-        doc_tab = _make_doc_tab([
-            ("Hello", "NORMAL_TEXT"),
-            ("", "NORMAL_TEXT"),
-            ("World", "NORMAL_TEXT"),
-        ])
+        doc_tab = _make_doc_tab(
+            [
+                ("Hello", "NORMAL_TEXT"),
+                ("", "NORMAL_TEXT"),
+                ("World", "NORMAL_TEXT"),
+            ]
+        )
         result = serializer.serialize(doc_tab)
         assert result == "Hello\n\nWorld\n"
 
     def test_deterministic_output(self, serializer: MarkdownSerializer) -> None:
-        doc_tab = _make_doc_tab([
-            ("Title", "TITLE"),
-            ("Some text", "NORMAL_TEXT"),
-            ("Heading", "HEADING_2"),
-        ])
+        doc_tab = _make_doc_tab(
+            [
+                ("Title", "TITLE"),
+                ("Some text", "NORMAL_TEXT"),
+                ("Heading", "HEADING_2"),
+            ]
+        )
         result1 = serializer.serialize(doc_tab)
         result2 = serializer.serialize(doc_tab)
         assert result1 == result2

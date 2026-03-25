@@ -11,7 +11,7 @@ from pathlib import Path
 
 from google_docs_markdown.client import GoogleDocsClient
 from google_docs_markdown.markdown_serializer import MarkdownSerializer
-from google_docs_markdown.models.document import Document, Tab
+from google_docs_markdown.models.document import Tab
 
 
 class Downloader:

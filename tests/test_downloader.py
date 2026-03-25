@@ -8,13 +8,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
 
 from google_docs_markdown.downloader import Downloader, sanitize_filename
-from google_docs_markdown.markdown_serializer import MarkdownSerializer
 from google_docs_markdown.models import Document
 
 RESOURCES_DIR = Path(__file__).parent / "resources" / "document_jsons"
@@ -24,7 +23,7 @@ MULTI_TAB_JSON = RESOURCES_DIR / "Markdown_Conversion_Example_-_Multi-Tab.json"
 
 def _load_raw(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as f:
-        return json.load(f)
+        return cast(dict[str, Any], json.load(f))
 
 
 def _mock_client(raw: dict[str, Any]) -> MagicMock:
