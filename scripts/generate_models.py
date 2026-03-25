@@ -200,54 +200,56 @@ MODEL_ORGANIZATION = {
 
 def parse_schemas_file(schemas_path: Path) -> dict[str, dict[str, Any]]:
     """Parse the schemas.pyi file and extract TypedDict definitions."""
-    with open(schemas_path, "r", encoding="utf-8") as f:
+    with open(schemas_path, encoding="utf-8") as f:
         content = f.read()
 
     models = {}
-    
+
     # Split by class definitions
     # Pattern: @typing.type_check_only\nclass ClassName(...):
     class_pattern = r"@typing\.type_check_only\s+class\s+(\w+)\([^)]+\):"
-    
+
     class_matches = list(re.finditer(class_pattern, content))
-    
+
     for idx, match in enumerate(class_matches):
         class_name = match.group(1)
         start_pos = match.end()
-        
+
         # Find the end of this class (start of next class or end of file)
         if idx + 1 < len(class_matches):
             end_pos = class_matches[idx + 1].start()
         else:
             end_pos = len(content)
-        
+
         class_body = content[start_pos:end_pos]
-        
+
         # Parse fields from class body
         fields = {}
         lines = class_body.split("\n")
         i = 0
-        
+
         while i < len(lines):
             line = lines[i].strip()
-            
+
             # Skip empty lines, comments, and ellipsis
             if not line or line.startswith("#") or line == "...":
                 i += 1
                 continue
-            
+
             # Check if we've hit a non-indented line (next class or end)
             if line and not line.startswith(" ") and ":" not in line:
                 break
-            
+
             # Parse field: type
             field_match = re.match(r"(\w+):\s*(.+)", line)
             if field_match:
                 field_name = field_match.group(1)
                 field_type = field_match.group(2).strip()
-                
+
                 # Handle multi-line Literal types
-                if ("Literal[" in field_type or "typing_extensions.Literal[" in field_type) and field_type.count("[") > field_type.count("]"):
+                if ("Literal[" in field_type or "typing_extensions.Literal[" in field_type) and field_type.count(
+                    "["
+                ) > field_type.count("]"):
                     # Collect continuation lines until brackets balance
                     i += 1
                     while i < len(lines):
@@ -259,14 +261,14 @@ def parse_schemas_file(schemas_path: Path) -> dict[str, dict[str, Any]]:
                         if field_type.count("[") == field_type.count("]"):
                             break
                         i += 1
-                
+
                 fields[field_name] = field_type
-            
+
             i += 1
-        
+
         if fields:
             models[class_name] = {"fields": fields}
-    
+
     return models
 
 
@@ -557,4 +559,3 @@ class GoogleDocsBaseModel(BaseModel):
 
 if __name__ == "__main__":
     main()
-

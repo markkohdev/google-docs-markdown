@@ -27,6 +27,10 @@ lint-check:
 lint-fix:
 	uv run ruff check --fix .
 
+# Ruff unsafe fixes
+lint-fix-unsafe:
+	uv run ruff check --fix --unsafe-fixes .
+
 # Check formatting (without modifying files)
 format-check:
 	uv run ruff format --check .
@@ -40,7 +44,7 @@ type-check:
 	uv run mypy google_docs_markdown tests
 
 # Run all checks
-test: lint-fix format-fix lint-check format-check type-check run-tests
+test: format-fix lint-fix format-check lint-check type-check run-tests
 
 # Run all fixers
 fix: lint-fix format-fix

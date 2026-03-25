@@ -7,20 +7,13 @@ Handles authentication, API requests, and basic calls to the Google Docs API.
 from __future__ import annotations
 
 import re
-import typing
 from dataclasses import dataclass
 
 from google.auth.credentials import Credentials
 from google.auth.exceptions import DefaultCredentialsError
 from googleapiclient.discovery import build
 
-# Google API python clients are very weirdly typed so we need to use stubs to get the correct types
-# since these aren't "real" types, we need to use TYPE_CHECKING to get the correct types
-# see https://pypi.org/project/google-api-python-client-stubs/ for more info
-# and make sure you always have `from __future__ import annotations` at the top of the file!
-if typing.TYPE_CHECKING:
-    from googleapiclient._apis.docs.v1 import DocsResource, Document, Request, Response
-
+from google_docs_markdown.models import Document, Request, Response
 
 # Google Docs API scope
 SCOPES = ["https://www.googleapis.com/auth/documents"]
@@ -53,16 +46,16 @@ class GoogleDocsAPIClient:
                         Application Default Credentials.
         """
         self.credentials = credentials
-        self._service: DocsResource | None = None
+        self._service = None  # type: ignore
 
     @property
-    def service(self) -> DocsResource:
+    def service(self):  # type: ignore
         """Lazy-load the Google Docs API service."""
         if self._service is None:
             self._service = self._build_service()
         return self._service
 
-    def _build_service(self) -> DocsResource:
+    def _build_service(self):  # type: ignore
         """Build and return the Google Docs API service."""
         if self.credentials is None:
             self.credentials = self._get_credentials()
@@ -143,7 +136,7 @@ class GoogleDocsAPIClient:
             document_id: The document ID
 
         Returns:
-            Document object from the API
+            Document Pydantic model
 
         Raises:
             HttpError: If the API request fails
@@ -156,20 +149,22 @@ class GoogleDocsAPIClient:
             .get(documentId=document_id, includeTabsContent=True)
             .execute(num_retries=MAX_RETRIES)
         )
-        return result
+        return Document.model_validate(result)
 
     def create_document(self, document: Document) -> Document:
         """
         Create a new blank document.
 
         Args:
-            document: The document to create
+            document: The document Pydantic model to create
 
         Returns:
-            The newly created document
+            The newly created document as a Pydantic model
         """
-        result = self.service.documents().create(body=document).execute(num_retries=MAX_RETRIES)
-        return result
+        # Convert Pydantic model to dict for API
+        document_dict = document.model_dump(exclude_none=True)
+        result = self.service.documents().create(body=document_dict).execute(num_retries=MAX_RETRIES)
+        return Document.model_validate(result)
 
     def batch_update(self, document_id: str, requests: list[Request]) -> list[Response]:
         """
@@ -177,19 +172,22 @@ class GoogleDocsAPIClient:
 
         Args:
             document_id: The document ID
-            requests: List of Request objects for batchUpdate
+            requests: List of Request Pydantic models for batchUpdate
 
         Returns:
-            List of responses from the API
+            List of Response Pydantic models from the API
         """
         document_id = self.extract_document_id(document_id)
 
+        # Convert Pydantic models to dicts for API
+        requests_dict = [r.model_dump(exclude_none=True) for r in requests]
+
         result = (
             self.service.documents()
-            .batchUpdate(documentId=document_id, body={"requests": requests})
+            .batchUpdate(documentId=document_id, body={"requests": requests_dict})
             .execute(num_retries=MAX_RETRIES)
         )
 
-        # result is a BatchUpdateDocumentResponse TypedDict
+        # Convert responses to Pydantic models
         response_list = result.get("replies", [])
-        return response_list
+        return [Response.model_validate(r) for r in response_list]

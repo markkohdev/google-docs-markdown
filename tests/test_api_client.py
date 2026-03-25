@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, cast
+from typing import TYPE_CHECKING, Any
 from unittest.mock import Mock, patch
 
 import pytest
@@ -20,7 +20,7 @@ from google_docs_markdown.api_client import (
 )
 
 if TYPE_CHECKING:
-    from googleapiclient._apis.docs.v1 import Document, Request
+    pass
 
 
 def load_example_document_json() -> dict[str, Any]:
@@ -110,7 +110,7 @@ class TestGetDocument:
         client = GoogleDocsAPIClient(credentials=Mock())
         result = client.get_document("test-doc-id")
 
-        assert result["title"] == "Test Doc"
+        assert result.title == "Test Doc"
         mock_service.documents.return_value.get.assert_called_once_with(
             documentId="test-doc-id", includeTabsContent=True
         )
@@ -128,7 +128,7 @@ class TestGetDocument:
         url = "https://docs.google.com/document/d/test-doc-id/edit"
         result = client.get_document(url)
 
-        assert result["title"] == "Test Doc"
+        assert result.title == "Test Doc"
         # Should extract ID from URL
         mock_service.documents.return_value.get.assert_called_once_with(
             documentId="test-doc-id", includeTabsContent=True
@@ -148,27 +148,27 @@ class TestGetDocument:
         result = client.get_document(example_doc["documentId"])
 
         # Validate the response structure matches real API response
-        assert result["title"] == "Markdown Conversion Example"
-        assert result["documentId"] == "1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M"
-        assert "tabs" in result
-        assert len(result["tabs"]) > 0
+        assert result.title == "Markdown Conversion Example"
+        assert result.documentId == "1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M"
+        assert result.tabs is not None
+        assert len(result.tabs) > 0
 
         # Validate tab structure
-        first_tab = result["tabs"][0]
-        assert "tabProperties" in first_tab
-        assert "documentTab" in first_tab
-        assert first_tab["tabProperties"]["tabId"] == "t.0"
-        assert first_tab["tabProperties"]["title"] == "First tab"
+        first_tab = result.tabs[0]
+        assert first_tab.tabProperties is not None
+        assert first_tab.documentTab is not None
+        assert first_tab.tabProperties.tabId == "t.0"
+        assert first_tab.tabProperties.title == "First tab"
 
         # Validate document tab has body content
-        assert "body" in first_tab["documentTab"]
-        assert "content" in first_tab["documentTab"]["body"]
+        assert first_tab.documentTab.body is not None
+        assert first_tab.documentTab.body.content is not None
 
         # Validate includes multi-tab structure (nested tabs)
-        assert len(result["tabs"]) > 1
-        second_tab = result["tabs"][1]
-        assert "childTabs" in second_tab
-        assert len(second_tab["childTabs"]) > 0
+        assert len(result.tabs) > 1
+        second_tab = result.tabs[1]
+        assert second_tab.childTabs is not None
+        assert len(second_tab.childTabs) > 0
 
         mock_service.documents.return_value.get.assert_called_once_with(
             documentId=example_doc["documentId"], includeTabsContent=True
@@ -188,47 +188,48 @@ class TestGetDocument:
         result = client.get_document(example_doc["documentId"])
 
         # Validate document metadata
-        assert "title" in result
-        assert "documentId" in result
-        assert "suggestionsViewMode" in result
+        assert result.title is not None
+        assert result.documentId is not None
+        assert result.suggestionsViewMode is not None
 
         # Validate tabs array exists and has expected structure
-        assert isinstance(result["tabs"], list)
-        assert len(result["tabs"]) >= 1
+        assert result.tabs is not None
+        assert isinstance(result.tabs, list)
+        assert len(result.tabs) >= 1
 
         # Validate first tab has all expected fields
-        first_tab = result["tabs"][0]
-        assert "tabProperties" in first_tab
-        assert "documentTab" in first_tab
+        first_tab = result.tabs[0]
+        assert first_tab.tabProperties is not None
+        assert first_tab.documentTab is not None
 
-        tab_props = first_tab["tabProperties"]
-        assert "tabId" in tab_props
-        assert "title" in tab_props
-        assert "index" in tab_props
+        tab_props = first_tab.tabProperties
+        assert tab_props.tabId is not None
+        assert tab_props.title is not None
+        assert tab_props.index is not None
 
-        doc_tab = first_tab["documentTab"]
-        assert "body" in doc_tab
-        assert "documentStyle" in doc_tab
+        doc_tab = first_tab.documentTab
+        assert doc_tab.body is not None
+        assert doc_tab.documentStyle is not None
 
         # Validate body content structure
-        body = doc_tab["body"]
-        assert "content" in body
-        assert isinstance(body["content"], list)
+        body = doc_tab.body
+        assert body.content is not None
+        assert isinstance(body.content, list)
 
         # Validate document style structure
-        doc_style = doc_tab["documentStyle"]
-        assert "pageSize" in doc_style
-        assert "marginTop" in doc_style
+        doc_style = doc_tab.documentStyle
+        assert doc_style.pageSize is not None
+        assert doc_style.marginTop is not None
 
         # Validate named styles exist
-        assert "namedStyles" in doc_tab
-        assert "styles" in doc_tab["namedStyles"]
+        assert doc_tab.namedStyles is not None
+        assert doc_tab.namedStyles.styles is not None
 
         # Validate inline objects exist (for images)
-        assert "inlineObjects" in doc_tab
+        assert doc_tab.inlineObjects is not None
 
         # Validate lists exist
-        assert "lists" in doc_tab
+        assert doc_tab.lists is not None
 
 
 class TestCreateDocument:
@@ -243,13 +244,18 @@ class TestCreateDocument:
         mock_service.documents.return_value.create.return_value = mock_request
         mock_build.return_value = mock_service
 
+        from google_docs_markdown.models import Document
+
         client = GoogleDocsAPIClient(credentials=Mock())
-        document_body: Document = cast("Document", {"title": "New Document"})
+        document_body = Document(title="New Document")
         result = client.create_document(document_body)
 
-        assert result["documentId"] == "new-doc-id"
-        assert result["title"] == "New Document"
-        mock_service.documents.return_value.create.assert_called_once_with(body=document_body)
+        assert result.documentId == "new-doc-id"
+        assert result.title == "New Document"
+        # Verify the API was called with a dict (Pydantic model converted)
+        call_args = mock_service.documents.return_value.create.call_args
+        assert call_args is not None
+        assert call_args.kwargs["body"]["title"] == "New Document"
 
 
 class TestBatchUpdate:
@@ -264,12 +270,19 @@ class TestBatchUpdate:
         mock_service.documents.return_value.batchUpdate.return_value = mock_request
         mock_build.return_value = mock_service
 
+        from google_docs_markdown.models import InsertTextRequest, Location, Request
+
         client = GoogleDocsAPIClient(credentials=Mock())
-        requests: list[Request] = cast("list[Request]", [{"insertText": {"location": {"index": 1}, "text": "Hello"}}])
+        location = Location(index=1)
+        insert_request = InsertTextRequest(location=location, text="Hello")
+        request = Request(insertText=insert_request)
+        requests = [request]
         result = client.batch_update("test-doc-id", requests)
 
         assert isinstance(result, list)
         assert len(result) == 0
-        mock_service.documents.return_value.batchUpdate.assert_called_once_with(
-            documentId="test-doc-id", body={"requests": requests}
-        )
+        # Verify the API was called with dicts (Pydantic models converted)
+        call_args = mock_service.documents.return_value.batchUpdate.call_args
+        assert call_args is not None
+        assert call_args.kwargs["documentId"] == "test-doc-id"
+        assert "requests" in call_args.kwargs["body"]
