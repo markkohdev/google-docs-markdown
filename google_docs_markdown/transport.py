@@ -1,7 +1,8 @@
 """
-Google Docs API Client
+Google Docs API Transport
 
-Handles authentication, API requests, and basic calls to the Google Docs API.
+Low-level transport layer that handles authentication, API requests, and basic calls
+to the Google Docs API. Returns raw dicts as received from the API.
 """
 
 from __future__ import annotations
@@ -37,16 +38,18 @@ class TabInfo:
     name: str
 
 
-class GoogleDocsAPIClient:
+class GoogleDocsTransport:
     """
-    Client for interacting with the Google Docs API.
+    Low-level transport for the Google Docs API.
 
-    Handles authentication, API requests, retry logic, and multi-tab document support.
+    Handles authentication, API requests, and retry logic. All methods accept and
+    return raw dicts (the TypedDicts from the Google API stubs). Use GoogleDocsClient
+    for typed Pydantic model access.
     """
 
     def __init__(self, credentials: Credentials | None = None):
         """
-        Initialize the API client.
+        Initialize the transport.
 
         Args:
             credentials: Optional pre-configured credentials. If None, uses

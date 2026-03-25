@@ -1,4 +1,4 @@
-.PHONY: help test lint format type-check check all clean
+.PHONY: help test lint format type-check check all clean update-docs update-models update-all
 
 help:
 	@echo "Available commands:"
@@ -10,6 +10,9 @@ help:
 	@echo "  make check       - Run all checks (lint, format, type-check, test)"
 	@echo "  make all         - Same as 'make check'"
 	@echo "  make clean       - Clean cache files"
+	@echo "  make update-docs    - Re-download all test doc JSONs from Google Docs API"
+	@echo "  make update-models  - Update stubs and regenerate Pydantic models if needed"
+	@echo "  make update-all     - Update docs and models"
 
 # Run tests
 run-tests:
@@ -27,6 +30,10 @@ lint-check:
 lint-fix:
 	uv run ruff check --fix .
 
+# Ruff unsafe fixes
+lint-fix-unsafe:
+	uv run ruff check --fix --unsafe-fixes .
+
 # Check formatting (without modifying files)
 format-check:
 	uv run ruff format --check .
@@ -40,10 +47,21 @@ type-check:
 	uv run mypy google_docs_markdown tests
 
 # Run all checks
-test: lint-fix format-fix lint-check format-check type-check run-tests
+test: format-fix lint-fix format-check lint-check type-check run-tests
 
 # Run all fixers
 fix: lint-fix format-fix
+
+# Update test fixture JSONs from Google Docs API
+update-docs:
+	uv run python scripts/download_test_doc.py --urls-file tests/resources/document_jsons/doc_urls.txt --overwrite
+
+# Update stubs and regenerate Pydantic models if the stubs version changed
+update-models:
+	uv run python scripts/update_models.py
+
+# Update all generated artifacts (docs, models, etc.)
+update-all: update-docs update-models
 
 # Alias for check
 all: check
