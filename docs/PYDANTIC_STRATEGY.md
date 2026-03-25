@@ -1,7 +1,7 @@
 # Pydantic Migration Strategy for Google Docs Markdown
 
 **Date:** 2026-01-08  
-**Status:** Strategy Document (Pre-Implementation)
+**Status:** Parts 1–2 implemented; Part 3 serialization implemented (Phase 1 scope: headings, paragraphs, bold/italic); deserialization not yet started
 
 ## Overview
 
@@ -711,15 +711,15 @@ class Document(GoogleDocsBaseModel):
 
 ## Next Steps
 
-1. Review and approve this strategy
-2. **Create model generation script** (`scripts/generate_models.py`)
-3. Set up `google_docs_markdown/models/` module structure
-4. Create base model configuration (`base.py`)
-5. **Run model generation script** to generate all Pydantic models
-6. Review and test generated models
-7. Create `GoogleDocsClient` (`client.py`) composing `GoogleDocsTransport` with Pydantic model conversion
-8. Keep `GoogleDocsTransport` (`transport.py`) as the raw-dict API layer
-9. Implement basic Markdown serializer (Visitor Pattern, no markdown library)
-10. Implement Markdown deserializer (using `markdown-it-py` for parsing)
-11. Test end-to-end workflow
+1. ~~Review and approve this strategy~~ ✅
+2. ~~**Create model generation script** (`scripts/generate_models.py`)~~ ✅
+3. ~~Set up `google_docs_markdown/models/` module structure~~ ✅
+4. ~~Create base model configuration (`base.py`)~~ ✅
+5. ~~**Run model generation script** to generate all Pydantic models~~ ✅
+6. ~~Review and test generated models~~ ✅
+7. ~~Create `GoogleDocsClient` (`client.py`) composing `GoogleDocsTransport` with Pydantic model conversion~~ ✅
+8. ~~Keep `GoogleDocsTransport` (`transport.py`) as the raw-dict API layer~~ ✅
+9. ~~Implement basic Markdown serializer (Visitor Pattern, no markdown library)~~ ✅ — `MarkdownSerializer` in `markdown_serializer.py`; Phase 1 scope (headings, paragraphs, bold/italic, whitespace normalization)
+10. Implement Markdown deserializer (using `markdown-it-py` for parsing) — **not started** (Phase 3)
+11. Test end-to-end workflow — unit tests done (165 passing); live integration tests remain
 
