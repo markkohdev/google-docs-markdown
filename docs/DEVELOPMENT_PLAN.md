@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-01-08 (Updated to reflect Pydantic models approach and nested tab structure)  
-**Status:** Phase 1 - In Progress (Tasks 1 & 2 Complete ✅)
+**Last Updated:** 2026-03-25 (Phase 1 Task 3 complete; Phase 3 started — API upload primitives + CLI scaffold)  
+**Status:** Phase 1 — downloader/CLI still MVP; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
 
 ## Overview
 
@@ -33,18 +33,18 @@ Unit tests and documentation should be written for each component and function a
    - [x] Extract document ID from URLs
    - [x] Retrieve tab information (names, IDs) for multi-tab documents
 
-3. **Pydantic Model Generation** (Foundational Work)
-   - [ ] Create `scripts/generate_models.py` script
-   - [ ] Implement parser to extract TypedDict definitions from `google-api-python-client-stubs` schemas.pyi
-   - [ ] Convert TypedDict classes to Pydantic models following conversion patterns
-   - [ ] Handle forward references and circular dependencies
-   - [ ] Organize models into appropriate files (`google_docs_markdown/models/`)
-   - [ ] Create base model configuration (`base.py`)
-   - [ ] Generate all Pydantic models (100+ models)
-   - [ ] Review and test generated models with sample API responses
-   - [ ] Update `api_client.py` to return Pydantic models instead of dicts
-   - [ ] Update `api_client.py` to accept Pydantic models for batch updates
-   - [ ] Test API round-trip (dict → Pydantic → dict)
+3. **Pydantic Model Generation** (Foundational Work) ✅
+   - [x] Create `scripts/generate_models.py` script
+   - [x] Implement parser to extract TypedDict definitions from `google-api-python-client-stubs` schemas.pyi
+   - [x] Convert TypedDict classes to Pydantic models following conversion patterns
+   - [x] Handle forward references and circular dependencies
+   - [x] Organize models into appropriate files (`google_docs_markdown/models/`)
+   - [x] Create base model configuration (`base.py`)
+   - [x] Generate all Pydantic models (100+ models)
+   - [x] Review and test generated models with sample API responses
+   - [x] Update `api_client.py` to return Pydantic models instead of dicts
+   - [x] Update `api_client.py` to accept Pydantic models for batch updates
+   - [x] Test API round-trip (dict → Pydantic → dict)
 
 4. **Basic Downloader (Docs → Markdown)**
    - [ ] Create `google_docs_markdown/downloader.py`
@@ -164,10 +164,12 @@ Unit tests and documentation should be written for each component and function a
 ### Phase 3: Upload (Markdown → Docs)
 **Goal:** Convert Markdown back to Google Docs, including multi-tab documents
 
+**Progress (2026-03-25):** Upload is **partially started**. The API client already exposes **document creation** and **`batchUpdate`** with Pydantic `Document` / `Request` models (serialized via `model_dump(exclude_none=True)`), with unit tests (mocked). The CLI defines an `upload` command and flags (`--create`, `--overwrite`, `--local-path`), but the command body is still a stub (`NotImplementedError`). There is no `markdown_deserializer.py`, no `uploader.py` orchestration, and no end-to-end Markdown → Docs pipeline yet.
+
 **Tasks:**
 1. **Markdown Parser & Deserializer**
    - [ ] Create `google_docs_markdown/markdown_deserializer.py`
-   - [ ] Use `markdown-it-py` to parse Markdown into tokens (for deserialization only)
+   - [ ] Add `markdown-it-py` dependency and use it to parse Markdown into tokens (for deserialization only)
    - [ ] Implement `MarkdownDeserializer` class to convert Markdown tokens to Pydantic models
    - [ ] Traverse markdown-it-py token stream and build Pydantic models (`Document`, `Paragraph`, `TextRun`, etc.)
    - [ ] Handle all Markdown features from Phase 2
@@ -176,11 +178,11 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Convert parsed content back to Pydantic models for API submission
 
 2. **Uploader**
+   - [x] Handle document creation (`documents().create()`) with Pydantic `Document` model — implemented on `GoogleDocsAPIClient.create_document`
+   - [x] Handle document updates (`documents().batchUpdate()`) with Pydantic `Request` models — implemented on `GoogleDocsAPIClient.batch_update`
    - [ ] Create `google_docs_markdown/uploader.py`
    - [ ] Use `MarkdownDeserializer` to convert Markdown to Pydantic models
-   - [ ] Convert Pydantic models to Google Docs API `batchUpdate` requests using `model_dump(exclude_none=True)`
-   - [ ] Handle document creation (`documents().create()`) with Pydantic `Document` model
-   - [ ] Handle document updates (`documents().batchUpdate()`) with Pydantic `Request` models
+   - [ ] Build full `batchUpdate` request sequences from structured content (beyond raw client calls)
    - [ ] Map Markdown elements (via Pydantic models) to Google Docs API elements:
      - Headings → paragraph with heading style
      - Lists → list elements
@@ -204,9 +206,10 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Upload footnote content to footnote segments
 
 3. **CLI - Upload Command**
-   - [ ] Add `upload` command to CLI
-   - [ ] Support `--create` flag for new documents
-   - [ ] Support `--overwrite` flag
+   - [x] Add `upload` command to CLI (options: `--create`, `--overwrite`, `--local-path`; **handler not implemented**)
+   - [ ] Implement `upload` command body (call uploader / deserializer; remove `NotImplementedError`)
+   - [ ] Support `--create` flag for new documents (wired to create flow)
+   - [ ] Support `--overwrite` flag (wired to diff/skip logic when Phase 4 exists, or no-op until then)
    - [ ] Handle directory path input
    - [ ] Auto-detect tab structure from directory contents (files → tabs, subdirectories → nested tabs)
    - [ ] Handle document URL/ID for updates
@@ -221,6 +224,7 @@ Unit tests and documentation should be written for each component and function a
    - [ ] Return created/updated document ID
 
 5. **Testing**
+   - [x] Unit tests for `create_document` and `batch_update` on API client (mocked Google API)
    - [ ] Test round-trip: download → upload → download (should match) for single-tab (treated as multi-tab with one tab)
    - [ ] Test round-trip: download → upload → download (should match) for multi-tab
    - [ ] Test round-trip with nested tabs
@@ -501,14 +505,17 @@ This document should be used for testing throughout development.
 **Completed:**
 - ✅ Phase 1, Task 1: Project Setup
 - ✅ Phase 1, Task 2: Google Docs API Client (with comprehensive unit tests)
+- ✅ Phase 1, Task 3: Pydantic model generation and API client integration (`get_document`, `create_document`, `batch_update`)
 
 **In Progress:**
-- Phase 1, Task 3: Pydantic Model Generation (foundational work, next up)
+- **Phase 3:** Upload — client primitives and CLI `upload` scaffold done; **Markdown deserializer**, **`uploader.py`**, directory/tab mapping, and working CLI still to do
 
 **Remaining Phase 1 Tasks:**
-- Task 3: Pydantic Model Generation (foundational work)
-- Task 4: Basic Downloader (Docs → Markdown) - depends on Task 3
-- Task 5: CLI - Download Command
-- Task 6: Python API - Basic Interface
-- Task 7: Testing (API client tests complete; remaining tests depend on downloader and Pydantic models)
+- Task 4: Basic Downloader (Docs → Markdown) — models ready; serializer/downloader not yet landed
+- Task 5: CLI — Download Command (currently minimal stub)
+- Task 6: Python API — Basic Interface
+- Task 7: Testing — downloader/integration tests once downloader exists
+
+**Remaining Phase 3 Tasks:**
+- Deserializer (`markdown-it-py`), `uploader.py`, element → `Request` mapping, multi-tab directory support, Python upload API, round-trip and integration tests
 
