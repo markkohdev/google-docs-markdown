@@ -1,7 +1,7 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-25 (Phase 1 Tasks 4–5 complete; `MarkdownSerializer`, `Downloader`, working CLI `download`; Phase 3 API primitives + CLI scaffold)  
+**Last Updated:** 2026-03-25 (Phase 1 Tasks 4-5 complete; Phase 2 restructured into 2a-2f; Phase 3 updated with atomic-edit upload strategy; Phase 5 metadata folded into Phase 2f; PYDANTIC_STRATEGY.md archived)  
 **Status:** Phase 1 — Tasks 1–5 complete (basic download pipeline working end-to-end); Task 6 partially done; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
 
 ## Overview
@@ -105,146 +105,174 @@ Unit tests and documentation should be written for each component and function a
 ### Phase 2: Enhanced Markdown Features
 **Goal:** Support more complex document structures (applies to all tabs in multi-tab documents)
 
-**Tasks:**
-1. **Advanced Text Formatting**
-   - [ ] Handle strikethrough
-   - [ ] Handle underline (convert to emphasis or preserve)
-   - [ ] Handle code spans (inline code)
-   - [ ] Handle links (TextRun with link property)
-   - [ ] Handle rich links (RichLink element → `[title](uri)`)
-   - [ ] Handle colored text (serialize as HTML comments per spec)
-   - [ ] Handle column breaks (serialize as HTML comment)
-   - [ ] Handle auto text (serialize as HTML comment with type info)
-   - [ ] Ensure formatting works correctly across all tabs in multi-tab documents
+Phase 2 is broken into sub-phases ordered by complexity and dependency. Each sub-phase can be implemented and tested independently.
 
-2. **Structural Elements**
-   - [ ] Handle lists (ordered and unordered)
-   - [ ] Handle nested lists
-   - [ ] Handle tables (convert to Markdown table format)
-   - [ ] Handle horizontal rules
-   - [ ] Handle block quotes
-   - [ ] Handle section breaks (serialize as HTML comment with section style info)
-   - [ ] Handle table of contents (mark as auto-generated, preserve or regenerate)
-   - [ ] Handle equations (both block and inline versions)
-   - [ ] Ensure structural elements work correctly in each tab independently
+**Phase 2a: Simple Inline and Block Elements** (no state tracking needed)
 
-3. **Code Blocks**
-   - [ ] Detect code blocks in Google Docs
-   - [ ] Preserve language hints if available
-   - [ ] Handle preformatted text
-   - [ ] Support code blocks in any tab
+These elements can be handled by extending `MarkdownSerializer` with additional `_visit_*` branches. No changes to the serializer's stateless architecture required.
 
-4. **Images**
-   - [ ] Create `google_docs_markdown/image_manager.py`
-   - [ ] Extract images from Google Docs API
-   - [ ] Download images to local `imgs/` directory within the document's output folder (e.g., `My Doc/imgs/`)
-   - [ ] Generate Markdown image references
-   - [ ] Handle image alt text and titles
+1. **Links and Inline Formatting**
+   - [ ] Handle links (`TextStyle.link.url` → `[text](url)`)
+   - [ ] Handle strikethrough (`TextStyle.strikethrough` → `~~text~~`)
+   - [ ] Handle underline (convert to emphasis or HTML `<u>` tag)
+   - [ ] Handle rich links (`RichLink.richLinkProperties` → `[title](uri)`)
+   - [ ] Handle horizontal rules (`HorizontalRule` → `---`)
+   - [ ] Handle footnote references (`FootnoteReference` → `[^N]`) and footnote content from `DocumentTab.footnotes`
 
-5. **Headers, Footers, and Footnotes**
+2. **Testing**
+   - [ ] Unit tests for each new element type
+   - [ ] Fixture-based integration tests
+
+**Phase 2b: Lists** (requires stateful serialization + `DocumentTab.lists` context)
+
+Lists require a significant change to the serializer: consecutive `Paragraph` elements with `bullet` fields must be grouped, and the `DocumentTab.lists` dict must be consulted to determine ordered vs. unordered. This is the first feature that requires cross-paragraph state.
+
+**Architecture note:** Either (a) pass the full `DocumentTab` to the serializer so it has access to `lists`, or (b) introduce a pre-processing "block grouper" pass that groups structural elements into blocks (paragraph-block, list-block, table-block) before serializing. Option (b) is recommended as it also benefits code block detection (Phase 2d).
+
+1. **List Support**
+   - [ ] Refactor serializer to accept `DocumentTab.lists` context (or introduce block grouper)
+   - [ ] Handle unordered lists (`Paragraph.bullet` + `glyphType == GLYPH_TYPE_UNSPECIFIED` → `- item`)
+   - [ ] Handle ordered lists (`Paragraph.bullet` + `glyphType == DECIMAL` → `1. item`)
+   - [ ] Handle nested lists via `bullet.nestingLevel` (indentation)
+   - [ ] Handle list item spacing (single newline between items, blank line before/after list)
+   - [ ] Look up list type via `DocumentTab.lists[listId].listProperties.nestingLevels[n].glyphType`
+
+2. **Testing**
+   - [ ] Unit tests for ordered, unordered, and nested lists
+   - [ ] Test list grouping across consecutive paragraphs
+
+**Phase 2c: Tables**
+
+1. **Table Support**
+   - [ ] Handle `Table` structural element → Markdown pipe table
+   - [ ] Traverse `TableRow` → `TableCell` → `content[]` (recursive `StructuralElement` list)
+   - [ ] Handle header rows (`tableRowStyle.tableHeader`)
+   - [ ] Handle cell content (can contain paragraphs with formatting)
+   - [ ] Generate separator row (`| --- | --- |`)
+
+2. **Testing**
+   - [ ] Unit tests with fixture table data
+   - [ ] Test tables with formatted cell content
+
+**Phase 2d: Code Blocks** (U+E907 boundary markers + monospace font heuristic)
+
+Google Docs code blocks are NOT a formal API element. They are detected via a combination of `U+E907` boundary markers and monospace font. See `TECH_SPEC.md` Section 5.9 for full details.
+
+1. **Code Block Detection and Serialization**
+   - [ ] Detect code block boundaries via `U+E907` (`\ue907`) bookend characters in `TextRun.content`
+   - [ ] Confirm with monospace font (`Roboto Mono`) on interior paragraph `TextRun`s
+   - [ ] Group consecutive monospace paragraphs into a single fenced code block
+   - [ ] Emit bare fenced code blocks with no language identifier (API does not expose language)
+   - [ ] Preserve `U+E907` positions in internal representation for round-trip fidelity
+   - [ ] Strip `U+E907` characters from Markdown output (not meaningful to users)
+
+2. **Testing**
+   - [ ] Unit tests with fixture code block data
+   - [ ] Test detection of code block boundaries
+   - [ ] Test that non-code-block `U+E907` (smart chips) is handled separately
+
+**Phase 2e: Images**
+
+1. **Image Support**
+   - [ ] Handle `InlineObjectElement` → `![alt](url)`
+   - [ ] Look up image data in `DocumentTab.inlineObjects[objectId].inlineObjectProperties.embeddedObject`
+   - [ ] Download images from `contentUri` to local `imgs/` directory within the document's output folder
+   - [ ] Generate Markdown image references with local paths
+   - [ ] Handle image alt text (from `description` if available)
+
+2. **Testing**
+   - [ ] Unit tests for image reference generation
+   - [ ] Test image download and local path generation
+
+**Phase 2f: Non-Markdown Elements, Metadata Strategy, and Suggestions**
+
+This sub-phase handles Google Docs features that have no direct Markdown equivalent. It absorbs the metadata strategy work originally planned for Phase 5.
+
+1. **Metadata Strategy Decision**
+   - [ ] Decide and implement the full representation strategy for non-Markdown elements (HTML comments, companion JSON, or both)
+   - [ ] Define metadata format for each element type
+
+2. **Non-Markdown Element Handling**
+   - [ ] Handle `Person` chips (`personProperties.name` + `personProperties.email`)
+   - [ ] Handle `DateElement` (`dateElementProperties.displayText`)
+   - [ ] Handle `AutoText` (`type`: PAGE_NUMBER, PAGE_COUNT)
+   - [ ] Handle colored text (`foregroundColor`, `backgroundColor`)
+   - [ ] Handle column breaks (`ColumnBreak`)
+   - [ ] Handle section breaks (`SectionBreak` → HTML comment with section style info)
+   - [ ] Handle table of contents (`TableOfContents` → mark as auto-generated)
+   - [ ] Handle equations (`Equation` → placeholder or LaTeX if feasible)
+
+3. **Suggestion Handling**
+   - [ ] Serialize Google Docs suggestions (`suggestedInsertionIds` / `suggestedDeletionIds`) with visible markers (e.g., HTML comments around suggested text) so users can distinguish suggested vs. accepted content
+
+4. **Headers, Footers, and Footnotes**
    - [ ] Extract headers from document (per-tab for multi-tab documents)
    - [ ] Extract footers from document (per-tab for multi-tab documents)
-   - [ ] Extract footnotes from document (shared across tabs or per-tab)
    - [ ] Serialize headers/footers (as separate files or metadata)
-   - [ ] Handle footnote references (`[^1]`) and footnote content
-   - [ ] Ensure headers/footers/footnotes work correctly for all documents
 
-6. **Multi-Tab Enhancements**
-   - [ ] Ensure all enhanced features work correctly per-tab
-   - [ ] Handle tab-specific formatting and structure
-   - [ ] Maintain consistent image directory structure across tabs
-   - [ ] Handle headers/footers per-tab in multi-tab documents
+5. **Testing**
+   - [ ] Test with example doc containing all element types
+   - [ ] Test metadata round-trip (serialize then parse)
+   - [ ] Test suggestion markers
+   - [ ] Verify all features work across tabs in multi-tab documents
 
-7. **Testing**
-   - [ ] Test with example doc (has images, tables, code blocks)
-   - [ ] Test with multi-tab doc containing complex features in multiple tabs
-   - [ ] Verify all formatting is preserved across all tabs
-   - [ ] Test edge cases (empty lists, nested structures) in multi-tab context
-   - [ ] Verify image organization in multi-tab documents
-
-**Deliverable:** Can download complex Google Docs with tables, images, lists, code blocks, headers/footers/footnotes, section breaks, TOC, and all paragraph elements, with full support for multi-tab documents
+**Deliverable:** Can download complex Google Docs with tables, images, lists, code blocks, links, footnotes, headers/footers, section breaks, TOC, suggestions, smart chips, and all paragraph elements, with full support for multi-tab documents
 
 ---
 
 ### Phase 3: Upload (Markdown → Docs)
 **Goal:** Convert Markdown back to Google Docs, including multi-tab documents
 
-**Progress (2026-03-25):** Upload is **partially started**. `GoogleDocsClient` exposes **document creation** and **`batchUpdate`** with Pydantic `Document` / `Request` models (serialized via `model_dump(exclude_none=True)`), with unit tests (mocked). `GoogleDocsTransport` provides the same operations with raw dicts for lower-level use cases. The CLI defines an `upload` command and flags (`--create`, `--overwrite`, `--local-path`), but the command body is still a stub (`NotImplementedError`). There is no `markdown_deserializer.py`, no `uploader.py` orchestration, and no end-to-end Markdown → Docs pipeline yet.
+**Key Architecture Decision:** The upload strategy uses **atomic, surgical edits** rather than full document reconstruction. See `TECH_SPEC.md` Sections 5.9-5.10 for the rationale (preserving U+E907 widget state via edit-in-place).
+
+**Progress (2026-03-25):** `GoogleDocsClient` exposes `create_document` and `batch_update` with Pydantic models (unit tested). CLI `upload` command exists as a stub. No `uploader.py` or working pipeline yet.
 
 **Tasks:**
-1. **Markdown Parser & Deserializer**
-   - [ ] Create `google_docs_markdown/markdown_deserializer.py`
-   - [ ] Add `markdown-it-py` dependency and use it to parse Markdown into tokens (for deserialization only)
-   - [ ] Implement `MarkdownDeserializer` class to convert Markdown tokens to Pydantic models
-   - [ ] Traverse markdown-it-py token stream and build Pydantic models (`Document`, `Paragraph`, `TextRun`, etc.)
-   - [ ] Handle all Markdown features from Phase 2
-   - [ ] Detect directory structure indicating multi-tab document
-   - [ ] Extract metadata from HTML comments and JSON files
-   - [ ] Convert parsed content back to Pydantic models for API submission
-
-2. **Uploader**
-   - [x] Handle document creation (`documents().create()`) with Pydantic `Document` model — implemented on `GoogleDocsClient.create_document` (delegates to `GoogleDocsTransport`)
-   - [x] Handle document updates (`documents().batchUpdate()`) with Pydantic `Request` models — implemented on `GoogleDocsClient.batch_update` (delegates to `GoogleDocsTransport`)
+1. **Uploader -- Update Existing Documents (Atomic Edit Approach)**
+   - [x] Handle document creation (`documents().create()`) — `GoogleDocsClient.create_document`
+   - [x] Handle document updates (`documents().batchUpdate()`) — `GoogleDocsClient.batch_update`
    - [ ] Create `google_docs_markdown/uploader.py`
-   - [ ] Use `MarkdownDeserializer` to convert Markdown to Pydantic models
-   - [ ] Build full `batchUpdate` request sequences from structured content (beyond raw client calls)
-   - [ ] Map Markdown elements (via Pydantic models) to Google Docs API elements:
-     - Headings → paragraph with heading style
-     - Lists → list elements
-     - Tables → table elements
-     - Images → inline images
-     - Formatting → text runs with formatting
-     - Rich links → RichLink elements
-     - Section breaks → SectionBreak elements
-     - Footnotes → FootnoteReference and footnote segments
+   - [ ] **Update flow:** Fetch current document → serialize to Markdown via `MarkdownSerializer` → text-diff against local Markdown → map diff ranges to document indices → generate surgical `batchUpdate` requests
+   - [ ] Map diff operations to API requests: `DeleteContentRange` for deletions, `InsertText` for insertions, `UpdateParagraphStyle`/`UpdateTextStyle` for formatting changes
+   - [ ] Preserve U+E907 widget boundaries (code blocks, smart chips) by targeting only text content indices
+   - [ ] Process batch updates in correct order: deletions (end-to-start), insertions (start-to-end), style updates (any order)
+   - [ ] Handle `tabId` in Location/Range objects for multi-tab documents
+   - [ ] Handle `segmentId` in Location/Range objects for headers/footers/footnotes
    - [ ] Handle directory structure (all documents treated as multi-tab)
    - [ ] Handle uploading to specific tabs in multi-tab documents
    - [ ] Handle nested tab structures when uploading
-   - [ ] Support creating documents from directory structure
-   - [ ] Map directory structure to tab structure (directory name → document, files → tabs, subdirectories → nested tabs)
-   - [ ] Handle `segmentId` in Location/Range objects for headers/footers/footnotes
-   - [ ] Process batch updates in correct order:
-     1. Deletions (from end to start to preserve indices)
-     2. Insertions (from start to end)
-     3. Updates (can be done in any order)
-   - [ ] Upload headers/footers content to appropriate segments
-   - [ ] Upload footnote content to footnote segments
+
+2. **Uploader -- Create New Documents**
+   - [ ] Parse Markdown into a sequence of `batchUpdate` `Request` objects (may use `markdown-it-py` for tokenization)
+   - [ ] Map Markdown elements to API requests: headings, lists, tables, images, formatting, links
+   - [ ] Support creating documents from directory structure (directory name → document, files → tabs, subdirectories → nested tabs)
 
 3. **CLI - Upload Command**
    - [x] Add `upload` command to CLI (options: `--create`, `--overwrite`, `--local-path`; **handler not implemented**)
-   - [ ] Implement `upload` command body (call uploader / deserializer; remove `NotImplementedError`)
+   - [ ] Implement `upload` command body (call uploader; remove `NotImplementedError`)
    - [ ] Support `--create` flag for new documents (wired to create flow)
-   - [ ] Support `--overwrite` flag (wired to diff/skip logic when Phase 4 exists, or no-op until then)
-   - [ ] Handle directory path input
-   - [ ] Auto-detect tab structure from directory contents (files → tabs, subdirectories → nested tabs)
-   - [ ] Handle document URL/ID for updates
+   - [ ] Support `--overwrite` flag (force update even when no changes detected)
+   - [ ] Handle directory path input, auto-detect tab structure from directory contents
    - [ ] Add `--tab` flag to specify which tab to update (for multi-tab docs)
-   - [ ] Support nested tab paths (e.g., `--tab "Tab 1/Subtab A"`)
 
 4. **Python API - Upload Methods**
    - [ ] Add `upload(document_id, markdown_content, tab_name=None)` method
-   - [ ] Add `upload_from_directory(document_id, directory_path)` method for multi-tab (handles nested tabs)
-   - [ ] Add `create(markdown_content, title=None)` method (creates single-tab document)
-   - [ ] Add `create_from_directory(directory_path, document_title=None)` method (handles multi-tab and nested tabs)
+   - [ ] Add `upload_from_directory(document_id, directory_path)` method for multi-tab
+   - [ ] Add `create(markdown_content, title=None)` method (creates new document)
+   - [ ] Add `create_from_directory(directory_path, document_title=None)` method
    - [ ] Return created/updated document ID
 
 5. **Testing**
    - [x] Unit tests for `create_document` and `batch_update` on both transport and client (mocked Google API)
-   - [ ] Test round-trip: download → upload → download (should match) for single-tab (treated as multi-tab with one tab)
-   - [ ] Test round-trip: download → upload → download (should match) for multi-tab
-   - [ ] Test round-trip with nested tabs
-   - [ ] Test creating new single-tab documents
-   - [ ] Test creating new multi-tab documents from directory
-   - [ ] Test creating documents with nested tabs
-   - [ ] Test updating existing single-tab documents
-   - [ ] Test updating existing multi-tab documents (all tabs and specific tabs)
-   - [ ] Test updating nested tabs
-   - [ ] Verify deterministic upload (same markdown → same doc structure)
-   - [ ] Test tab-specific updates
-   - [ ] Test headers/footers/footnotes upload and round-trip
+   - [ ] Test round-trip: download → upload → download (should match) for single-tab and multi-tab
+   - [ ] Test that U+E907 widget boundaries are preserved during update
+   - [ ] Test creating new documents from Markdown
+   - [ ] Test creating multi-tab documents from directory structure
+   - [ ] Test updating existing documents (verify surgical edits)
    - [ ] Test batch update ordering (verify indices are preserved)
+   - [ ] Verify deterministic upload (same markdown → same doc structure)
 
-**Deliverable:** Can upload Markdown to Google Docs (create and update), including full multi-tab support
+**Deliverable:** Can upload Markdown to Google Docs (create and update), with widget-preserving atomic edits and full multi-tab support
 
 ---
 
@@ -295,36 +323,27 @@ Unit tests and documentation should be written for each component and function a
 
 ---
 
-### Phase 5: Advanced Features
-**Goal:** Handle Google Docs features not in Markdown
+### Phase 5: Advanced Feature Preservation (Residual)
+**Goal:** Handle any remaining Google Docs features not covered by Phase 2f
+
+**Note:** The bulk of the metadata strategy and non-Markdown element handling has been folded into Phase 2f. This phase covers only features discovered during Phase 2-3 implementation that require additional work.
 
 **Tasks:**
-1. **Metadata Serialization**
-   - [ ] Create `google_docs_markdown/metadata.py`
-   - [ ] Implement HTML comment parsing for user-editable features
-   - [ ] Implement JSON metadata parsing (from file or bottom of markdown)
-   - [ ] Support both storage strategies (HTML comments + JSON)
+1. **Additional Feature Discovery**
+   - [ ] Identify any Google Docs features not covered by Phase 2f during real-world testing
+   - [ ] Handle edge cases in metadata serialization/deserialization discovered during Phase 3 (upload)
+   - [ ] Handle embedded objects (charts, drawings) if encountered
 
-2. **Feature Preservation**
-   - [ ] Handle date pickers (serialize as HTML comments)
-   - [ ] Handle person references (serialize as JSON)
-   - [ ] Handle custom font colors (serialize as HTML comments)
-   - [ ] Handle column breaks (serialize as HTML comments)
-   - [ ] Handle auto text (serialize as HTML comments with type info)
-   - [ ] Handle rich links (convert to Markdown links, preserve metadata)
-   - [ ] Handle other advanced features as discovered
+2. **Metadata Round-Trip Refinement**
+   - [ ] Ensure HTML comment metadata survives download → edit → upload cycle
+   - [ ] Ensure companion JSON metadata stays in sync with Markdown content
+   - [ ] Handle metadata conflicts (e.g., user edits HTML comment, breaking JSON structure)
 
-3. **Deserialization**
-   - [ ] Parse HTML comments during upload
-   - [ ] Parse JSON metadata during upload
-   - [ ] Convert back to Google Docs API format
-   - [ ] Preserve feature order
+3. **Testing**
+   - [ ] End-to-end round-trip tests with all advanced features
+   - [ ] Verify feature preservation across multiple download/upload cycles
 
-4. **Testing**
-   - [ ] Test round-trip with advanced features
-   - [ ] Verify features are preserved
-
-**Deliverable:** Advanced Google Docs features preserved in Markdown
+**Deliverable:** Robust handling of all Google Docs features in Markdown round-trips
 
 ---
 
@@ -445,7 +464,7 @@ Unit tests and documentation should be written for each component and function a
 **Then Phase 4** - Add change detection. This is critical for the tool's efficiency and conflict handling. Change detection should work per-tab for multi-tab documents.
 
 **Phases 5-7** can be done in parallel or based on priority:
-- **Phase 5** if advanced features are needed early
+- **Phase 5** is now residual -- most content absorbed into Phase 2f. Only needed if additional features are discovered.
 - **Phase 6** if advanced tab management features are needed (basic tab support is already in Phases 1-3)
 - **Phase 7** if image storage is needed
 
@@ -456,16 +475,16 @@ Unit tests and documentation should be written for each component and function a
 1. **Data Models**: Use Pydantic models instead of TypedDicts
    - **Decision**: Generate Pydantic models from `google-api-python-client-stubs` using automated script
    - **Benefits**: Attribute access (`doc.title`), runtime validation, better developer experience
-   - **See**: `docs/PYDANTIC_STRATEGY.md` for detailed approach
+   - **See**: `docs/TECH_SPEC.md` Section 5.4 for model details (historical strategy doc archived at `docs/archive/PYDANTIC_STRATEGY.md`)
 
 2. **Transport/Client Separation**: Two-layer API architecture
    - **`GoogleDocsTransport`** (`transport.py`): Low-level layer that talks to the Google Docs API and returns raw dicts. Uses `googleapiclient._apis.docs.v1` type stubs for typing.
    - **`GoogleDocsClient`** (`client.py`): High-level layer that composes the transport and returns typed Pydantic models. Most consumers should use this.
    - **Rationale**: Keeps raw API access available for scripts like `download_test_doc.py` that need unmodified JSON, while providing typed models for application code.
 
-3. **Markdown Parser**: Choose library for parsing Markdown (deserialization only)
+3. **Markdown Parser**: Choose library for parsing Markdown
    - **Decision**: `markdown-it-py` (modern, extensible)
-   - **Note**: Used only for deserialization (Markdown → Pydantic). Serialization (Pydantic → Markdown) builds strings directly using Visitor Pattern.
+   - **Note**: May only be needed for the **create-new-document** flow. The **update-existing-document** flow uses Markdown text diffing (not parsing) to generate surgical `batchUpdate` requests. Serialization (Pydantic → Markdown) builds strings directly using visitor-style dispatch.
 
 4. **CLI Framework**: Choose CLI framework
    - **Decision**: `typer` (modern, type-safe, leverages Python type hints)
@@ -525,9 +544,11 @@ This document should be used for testing throughout development.
 - **Phase 3:** Upload — client primitives and CLI `upload` scaffold done; **Markdown deserializer**, **`uploader.py`**, directory/tab mapping, and working CLI still to do
 
 **Up Next:**
-- **Phase 2:** Enhanced Markdown features — lists, tables, images, code blocks, links, strikethrough, etc. in `MarkdownSerializer`
-- **Phase 1.4 remaining:** Location/Range `tabId` and `segmentId` handling (deferred to when upload/batch-update needs them)
+- **Phase 2a:** Simple inline/block elements — links, strikethrough, horizontal rules, rich links, footnotes
+- **Phase 2b:** Lists (requires serializer refactoring for stateful cross-paragraph grouping + `DocumentTab.lists` context)
+- **Phase 2c-f:** Tables, code blocks (U+E907 detection), images, non-Markdown elements + metadata strategy
+- **Phase 1.4 remaining:** Location/Range `tabId` and `segmentId` handling (deferred to Phase 3 when upload needs them)
 
 **Remaining Phase 3 Tasks:**
-- Deserializer (`markdown-it-py`), `uploader.py`, element → `Request` mapping, multi-tab directory support, Python upload API, round-trip and integration tests
+- `uploader.py` with atomic-edit strategy (diff Markdown strings → map to API indices → surgical batchUpdate), create-new-document flow (may use `markdown-it-py`), multi-tab directory support, Python upload API, round-trip and integration tests
 

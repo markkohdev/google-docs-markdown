@@ -1,6 +1,7 @@
 # Google Docs API - Comprehensive Element Type Analysis
 
 **Date:** 2026-01-08  
+**Last Updated:** 2026-03-25 (Added U+E907 widget marker documentation; updated implementation recommendations from dataclasses to Pydantic)  
 **Purpose:** Detailed analysis of Google Docs API element types, their relationships, and reusable sub-elements for the Google Docs Markdown tool
 
 ## Table of Contents
@@ -11,7 +12,8 @@
 4. [Paragraph Elements](#paragraph-elements)
 5. [Reusable Sub-Element Types](#reusable-sub-element-types)
 6. [Element Relationships and Constraints](#element-relationships-and-constraints)
-7. [Implementation Recommendations](#implementation-recommendations)
+7. [U+E907 Widget Markers](#ue907-widget-markers)
+8. [Implementation Recommendations](#implementation-recommendations)
 
 ---
 
@@ -487,51 +489,59 @@ Document
 
 ---
 
+## U+E907 Widget Markers
+
+The Google Docs API uses the Unicode Private Use Area character `U+E907` as a placeholder within `TextRun.content` for non-text elements. From the API documentation:
+
+> "The text of this run. Any non-text elements in the run are replaced with the Unicode character U+E907."
+
+### Observed Behavior
+
+Investigation of real document fixture JSON revealed that `U+E907` appears in two distinct contexts:
+
+**1. Code Block Widget Boundaries**
+
+Code blocks in Google Docs are rendered as a special widget container (visible in the UI with a language label like "Python"). The API does not expose a dedicated code block element type. Instead:
+
+- A `TextRun` with `content="\ue907"` (typically Arial font) appears immediately before the first monospace code line
+- Consecutive `Paragraph` elements with all `TextRun`s using `fontFamily: "Roboto Mono"` contain the code content
+- A `TextRun` with `content="\ue907\n"` (Arial font) appears immediately after the last code line
+
+The widget's internal state (language, theme) is NOT exposed through the API, but the boundary markers are consistently present.
+
+**2. Smart Chip Placeholders**
+
+When a smart chip (person mention, status chip, file chip, etc.) exists within a paragraph but does not have its own `ParagraphElement` entry in the JSON response, a `U+E907` character appears in the adjacent `TextRun.content` as a positional placeholder.
+
+### Detection Strategy for Code Blocks
+
+Combine U+E907 boundary detection with monospace font heuristic:
+1. Identify a `TextRun` starting with `\ue907` in a non-monospace font
+2. Check if subsequent paragraphs contain exclusively monospace-font (`Roboto Mono`) `TextRun`s
+3. Look for a closing `\ue907` marker after the monospace paragraphs
+4. Group the interior paragraphs as a fenced code block (no language identifier -- API doesn't expose it)
+
+### Implications for Upload
+
+Since `U+E907` characters represent widget containers with invisible internal state, the upload strategy should use surgical `batchUpdate` operations that edit text WITHIN widget boundaries without touching the markers. This preserves widget state (language labels, chip metadata) that cannot be recreated through the API. See `TECH_SPEC.md` Section 5.9 for details.
+
+---
+
 ## Implementation Recommendations
 
 ### 1. Data Model Structure
 
-Create Python dataclasses mirroring the API structure:
+**Status:** Implemented using Pydantic models (generated from `google-api-python-client-stubs` via `scripts/generate_models.py`).
 
-```python
-# Core types
-@dataclass
-class TextStyle:
-    backgroundColor: Optional[Color] = None
-    foregroundColor: Optional[Color] = None
-    bold: Optional[bool] = None
-    italic: Optional[bool] = None
-    # ... other properties
+All models inherit from `GoogleDocsBaseModel` (Pydantic `BaseModel` with `extra="allow"`, `populate_by_name=True`). Models use **optional-field composition** rather than class hierarchies -- `StructuralElement` has optional `paragraph`, `table`, `sectionBreak`, and `tableOfContents` fields (exactly one is set). Same pattern for `ParagraphElement` (optional `textRun`, `person`, `richLink`, etc.).
 
-@dataclass
-class ParagraphStyle:
-    alignment: Optional[str] = None
-    namedStyleType: Optional[str] = None
-    # ... other properties
-
-# Structural elements
-@dataclass
-class Paragraph(StructuralElement):
-    elements: List[ParagraphElement]
-    paragraphStyle: Optional[ParagraphStyle] = None
-    bullet: Optional[Bullet] = None
-
-@dataclass
-class Table(StructuralElement):
-    tableRows: List[TableRow]
-    tableStyle: Optional[TableStyle] = None
-
-# Paragraph elements
-@dataclass
-class TextRun(ParagraphElement):
-    content: str
-    textStyle: Optional[TextStyle] = None
-
-@dataclass
-class InlineObjectElement(ParagraphElement):
-    inlineObjectId: str
-    textStyle: Optional[TextStyle] = None
-```
+Models are organized in `google_docs_markdown/models/`:
+- `document.py`: `Document`, `DocumentTab`, `Body`, `Tab`, `TabProperties`
+- `elements.py`: `StructuralElement`, `Paragraph`, `ParagraphElement`, `TextRun`, `Table`, etc.
+- `styles.py`: `ParagraphStyle`, `TextStyle`, `Bullet`, `NestingLevel`, etc.
+- `common.py`: `Color`, `Dimension`, `Location`, `Range`, `Link`, `List`, `ListProperties`, etc.
+- `requests.py`: `Request` and all `batchUpdate` request types
+- `responses.py`: `Response` and reply types
 
 ### 2. Element Type Mapping
 
@@ -556,21 +566,9 @@ class InlineObjectElement(ParagraphElement):
 | Bullet (list) | `- item` or `1. item` |
 | Code block | Fenced code block |
 
-### 3. Reusable Component Strategy
+### 3. Model Organization
 
-**Create shared modules:**
-- `text_style.py` - TextStyle dataclass and conversion logic
-- `paragraph_style.py` - ParagraphStyle dataclass and conversion logic
-- `color.py` - Color object handling
-- `size.py` - Size object handling
-- `location.py` - Location and Range utilities
-- `table.py` - Table, TableRow, TableCell structures
-
-**Benefits:**
-- Consistent handling across all element types
-- Easier to maintain and update
-- Type safety and IDE support
-- Reusable conversion utilities
+**Status:** Implemented. All reusable types are organized into the generated Pydantic model files (`styles.py`, `common.py`, etc.) rather than separate per-type modules. The `models/__init__.py` re-exports key types and runs `model_rebuild()` to resolve cross-module forward references.
 
 ### 4. Handling Multi-Tab Documents
 
@@ -581,9 +579,9 @@ class InlineObjectElement(ParagraphElement):
 
 ### 5. Suggestion Handling
 
-Many elements support `suggestedInsertionIds`, `suggestedDeletionIds`, and `suggested*Changes` properties. For initial implementation:
-- Focus on accepted content (ignore suggestions)
-- Can add suggestion handling later if needed
+Many elements support `suggestedInsertionIds`, `suggestedDeletionIds`, and `suggested*Changes` properties.
+
+**Decision (Phase 2f):** Suggestions will be serialized with visible markers in the Markdown output (e.g., HTML comments around suggested text) so users can distinguish suggested vs. accepted content. Currently (Phase 1), suggestions are treated as accepted content (included in output without markers).
 
 ### 6. Batch Update Strategy
 
@@ -609,5 +607,7 @@ The Google Docs API provides a rich hierarchical structure with:
 - **11 paragraph element types:** TextRun, InlineObjectElement, PageBreak, ColumnBreak, HorizontalRule, FootnoteReference, DateElement, Person, RichLink, AutoText, Equation
 - **12+ reusable sub-element types:** TextStyle, ParagraphStyle, Color, Size, Link, Border, Location, Range, etc.
 
-The reusable sub-elements (especially `TextStyle`, `Color`, `Size`, `Location`, `Range`) are used extensively across element types, making them ideal candidates for shared implementation modules. This will ensure consistency and reduce code duplication in the conversion tool.
+The reusable sub-elements (especially `TextStyle`, `Color`, `Size`, `Location`, `Range`) are used extensively across element types and are organized in the Pydantic model files under `google_docs_markdown/models/`.
+
+Additionally, the `U+E907` Private Use Area character serves as a placeholder for non-text elements (code block widgets, smart chips) and plays a critical role in code block detection and the atomic-edit upload strategy. See Section 7 above for details.
 
