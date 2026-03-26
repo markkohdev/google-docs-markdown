@@ -8,9 +8,11 @@ Phase 2.1 scope: links, strikethrough, underline, rich links, horizontal
 rules, footnote references and footnote content.
 Phase 2.2 scope: lists (ordered, unordered, nested) via block grouper
 pre-processing pass.
+Phase 2.3 scope: tables (pipe tables with header detection, formatted cell
+content, multi-paragraph cells via <br>, pipe escaping).
 
-Unsupported element types (tables, images, code blocks, etc.) are silently
-skipped and will be added in later phases.
+Unsupported element types (images, code blocks, etc.) are silently skipped
+and will be added in later phases.
 """
 
 from __future__ import annotations
@@ -32,6 +34,8 @@ from google_docs_markdown.models.elements import (
     ParagraphElement,
     RichLink,
     StructuralElement,
+    Table,
+    TableCell,
     TextRun,
 )
 
@@ -133,7 +137,60 @@ class MarkdownSerializer:
         """Return Markdown for a StructuralElement, or None to skip."""
         if element.paragraph:
             return self._visit_paragraph(element.paragraph)
+        if element.table:
+            return self._visit_table(element.table)
         return None
+
+    def _visit_table(self, table: Table) -> str | None:
+        """Render a Table as a Markdown pipe table."""
+        if not table.tableRows:
+            return None
+
+        rows: list[list[str]] = []
+        header_row_count = 0
+
+        for row in table.tableRows:
+            cells: list[str] = []
+            for cell in row.tableCells or []:
+                cells.append(self._serialize_cell_content(cell))
+            rows.append(cells)
+
+            if row.tableRowStyle and row.tableRowStyle.tableHeader:
+                header_row_count += 1
+
+        if not rows:
+            return None
+
+        col_count = table.columns or (max(len(r) for r in rows) if rows else 0)
+        for row in rows:
+            while len(row) < col_count:
+                row.append("")
+
+        separator = "| " + " | ".join("---" for _ in range(col_count)) + " |"
+
+        lines: list[str] = []
+        for i, row in enumerate(rows):
+            line = "| " + " | ".join(row) + " |"
+            lines.append(line)
+            if i == max(header_row_count - 1, 0):
+                lines.append(separator)
+
+        return "\n".join(lines)
+
+    def _serialize_cell_content(self, cell: TableCell) -> str:
+        """Serialize a table cell's content into a single inline string."""
+        if not cell.content:
+            return ""
+
+        parts: list[str] = []
+        for element in cell.content:
+            if element.paragraph:
+                text = self._collect_paragraph_text(element.paragraph.elements or [])
+                if text:
+                    parts.append(text)
+
+        result = "<br>".join(parts)
+        return _escape_pipe(result)
 
     def _visit_paragraph(self, paragraph: Paragraph) -> str:
         """Return Markdown for a Paragraph (heading, subtitle, or body text)."""
@@ -219,6 +276,11 @@ class MarkdownSerializer:
         if ref.footnoteId:
             self._footnote_refs.append((ref.footnoteId, ref.footnoteNumber))
         return f"[^{ref.footnoteNumber}]"
+
+
+def _escape_pipe(text: str) -> str:
+    """Escape literal pipe characters so they don't break table structure."""
+    return text.replace("|", "\\|")
 
 
 def _apply_inline_formatting(

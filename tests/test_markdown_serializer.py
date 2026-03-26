@@ -296,7 +296,7 @@ class TestSerializerBasic:
         assert result == "Normal **bold** and *italic* text\n"
 
     def test_skips_unsupported_structural_elements(self, serializer: MarkdownSerializer) -> None:
-        from google_docs_markdown.models.elements import SectionBreak, Table
+        from google_docs_markdown.models.elements import SectionBreak
 
         doc_tab = DocumentTab(
             body=Body(
@@ -308,7 +308,6 @@ class TestSerializerBasic:
                             paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
                         )
                     ),
-                    StructuralElement(table=Table(rows=1, columns=1)),
                 ]
             )
         )
@@ -855,6 +854,277 @@ class TestSerializerLists:
 
 
 # ---------------------------------------------------------------------------
+# Table serialization tests (Phase 2.3)
+# ---------------------------------------------------------------------------
+
+
+def _table_cell(text: str, bold: bool = False) -> "TableCell":
+    """Build a TableCell containing a single paragraph with optional bold."""
+    from google_docs_markdown.models.elements import TableCell
+
+    style = TextStyle(bold=True) if bold else None
+    return TableCell(
+        content=[
+            StructuralElement(
+                paragraph=Paragraph(
+                    elements=[
+                        ParagraphElement(textRun=TextRun(content=text + "\n", textStyle=style)),
+                    ],
+                    paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                )
+            )
+        ]
+    )
+
+
+def _table_row(cells: list["TableCell"], header: bool = False) -> "TableRow":
+    """Build a TableRow with optional header flag."""
+    from google_docs_markdown.models.elements import TableRow
+    from google_docs_markdown.models.styles import TableRowStyle
+
+    style = TableRowStyle(tableHeader=True) if header else None
+    return TableRow(tableCells=cells, tableRowStyle=style)
+
+
+class TestSerializerTables:
+    def test_basic_table_with_header(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import Table
+
+        table = Table(
+            rows=3,
+            columns=2,
+            tableRows=[
+                _table_row([_table_cell("H1"), _table_cell("H2")], header=True),
+                _table_row([_table_cell("A1"), _table_cell("A2")]),
+                _table_row([_table_cell("B1"), _table_cell("B2")]),
+            ],
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
+        result = serializer.serialize(doc_tab)
+        expected = (
+            "| H1 | H2 |\n"
+            "| --- | --- |\n"
+            "| A1 | A2 |\n"
+            "| B1 | B2 |\n"
+        )
+        assert result == expected
+
+    def test_table_without_explicit_header(self, serializer: MarkdownSerializer) -> None:
+        """First row is used as header when no row has tableHeader=True."""
+        from google_docs_markdown.models.elements import Table
+
+        table = Table(
+            rows=2,
+            columns=2,
+            tableRows=[
+                _table_row([_table_cell("A1"), _table_cell("A2")]),
+                _table_row([_table_cell("B1"), _table_cell("B2")]),
+            ],
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
+        result = serializer.serialize(doc_tab)
+        expected = (
+            "| A1 | A2 |\n"
+            "| --- | --- |\n"
+            "| B1 | B2 |\n"
+        )
+        assert result == expected
+
+    def test_table_with_bold_header_cells(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import Table
+
+        table = Table(
+            rows=2,
+            columns=2,
+            tableRows=[
+                _table_row(
+                    [_table_cell("Name", bold=True), _table_cell("Value", bold=True)],
+                    header=True,
+                ),
+                _table_row([_table_cell("foo"), _table_cell("42")]),
+            ],
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
+        result = serializer.serialize(doc_tab)
+        assert "| **Name** | **Value** |" in result
+        assert "| --- | --- |" in result
+        assert "| foo | 42 |" in result
+
+    def test_table_with_formatted_cell_content(self, serializer: MarkdownSerializer) -> None:
+        """Cells with italic and link formatting."""
+        from google_docs_markdown.models.elements import Table, TableCell, TableRow
+
+        cell_with_italic = TableCell(
+            content=[
+                StructuralElement(
+                    paragraph=Paragraph(
+                        elements=[
+                            ParagraphElement(
+                                textRun=TextRun(content="emphasis", textStyle=TextStyle(italic=True))
+                            ),
+                            ParagraphElement(textRun=TextRun(content="\n")),
+                        ],
+                        paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                    )
+                )
+            ]
+        )
+        cell_with_link = TableCell(
+            content=[
+                StructuralElement(
+                    paragraph=Paragraph(
+                        elements=[
+                            ParagraphElement(
+                                textRun=TextRun(
+                                    content="click",
+                                    textStyle=TextStyle(link=Link(url="https://example.com")),
+                                )
+                            ),
+                            ParagraphElement(textRun=TextRun(content="\n")),
+                        ],
+                        paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                    )
+                )
+            ]
+        )
+        table = Table(
+            rows=2,
+            columns=2,
+            tableRows=[
+                _table_row([_table_cell("H1"), _table_cell("H2")], header=True),
+                TableRow(tableCells=[cell_with_italic, cell_with_link]),
+            ],
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
+        result = serializer.serialize(doc_tab)
+        assert "| *emphasis* | [click](https://example.com) |" in result
+
+    def test_table_with_multi_paragraph_cell(self, serializer: MarkdownSerializer) -> None:
+        """Multiple paragraphs in a cell are joined with <br>."""
+        from google_docs_markdown.models.elements import Table, TableCell, TableRow
+
+        multi_para_cell = TableCell(
+            content=[
+                StructuralElement(
+                    paragraph=Paragraph(
+                        elements=[ParagraphElement(textRun=TextRun(content="Line 1\n"))],
+                        paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                    )
+                ),
+                StructuralElement(
+                    paragraph=Paragraph(
+                        elements=[ParagraphElement(textRun=TextRun(content="Line 2\n"))],
+                        paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                    )
+                ),
+            ]
+        )
+        table = Table(
+            rows=2,
+            columns=1,
+            tableRows=[
+                _table_row([_table_cell("Header")], header=True),
+                TableRow(tableCells=[multi_para_cell]),
+            ],
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
+        result = serializer.serialize(doc_tab)
+        assert "| Line 1<br>Line 2 |" in result
+
+    def test_table_with_pipe_in_content(self, serializer: MarkdownSerializer) -> None:
+        """Pipe characters in cell text are escaped."""
+        from google_docs_markdown.models.elements import Table
+
+        table = Table(
+            rows=2,
+            columns=1,
+            tableRows=[
+                _table_row([_table_cell("Header")], header=True),
+                _table_row([_table_cell("a | b")]),
+            ],
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
+        result = serializer.serialize(doc_tab)
+        assert "| a \\| b |" in result
+
+    def test_single_row_table(self, serializer: MarkdownSerializer) -> None:
+        """A table with only a header row and no data rows."""
+        from google_docs_markdown.models.elements import Table
+
+        table = Table(
+            rows=1,
+            columns=2,
+            tableRows=[
+                _table_row([_table_cell("Col A"), _table_cell("Col B")], header=True),
+            ],
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
+        result = serializer.serialize(doc_tab)
+        expected = (
+            "| Col A | Col B |\n"
+            "| --- | --- |\n"
+        )
+        assert result == expected
+
+    def test_table_with_empty_cells(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import Table, TableCell, TableRow
+
+        table = Table(
+            rows=2,
+            columns=2,
+            tableRows=[
+                _table_row([_table_cell("H1"), _table_cell("H2")], header=True),
+                TableRow(tableCells=[TableCell(content=[]), _table_cell("data")]),
+            ],
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
+        result = serializer.serialize(doc_tab)
+        assert "|  | data |" in result
+
+    def test_table_no_rows_returns_empty(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import Table
+
+        table = Table(rows=0, columns=2, tableRows=[])
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
+        result = serializer.serialize(doc_tab)
+        assert result == ""
+
+    def test_table_between_paragraphs(self, serializer: MarkdownSerializer) -> None:
+        """Table surrounded by regular paragraphs gets blank-line separation."""
+        from google_docs_markdown.models.elements import Table
+
+        table = Table(
+            rows=2,
+            columns=1,
+            tableRows=[
+                _table_row([_table_cell("H")], header=True),
+                _table_row([_table_cell("D")]),
+            ],
+        )
+        doc_tab = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="Before\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    ),
+                    StructuralElement(table=table),
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="After\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    ),
+                ]
+            )
+        )
+        result = serializer.serialize(doc_tab)
+        assert result == "Before\n\n| H |\n| --- |\n| D |\n\nAfter\n"
+
+
+# ---------------------------------------------------------------------------
 # Integration tests with real JSON fixtures
 # ---------------------------------------------------------------------------
 
@@ -930,6 +1200,27 @@ class TestSerializerFixtures:
         doc = _load_document(MULTI_TAB_JSON)
         result = serializer.serialize(doc.tabs[0].documentTab)  # type: ignore
         assert "[This is a link to the \u201cChild Tab\u201d](https://docs.google.com/document/d/" in result
+
+    def test_single_tab_fixture_table(self, serializer: MarkdownSerializer) -> None:
+        """Verify the single-tab fixture table renders as a Markdown pipe table."""
+        doc = _load_document(SINGLE_TAB_JSON)
+        tab = doc.tabs[0]  # type: ignore[index]
+        result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
+
+        assert "| **Header 1** | **Header 2** | **Header 3** |" in result
+        assert "| --- | --- | --- |" in result
+        assert "| Data A1 | Data B1 | Data C1 |" in result
+        assert "| Data A2 | Data B2 | Data C2 |" in result
+        assert "| Data A3 | Data B3 | Data C3 |" in result
+
+    def test_multi_tab_fixture_table(self, serializer: MarkdownSerializer) -> None:
+        """Verify the multi-tab fixture table renders as a Markdown pipe table."""
+        doc = _load_document(MULTI_TAB_JSON)
+        result = serializer.serialize(doc.tabs[0].documentTab)  # type: ignore
+
+        assert "| **Header 1** | **Header 2** | **Header 3** |" in result
+        assert "| --- | --- | --- |" in result
+        assert "| Data A1 | Data B1 | Data C1 |" in result
 
     def test_multi_tab_fixture_rich_link(self, serializer: MarkdownSerializer) -> None:
         """Verify the fixture's rich link chip renders as [title](uri)."""
