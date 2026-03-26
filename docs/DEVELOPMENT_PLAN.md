@@ -208,6 +208,7 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 - [ ] Handle column breaks (`ColumnBreak`)
 - [ ] Handle section breaks (`SectionBreak` → HTML comment with section style info)
 - [ ] Handle table of contents (`TableOfContents` → mark as auto-generated)
+- [ ] Handle `TITLE` and `SUBTITLE` named styles — currently serialized as lossy Markdown equivalents (`TITLE` → `#` same as `HEADING_1`, `SUBTITLE` → italic `*text*`). Add metadata (per 2.6.1 strategy) so they can be distinguished from `HEADING_1` / italic text and round-tripped on upload via `updateParagraphStyle` with the correct `namedStyleType`
 
 ##### 2.6.3: Suggestion Handling
 - [ ] Serialize Google Docs suggestions (`suggestedInsertionIds` / `suggestedDeletionIds`) with visible markers (e.g., HTML comments around suggested text) so users can distinguish suggested vs. accepted content
