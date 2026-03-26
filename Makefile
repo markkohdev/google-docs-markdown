@@ -54,7 +54,7 @@ fix: lint-fix format-fix
 
 # Update test fixture JSONs from Google Docs API
 update-docs:
-	uv run python scripts/download_test_doc.py --urls-file tests/resources/document_jsons/doc_urls.txt --overwrite
+	uv run python scripts/download_test_doc.py --urls-file tests/resources/document_jsons/doc_urls.txt --pretty --overwrite
 
 # Update stubs and regenerate Pydantic models if the stubs version changed
 update-models:

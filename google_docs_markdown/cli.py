@@ -4,8 +4,6 @@ from typing import Annotated
 
 import typer
 
-from google_docs_markdown.client import GoogleDocsClient
-
 app = typer.Typer(
     name="google-docs-markdown",
     help="Download and edit Google Docs as Markdown using the Google Docs API",
@@ -23,7 +21,7 @@ def download(
         typer.Option(
             "-o",
             "--output",
-            help="Output file or directory path (defaults to a directory named after the document title)",
+            help="Output directory path (defaults to a directory named after the document title)",
         ),
     ] = None,
     tabs: Annotated[
@@ -31,11 +29,24 @@ def download(
     ] = None,
 ) -> None:
     """Download a Google Doc as Markdown."""
-    typer.echo("Downloading a Google Doc as Markdown...")
-    # Temporary implementation until we've implemented the downloader
-    client = GoogleDocsClient()
-    doc = client.get_document(document_url)
-    typer.echo(f"Downloaded document: {doc.title}")
+    from google_docs_markdown.downloader import Downloader
+
+    dl = Downloader()
+    typer.echo("Downloading...")
+
+    try:
+        written = dl.download_to_files(
+            document_url,
+            output_dir=output,
+            tab_names=tabs or None,
+        )
+    except Exception as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    for tab_path, file_path in written.items():
+        typer.echo(f"  {tab_path} -> {file_path}")
+    typer.echo(f"Downloaded {len(written)} tab(s).")
 
 
 @app.command("list-tabs")

@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-25 (Phase 1 Task 3 complete; transport/client separation; Phase 3 started — API upload primitives + CLI scaffold)  
-**Status:** Phase 1 — downloader/CLI still MVP; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
+**Last Updated:** 2026-03-25 (Phase 1 Tasks 4–5 complete; `MarkdownSerializer`, `Downloader`, working CLI `download`; Phase 3 API primitives + CLI scaffold)  
+**Status:** Phase 1 — Tasks 1–5 complete (basic download pipeline working end-to-end); Task 6 partially done; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
 
 ## Overview
 
@@ -48,53 +48,55 @@ Unit tests and documentation should be written for each component and function a
    - [x] `GoogleDocsTransport` returns raw dicts for use cases like downloading test fixtures
    - [x] Test API round-trip (dict → Pydantic → dict)
 
-4. **Basic Downloader (Docs → Markdown)**
-   - [ ] Create `google_docs_markdown/downloader.py`
-   - [ ] Create `google_docs_markdown/markdown_serializer.py` implementing Visitor Pattern for Pydantic → Markdown conversion
-   - [ ] Implement `MarkdownSerializer` visitor class to traverse Pydantic models
-   - [ ] Treat every document as multi-tab (use `DocumentTab` Pydantic model as fundamental object)
-   - [ ] Handle nested tab structures recursively (tabs can contain both content and child tabs)
-   - [ ] Use `GoogleDocsClient` (Pydantic models) for document retrieval
-   - [ ] Implement basic text extraction from Pydantic `TextRun` models
-   - [ ] Handle headings (up to arbitrary depth) from `Paragraph` models with heading styles
-   - [ ] Handle paragraphs from `Paragraph` Pydantic models
-   - [ ] Handle basic formatting (bold, italic) from `TextStyle` models
-   - [ ] Handle line breaks
-   - [ ] Ensure deterministic output (normalize whitespace)
-   - [ ] Create directory structure named after document title (or user-provided output directory)
-   - [ ] Download each tab (including nested tabs) as a separate markdown file named after the tab (e.g., `My Doc/Tab 1.md`)
-   - [ ] Name markdown files after tab names (sanitize filenames)
-   - [ ] Handle nested tabs with appropriate naming convention (e.g., `Tab 1/Subtab A.md`)
+4. **Basic Downloader (Docs → Markdown)** ✅
+   - [x] Create `google_docs_markdown/downloader.py`
+   - [x] Create `google_docs_markdown/markdown_serializer.py` implementing Visitor Pattern for Pydantic → Markdown conversion
+   - [x] Implement `MarkdownSerializer` visitor class to traverse Pydantic models
+   - [x] Treat every document as multi-tab (use `DocumentTab` Pydantic model as fundamental object)
+   - [x] Handle nested tab structures recursively (tabs can contain both content and child tabs)
+   - [x] Use `GoogleDocsClient` (Pydantic models) for document retrieval
+   - [x] Implement basic text extraction from Pydantic `TextRun` models
+   - [x] Handle headings (up to arbitrary depth) from `Paragraph` models with heading styles
+   - [x] Handle paragraphs from `Paragraph` Pydantic models
+   - [x] Handle basic formatting (bold, italic) from `TextStyle` models
+   - [x] Handle line breaks
+   - [x] Ensure deterministic output (normalize whitespace)
+   - [x] Create directory structure named after document title (or user-provided output directory)
+   - [x] Download each tab (including nested tabs) as a separate markdown file named after the tab (e.g., `My Doc/Tab 1.md`)
+   - [x] Name markdown files after tab names (sanitize filenames)
+   - [x] Handle nested tabs with appropriate naming convention (e.g., `Tab 1/Subtab A.md`)
    - [ ] Ensure Location/Range objects include `tabId` when working with multi-tab documents (API client ready; objects created in later tasks)
    - [ ] Handle `segmentId` in Location/Range objects for headers/footers/footnotes (API client ready; objects created in later tasks)
 
-5. **CLI - Download Command**
-   - [ ] Create `google_docs_markdown/cli.py` using `typer`
-   - [ ] Implement `download` command
-   - [ ] Support document URL/ID input
-   - [ ] Support output directory path
-   - [ ] Add `--tabs` flag for selective tab download (specify which tabs to download)
-   - [ ] Add interactive prompts for missing arguments
-   - [ ] Update `pyproject.toml` entry point
+5. **CLI - Download Command** ✅
+   - [x] Create `google_docs_markdown/cli.py` using `typer`
+   - [x] Implement `download` command (calls `Downloader.download_to_files`)
+   - [x] Support document URL/ID input (with interactive prompt via typer)
+   - [x] Support output directory path (`--output` / `-o`)
+   - [x] Add `--tabs` flag for selective tab download (specify which tabs to download)
+   - [x] Add interactive prompts for missing arguments (document URL prompted by typer)
+   - [x] Update `pyproject.toml` entry point (`google-docs-markdown` and `gdm` aliases)
 
-6. **Python API - Basic Interface**
-   - [ ] Create `GoogleDocMarkdown` class in `downloader.py`
-   - [ ] Implement `download(document_id)` → returns dict of tab_name → markdown (all docs treated as multi-tab)
-   - [ ] Implement `download_to_file(document_id, output_path)` → saves to directory
-   - [ ] Implement `get_document_title(document_id)` → returns title
-   - [ ] Implement `get_tabs(document_id)` → returns list of tab names/IDs (always returns at least one tab)
+6. **Python API - Basic Interface** (Partially Complete)
+   - [x] Create `Downloader` class in `downloader.py` (named `Downloader`, not `GoogleDocMarkdown`)
+   - [x] Implement `download(document_id)` → returns dict of tab_path → markdown (all docs treated as multi-tab)
+   - [x] Implement `download_to_files(document_id, output_path)` → saves to directory, returns dict of tab_path → file Path
+   - [ ] Implement `get_document_title(document_id)` → returns title (available via `GoogleDocsClient.get_document().title`)
+   - [ ] Implement `get_tabs(document_id)` → returns list of tab names/IDs (available via `Document.tabs`)
    - [ ] Implement `get_nested_tabs(document_id, tab_id)` → returns nested tabs within a tab
-   - [ ] Implement `extract_document_id(url)` → static method
+   - [x] `extract_document_id(url)` → available as `GoogleDocsClient.extract_document_id()` (static method)
 
-7. **Testing**
-   - [ ] Test with example Google Doc from `example_markdown/google_doc_urls.txt`
-   - [ ] Test with multi-tab Google Doc (if available)
+7. **Testing** (Partially Complete)
+   - [ ] Test with example Google Doc from `example_markdown/google_doc_urls.txt` (integration — requires live API)
+   - [ ] Test with multi-tab Google Doc (integration — requires live API)
    - [x] Create unit tests for transport and client (including tab detection) ✅
-   - [ ] Create unit tests for downloader (single-tab and multi-tab)
+   - [x] Create unit tests for `MarkdownSerializer` (36 tests: headings, formatting, fixtures, determinism) ✅
+   - [x] Create unit tests for `Downloader` (22 tests: single-tab, multi-tab, nested, filtering, disk I/O) ✅
+   - [x] Create unit tests for CLI `download` command (4 tests: wiring, flags, error handling) ✅
    - [ ] Create integration tests for end-to-end download (both scenarios)
-   - [ ] Verify deterministic output (same doc → same markdown)
-   - [ ] Test directory creation and file naming for multi-tab documents
-   - [ ] Test selective tab download with `--tabs` flag
+   - [x] Verify deterministic output (same doc → same markdown) ✅
+   - [x] Test directory creation and file naming for multi-tab documents ✅
+   - [x] Test selective tab download with `--tabs` flag ✅
 
 **Deliverable:** Can download Google Docs as Markdown (creates directory structure with markdown files inside, named after document title)
 
@@ -514,15 +516,17 @@ This document should be used for testing throughout development.
 - ✅ Phase 1, Task 1: Project Setup
 - ✅ Phase 1, Task 2: Google Docs API Transport & Client (transport for raw dicts, client for Pydantic models, with comprehensive unit tests for both)
 - ✅ Phase 1, Task 3: Pydantic model generation and transport/client integration (`get_document`, `create_document`, `batch_update`)
+- ✅ Phase 1, Task 4: Basic Downloader — `MarkdownSerializer` (visitor-style traversal of `DocumentTab` → `Body` → `Paragraph` → `TextRun`, handles headings/bold/italic/whitespace normalization) and `Downloader` (multi-tab orchestration, recursive nested tabs, directory/file I/O, filename sanitization). Unsupported elements (tables, images, lists, etc.) are silently skipped — those are Phase 2.
+- ✅ Phase 1, Task 5: CLI Download Command — `download` wired to `Downloader.download_to_files()`, supports `--output`/`-o`, `--tabs`/`-t`, error handling, summary output
 
-**In Progress:**
+**In Progress / Partially Done:**
+- **Phase 1, Task 6:** Python API — `Downloader.download()` and `download_to_files()` implemented; convenience methods (`get_document_title`, `get_tabs`, etc.) not yet added
+- **Phase 1, Task 7:** Unit tests for serializer (36), downloader (22), and CLI (4) are done; integration tests with live API remain
 - **Phase 3:** Upload — client primitives and CLI `upload` scaffold done; **Markdown deserializer**, **`uploader.py`**, directory/tab mapping, and working CLI still to do
 
-**Remaining Phase 1 Tasks:**
-- Task 4: Basic Downloader (Docs → Markdown) — models ready; serializer/downloader not yet landed
-- Task 5: CLI — Download Command (currently minimal stub)
-- Task 6: Python API — Basic Interface
-- Task 7: Testing — downloader/integration tests once downloader exists
+**Up Next:**
+- **Phase 2:** Enhanced Markdown features — lists, tables, images, code blocks, links, strikethrough, etc. in `MarkdownSerializer`
+- **Phase 1.4 remaining:** Location/Range `tabId` and `segmentId` handling (deferred to when upload/batch-update needs them)
 
 **Remaining Phase 3 Tasks:**
 - Deserializer (`markdown-it-py`), `uploader.py`, element → `Request` mapping, multi-tab directory support, Python upload API, round-trip and integration tests
