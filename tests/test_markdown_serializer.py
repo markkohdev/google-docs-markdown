@@ -1331,6 +1331,95 @@ class TestSerializerEquation:
 
 
 # ---------------------------------------------------------------------------
+# Suggestion tests
+# ---------------------------------------------------------------------------
+
+
+class TestSerializerSuggestions:
+    def test_suggested_insertion(self, serializer: MarkdownSerializer) -> None:
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(
+                                    textRun=TextRun(
+                                        content="This is suggested text",
+                                        suggestedInsertionIds=["suggest.abc123"],
+                                    )
+                                ),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- suggestion:insert-start -->This is suggested text<!-- suggestion:insert-end -->" in result
+
+    def test_suggested_deletion(self, serializer: MarkdownSerializer) -> None:
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(
+                                    textRun=TextRun(
+                                        content="Delete this",
+                                        suggestedDeletionIds=["suggest.del456"],
+                                    )
+                                ),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- suggestion:delete-start -->Delete this<!-- suggestion:delete-end -->" in result
+
+    def test_mixed_suggestion_and_normal(self, serializer: MarkdownSerializer) -> None:
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(textRun=TextRun(content="Normal ")),
+                                ParagraphElement(
+                                    textRun=TextRun(
+                                        content="inserted",
+                                        suggestedInsertionIds=["suggest.xyz"],
+                                    )
+                                ),
+                                ParagraphElement(textRun=TextRun(content=" text\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "Normal " in result
+        assert "<!-- suggestion:insert-start -->inserted<!-- suggestion:insert-end -->" in result
+        assert " text" in result
+
+    def test_fixture_single_tab_suggestion(self, serializer: MarkdownSerializer) -> None:
+        doc = _load_document(SINGLE_TAB_JSON)
+        tab = doc.tabs[0]  # type: ignore[index]
+        result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
+        assert "<!-- suggestion:insert-start -->" in result
+        assert "This is an inline suggestion" in result
+
+
+# ---------------------------------------------------------------------------
 # SectionBreak, ColumnBreak, TableOfContents tests
 # ---------------------------------------------------------------------------
 

@@ -324,6 +324,11 @@ class MarkdownSerializer:
         if link and link.url:
             content = _apply_link(content, link.url)
 
+        if text_run.suggestedInsertionIds:
+            content = _wrap_suggestion(content, "insert")
+        elif text_run.suggestedDeletionIds:
+            content = _wrap_suggestion(content, "delete")
+
         return content
 
     def _visit_horizontal_rule(self, _rule: HorizontalRule) -> str:
@@ -476,6 +481,21 @@ def _apply_link(text: str, url: str) -> str:
         return text
 
     return f"{leading}[{inner}]({url}){trailing}"
+
+
+def _wrap_suggestion(text: str, kind: str) -> str:
+    """Wrap suggested text with HTML comment markers.
+
+    ``kind`` is either ``"insert"`` or ``"delete"``.
+    Only wraps non-whitespace content; trailing newlines stay outside.
+    """
+    stripped = text.rstrip("\n")
+    trailing = text[len(stripped) :]
+
+    if not stripped.strip():
+        return text
+
+    return f"<!-- suggestion:{kind}-start -->{stripped}<!-- suggestion:{kind}-end -->{trailing}"
 
 
 def _join_paragraphs(paragraphs: list[str]) -> str:
