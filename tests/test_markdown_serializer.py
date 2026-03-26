@@ -8,20 +8,25 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 import pytest
 
 from google_docs_markdown.markdown_serializer import (
     MarkdownSerializer,
     _apply_inline_formatting,
+    _apply_link,
     _join_paragraphs,
 )
 from google_docs_markdown.models import Document
+from google_docs_markdown.models.common import Footnote, Link, RichLinkProperties
 from google_docs_markdown.models.document import Body, DocumentTab
 from google_docs_markdown.models.elements import (
+    FootnoteReference,
+    HorizontalRule,
     Paragraph,
     ParagraphElement,
+    RichLink,
     StructuralElement,
     TextRun,
 )
@@ -105,6 +110,58 @@ class TestApplyInlineFormatting:
 
     def test_no_formatting(self) -> None:
         assert _apply_inline_formatting("hello", bold=False, italic=False) == "hello"
+
+    def test_strikethrough(self) -> None:
+        assert _apply_inline_formatting("hello", bold=False, italic=False, strikethrough=True) == "~~hello~~"
+
+    def test_underline(self) -> None:
+        assert _apply_inline_formatting("hello", bold=False, italic=False, underline=True) == "<u>hello</u>"
+
+    def test_bold_strikethrough(self) -> None:
+        result = _apply_inline_formatting("hello", bold=True, italic=False, strikethrough=True)
+        assert result == "~~**hello**~~"
+
+    def test_italic_underline(self) -> None:
+        result = _apply_inline_formatting("hello", bold=False, italic=True, underline=True)
+        assert result == "<u>*hello*</u>"
+
+    def test_all_formatting(self) -> None:
+        result = _apply_inline_formatting("hello", bold=True, italic=True, strikethrough=True, underline=True)
+        assert result == "<u>~~***hello***~~</u>"
+
+    def test_strikethrough_preserves_whitespace(self) -> None:
+        assert _apply_inline_formatting(" hello ", bold=False, italic=False, strikethrough=True) == " ~~hello~~ "
+
+    def test_underline_preserves_whitespace(self) -> None:
+        assert _apply_inline_formatting(" hello ", bold=False, italic=False, underline=True) == " <u>hello</u> "
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for _apply_link
+# ---------------------------------------------------------------------------
+
+
+class TestApplyLink:
+    def test_basic_link(self) -> None:
+        assert _apply_link("click here", "https://example.com") == "[click here](https://example.com)"
+
+    def test_preserves_leading_whitespace(self) -> None:
+        assert _apply_link("  click", "https://example.com") == "  [click](https://example.com)"
+
+    def test_preserves_trailing_whitespace(self) -> None:
+        assert _apply_link("click  ", "https://example.com") == "[click](https://example.com)  "
+
+    def test_preserves_both_whitespace(self) -> None:
+        assert _apply_link(" click ", "https://example.com") == " [click](https://example.com) "
+
+    def test_empty_string(self) -> None:
+        assert _apply_link("", "https://example.com") == ""
+
+    def test_all_whitespace(self) -> None:
+        assert _apply_link("   ", "https://example.com") == "   "
+
+    def test_formatted_content(self) -> None:
+        assert _apply_link("**bold**", "https://example.com") == "[**bold**](https://example.com)"
 
 
 # ---------------------------------------------------------------------------
@@ -273,6 +330,309 @@ class TestSerializerBasic:
         result = serializer.serialize(doc_tab)
         assert result == "Before  after\n"
 
+    def test_link_text(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(
+                    textRun=TextRun(
+                        content="click here",
+                        textStyle=TextStyle(link=Link(url="https://example.com")),
+                    )
+                ),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert result == "[click here](https://example.com)\n"
+
+    def test_link_with_bold(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(
+                    textRun=TextRun(
+                        content="bold link",
+                        textStyle=TextStyle(bold=True, link=Link(url="https://example.com")),
+                    )
+                ),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert result == "[**bold link**](https://example.com)\n"
+
+    def test_link_ignores_underline(self, serializer: MarkdownSerializer) -> None:
+        """Links in Google Docs automatically have underline=True; it should be ignored."""
+        para = Paragraph(
+            elements=[
+                ParagraphElement(
+                    textRun=TextRun(
+                        content="my link",
+                        textStyle=TextStyle(underline=True, link=Link(url="https://example.com")),
+                    )
+                ),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert result == "[my link](https://example.com)\n"
+        assert "<u>" not in result
+
+    def test_heading_link_no_url(self, serializer: MarkdownSerializer) -> None:
+        """Links to headings (no URL) should not produce link syntax."""
+        from google_docs_markdown.models.common import HeadingLink
+
+        para = Paragraph(
+            elements=[
+                ParagraphElement(
+                    textRun=TextRun(
+                        content="section ref",
+                        textStyle=TextStyle(link=Link(heading=HeadingLink(id="h.abc"))),
+                    )
+                ),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert result == "section ref\n"
+
+    def test_strikethrough_text(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="deleted", textStyle=TextStyle(strikethrough=True))),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert result == "~~deleted~~\n"
+
+    def test_underline_text(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="underlined", textStyle=TextStyle(underline=True))),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert result == "<u>underlined</u>\n"
+
+    def test_horizontal_rule(self, serializer: MarkdownSerializer) -> None:
+        doc_tab = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="Above\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    ),
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(horizontalRule=HorizontalRule())],
+                        )
+                    ),
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="Below\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    ),
+                ]
+            )
+        )
+        result = serializer.serialize(doc_tab)
+        assert "---" in result
+        assert result == "Above\n\n---\n\nBelow\n"
+
+    def test_rich_link(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(
+                    richLink=RichLink(richLinkProperties=RichLinkProperties(title="Google", uri="https://google.com"))
+                ),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert result == "[Google](https://google.com)\n"
+
+    def test_rich_link_no_title_uses_uri(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(richLink=RichLink(richLinkProperties=RichLinkProperties(uri="https://google.com"))),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert result == "[https://google.com](https://google.com)\n"
+
+    def test_rich_link_no_uri_skipped(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(richLink=RichLink(richLinkProperties=RichLinkProperties(title="Missing"))),
+                ParagraphElement(textRun=TextRun(content="text\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert result == "text\n"
+
+    def test_footnote_reference(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="Some claim")),
+                ParagraphElement(footnoteReference=FootnoteReference(footnoteId="fn1", footnoteNumber="1")),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        footnotes = {
+            "fn1": {
+                "footnoteId": "fn1",
+                "content": [
+                    {
+                        "paragraph": {
+                            "elements": [{"textRun": {"content": "Source: Wikipedia\n"}}],
+                            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                        }
+                    }
+                ],
+            }
+        }
+        doc_tab = DocumentTab(
+            body=Body(content=[StructuralElement(paragraph=para)]),
+            footnotes=footnotes,
+        )
+        result = serializer.serialize(doc_tab)
+        assert "[^1]" in result
+        assert "[^1]: Source: Wikipedia" in result
+
+    def test_multiple_footnotes(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="First")),
+                ParagraphElement(footnoteReference=FootnoteReference(footnoteId="fn1", footnoteNumber="1")),
+                ParagraphElement(textRun=TextRun(content=" and second")),
+                ParagraphElement(footnoteReference=FootnoteReference(footnoteId="fn2", footnoteNumber="2")),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        footnotes = {
+            "fn1": {
+                "footnoteId": "fn1",
+                "content": [
+                    {
+                        "paragraph": {
+                            "elements": [{"textRun": {"content": "First note\n"}}],
+                            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                        }
+                    }
+                ],
+            },
+            "fn2": {
+                "footnoteId": "fn2",
+                "content": [
+                    {
+                        "paragraph": {
+                            "elements": [{"textRun": {"content": "Second note\n"}}],
+                            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                        }
+                    }
+                ],
+            },
+        }
+        doc_tab = DocumentTab(
+            body=Body(content=[StructuralElement(paragraph=para)]),
+            footnotes=footnotes,
+        )
+        result = serializer.serialize(doc_tab)
+        assert "First[^1] and second[^2]" in result
+        assert "[^1]: First note" in result
+        assert "[^2]: Second note" in result
+
+    def test_footnote_no_content_no_crash(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="Text")),
+                ParagraphElement(footnoteReference=FootnoteReference(footnoteId="fn1", footnoteNumber="1")),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(
+            body=Body(content=[StructuralElement(paragraph=para)]),
+            footnotes={},
+        )
+        result = serializer.serialize(doc_tab)
+        assert "Text[^1]" in result
+        assert "[^1]:" not in result
+
+    def test_footnote_with_pydantic_model(self, serializer: MarkdownSerializer) -> None:
+        """Footnotes dict can contain pre-validated Pydantic Footnote objects."""
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="Claim")),
+                ParagraphElement(footnoteReference=FootnoteReference(footnoteId="fn1", footnoteNumber="1")),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        fn_content = StructuralElement(
+            paragraph=Paragraph(
+                elements=[ParagraphElement(textRun=TextRun(content="A Pydantic footnote\n"))],
+                paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+            )
+        )
+        footnotes: dict[str, Any] = {
+            "fn1": Footnote(footnoteId="fn1", content=[fn_content]),
+        }
+        doc_tab = DocumentTab(
+            body=Body(content=[StructuralElement(paragraph=para)]),
+            footnotes=footnotes,
+        )
+        result = serializer.serialize(doc_tab)
+        assert "[^1]: A Pydantic footnote" in result
+
+    def test_mixed_inline_with_link(self, serializer: MarkdownSerializer) -> None:
+        """Bold + italic + strikethrough + link all combined."""
+        para = Paragraph(
+            elements=[
+                ParagraphElement(
+                    textRun=TextRun(
+                        content="styled link",
+                        textStyle=TextStyle(
+                            bold=True,
+                            italic=True,
+                            strikethrough=True,
+                            link=Link(url="https://example.com"),
+                        ),
+                    )
+                ),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert result == "[~~***styled link***~~](https://example.com)\n"
+
     def test_empty_paragraph_becomes_blank_line(self, serializer: MarkdownSerializer) -> None:
         doc_tab = _make_doc_tab(
             [
@@ -295,6 +655,203 @@ class TestSerializerBasic:
         result1 = serializer.serialize(doc_tab)
         result2 = serializer.serialize(doc_tab)
         assert result1 == result2
+
+
+# ---------------------------------------------------------------------------
+# List serialization tests (Phase 2.2)
+# ---------------------------------------------------------------------------
+
+
+def _list_para(text: str, list_id: str, nesting: int = 0) -> StructuralElement:
+    """Build a StructuralElement for a list-item paragraph."""
+    from google_docs_markdown.models.styles import Bullet
+
+    return StructuralElement(
+        paragraph=Paragraph(
+            elements=[ParagraphElement(textRun=TextRun(content=text + "\n"))],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+            bullet=Bullet(listId=list_id, nestingLevel=nesting),
+        )
+    )
+
+
+def _lists_ctx(entries: dict[str, str]) -> dict[str, Any]:
+    """Build a lists context: listId -> glyphType (uniform across nesting levels)."""
+    ctx: dict[str, Any] = {}
+    for list_id, glyph_type in entries.items():
+        ctx[list_id] = {
+            "listProperties": {"nestingLevels": [{"glyphType": glyph_type, "startNumber": 1} for _ in range(9)]}
+        }
+    return ctx
+
+
+class TestSerializerLists:
+    def test_unordered_list(self, serializer: MarkdownSerializer) -> None:
+        doc_tab = DocumentTab(
+            body=Body(
+                content=[
+                    _list_para("Apple", "kix.a"),
+                    _list_para("Banana", "kix.a"),
+                    _list_para("Cherry", "kix.a"),
+                ]
+            ),
+            lists=_lists_ctx({"kix.a": "GLYPH_TYPE_UNSPECIFIED"}),
+        )
+        result = serializer.serialize(doc_tab)
+        assert result == "- Apple\n- Banana\n- Cherry\n"
+
+    def test_ordered_list(self, serializer: MarkdownSerializer) -> None:
+        doc_tab = DocumentTab(
+            body=Body(
+                content=[
+                    _list_para("First", "kix.n"),
+                    _list_para("Second", "kix.n"),
+                    _list_para("Third", "kix.n"),
+                ]
+            ),
+            lists=_lists_ctx({"kix.n": "DECIMAL"}),
+        )
+        result = serializer.serialize(doc_tab)
+        assert result == "1. First\n1. Second\n1. Third\n"
+
+    def test_nested_unordered_list(self, serializer: MarkdownSerializer) -> None:
+        doc_tab = DocumentTab(
+            body=Body(
+                content=[
+                    _list_para("Top", "kix.a"),
+                    _list_para("Sub", "kix.a", nesting=1),
+                    _list_para("SubSub", "kix.a", nesting=2),
+                    _list_para("Back to top", "kix.a"),
+                ]
+            ),
+            lists=_lists_ctx({"kix.a": "GLYPH_TYPE_UNSPECIFIED"}),
+        )
+        result = serializer.serialize(doc_tab)
+        expected = "- Top\n    - Sub\n        - SubSub\n- Back to top\n"
+        assert result == expected
+
+    def test_list_between_paragraphs(self, serializer: MarkdownSerializer) -> None:
+        doc_tab = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="Before list\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    ),
+                    _list_para("Item 1", "kix.a"),
+                    _list_para("Item 2", "kix.a"),
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="After list\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    ),
+                ]
+            ),
+            lists=_lists_ctx({"kix.a": "GLYPH_TYPE_UNSPECIFIED"}),
+        )
+        result = serializer.serialize(doc_tab)
+        assert result == "Before list\n\n- Item 1\n- Item 2\n\nAfter list\n"
+
+    def test_two_separate_lists(self, serializer: MarkdownSerializer) -> None:
+        doc_tab = DocumentTab(
+            body=Body(
+                content=[
+                    _list_para("Bullet 1", "kix.a"),
+                    _list_para("Bullet 2", "kix.a"),
+                    _list_para("Number 1", "kix.b"),
+                    _list_para("Number 2", "kix.b"),
+                ]
+            ),
+            lists=_lists_ctx({"kix.a": "GLYPH_TYPE_UNSPECIFIED", "kix.b": "DECIMAL"}),
+        )
+        result = serializer.serialize(doc_tab)
+        assert result == "- Bullet 1\n- Bullet 2\n\n1. Number 1\n1. Number 2\n"
+
+    def test_list_with_formatted_text(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.styles import Bullet
+
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="Normal and ")),
+                ParagraphElement(textRun=TextRun(content="bold", textStyle=TextStyle(bold=True))),
+                ParagraphElement(textRun=TextRun(content=" text\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+            bullet=Bullet(listId="kix.a"),
+        )
+        doc_tab = DocumentTab(
+            body=Body(content=[StructuralElement(paragraph=para)]),
+            lists=_lists_ctx({"kix.a": "GLYPH_TYPE_UNSPECIFIED"}),
+        )
+        result = serializer.serialize(doc_tab)
+        assert result == "- Normal and **bold** text\n"
+
+    def test_list_under_heading(self, serializer: MarkdownSerializer) -> None:
+        doc_tab = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="My Heading\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="HEADING_2"),
+                        )
+                    ),
+                    _list_para("Item A", "kix.a"),
+                    _list_para("Item B", "kix.a"),
+                ]
+            ),
+            lists=_lists_ctx({"kix.a": "GLYPH_TYPE_UNSPECIFIED"}),
+        )
+        result = serializer.serialize(doc_tab)
+        assert result == "## My Heading\n\n- Item A\n- Item B\n"
+
+    def test_mixed_nesting_ordered_unordered(self, serializer: MarkdownSerializer) -> None:
+        """Unordered at level 0, ordered at level 1 (same listId)."""
+        doc_tab = DocumentTab(
+            body=Body(
+                content=[
+                    _list_para("Top", "kix.mix"),
+                    _list_para("Nested num", "kix.mix", nesting=1),
+                    _list_para("Top again", "kix.mix"),
+                ]
+            ),
+            lists={
+                "kix.mix": {
+                    "listProperties": {
+                        "nestingLevels": [
+                            {"glyphType": "GLYPH_TYPE_UNSPECIFIED", "startNumber": 1},
+                            {"glyphType": "DECIMAL", "startNumber": 1},
+                        ]
+                    }
+                }
+            },
+        )
+        result = serializer.serialize(doc_tab)
+        assert result == "- Top\n    1. Nested num\n- Top again\n"
+
+    def test_no_lists_context_still_renders(self, serializer: MarkdownSerializer) -> None:
+        """If lists context is None, default to unordered."""
+        doc_tab = DocumentTab(
+            body=Body(content=[_list_para("Orphan item", "kix.a")]),
+        )
+        result = serializer.serialize(doc_tab)
+        assert result == "- Orphan item\n"
+
+    def test_alpha_ordered_list(self, serializer: MarkdownSerializer) -> None:
+        doc_tab = DocumentTab(
+            body=Body(
+                content=[
+                    _list_para("Alpha A", "kix.alpha"),
+                    _list_para("Alpha B", "kix.alpha"),
+                ]
+            ),
+            lists=_lists_ctx({"kix.alpha": "UPPER_ALPHA"}),
+        )
+        result = serializer.serialize(doc_tab)
+        assert result == "1. Alpha A\n1. Alpha B\n"
 
 
 # ---------------------------------------------------------------------------
@@ -351,6 +908,13 @@ class TestSerializerFixtures:
         result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
         assert "\n\n\n" not in result
 
+    def test_single_tab_fixture_lists(self, serializer: MarkdownSerializer) -> None:
+        """Verify lists in the single-tab fixture are rendered with bullet markers."""
+        doc = _load_document(SINGLE_TAB_JSON)
+        tab = doc.tabs[0]  # type: ignore[index]
+        result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
+        assert "\n- " in result
+
     def test_multi_tab_first_tab_structure(self, serializer: MarkdownSerializer) -> None:
         """The first tab of multi-tab has the same structure as single-tab (different title)."""
         multi = _load_document(MULTI_TAB_JSON)
@@ -360,6 +924,18 @@ class TestSerializerFixtures:
         assert "**should be bold**" in result
         assert "*should be italic*" in result
         assert "\n\n## Section 1: Headings and Structure (Heading 2)\n\n" in result
+
+    def test_multi_tab_fixture_link(self, serializer: MarkdownSerializer) -> None:
+        """Verify the fixture's hyperlink to the Child Tab renders as a Markdown link."""
+        doc = _load_document(MULTI_TAB_JSON)
+        result = serializer.serialize(doc.tabs[0].documentTab)  # type: ignore
+        assert "[This is a link to the \u201cChild Tab\u201d](https://docs.google.com/document/d/" in result
+
+    def test_multi_tab_fixture_rich_link(self, serializer: MarkdownSerializer) -> None:
+        """Verify the fixture's rich link chip renders as [title](uri)."""
+        doc = _load_document(MULTI_TAB_JSON)
+        result = serializer.serialize(doc.tabs[0].documentTab)  # type: ignore
+        assert "[Markdown Conversion Example - Single-Tab](https://docs.google.com/document/d/" in result
 
     def test_multi_tab_nested_tabs(self, serializer: MarkdownSerializer) -> None:
         """The multi-tab fixture has nested child/grandchild tabs."""

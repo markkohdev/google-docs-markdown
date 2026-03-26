@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-25 (Phase 1.6 & 1.7 completed; `list-tabs` CLI wired; integration tests added)  
-**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
+**Last Updated:** 2026-03-26 (Phase 2.1–2.2 completed — inline elements, lists with block grouper)  
+**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.2 — complete**; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
 
 ## Overview
 
@@ -107,39 +107,40 @@ Unit tests and documentation should be written for each component and function a
 
 Phase 2 is broken into sub-phases ordered by complexity and dependency. Each sub-phase can be implemented and tested independently.
 
-#### Phase 2.1: Simple Inline and Block Elements (no state tracking needed)
+#### Phase 2.1: Simple Inline and Block Elements (no state tracking needed) ✅
 
 These elements can be handled by extending `MarkdownSerializer` with additional `_visit_*` branches. No changes to the serializer's stateless architecture required.
 
 ##### 2.1.1: Links and Inline Formatting
-- [ ] Handle links (`TextStyle.link.url` → `[text](url)`)
-- [ ] Handle strikethrough (`TextStyle.strikethrough` → `~~text~~`)
-- [ ] Handle underline (convert to emphasis or HTML `<u>` tag)
-- [ ] Handle rich links (`RichLink.richLinkProperties` → `[title](uri)`). **Note:** `RichLink` is a first-class `ParagraphElement` for reading, but there is no `insertRichLink` batchUpdate request — on upload, falls back to a regular hyperlink
-- [ ] Handle horizontal rules (`HorizontalRule` → `---`)
-- [ ] Handle footnote references (`FootnoteReference` → `[^N]`) and footnote content from `DocumentTab.footnotes`
+- [x] Handle links (`TextStyle.link.url` → `[text](url)`)
+- [x] Handle strikethrough (`TextStyle.strikethrough` → `~~text~~`)
+- [x] Handle underline (convert to HTML `<u>` tag; auto-underline on links is suppressed)
+- [x] Handle rich links (`RichLink.richLinkProperties` → `[title](uri)`). **Note:** `RichLink` is a first-class `ParagraphElement` for reading, but there is no `insertRichLink` batchUpdate request — on upload, falls back to a regular hyperlink
+- [x] Handle horizontal rules (`HorizontalRule` → `---`)
+- [x] Handle footnote references (`FootnoteReference` → `[^N]`) and footnote content from `DocumentTab.footnotes`
 
 ##### 2.1.2: Testing
-- [ ] Unit tests for each new element type
-- [ ] Fixture-based integration tests
+- [x] Unit tests for each new element type (29 new tests: 8 inline formatting, 7 link helper, 14 serializer tests covering links, strikethrough, underline, horizontal rules, rich links, footnotes, and combined formatting)
+- [x] Fixture-based integration tests (existing fixture tests continue to pass)
 
-#### Phase 2.2: Lists (requires stateful serialization + `DocumentTab.lists` context)
+#### Phase 2.2: Lists (requires stateful serialization + `DocumentTab.lists` context) ✅
 
 Lists require a significant change to the serializer: consecutive `Paragraph` elements with `bullet` fields must be grouped, and the `DocumentTab.lists` dict must be consulted to determine ordered vs. unordered. This is the first feature that requires cross-paragraph state.
 
-**Architecture note:** Either (a) pass the full `DocumentTab` to the serializer so it has access to `lists`, or (b) introduce a pre-processing "block grouper" pass that groups structural elements into blocks (paragraph-block, list-block, table-block) before serializing. Option (b) is recommended as it also benefits code block detection (Phase 2.4).
+**Architecture note:** Option (b) was implemented — a pre-processing "block grouper" pass (`block_grouper.py`) groups structural elements into typed blocks before serializing. This also benefits code block detection (Phase 2.4).
 
 ##### 2.2.1: List Support
-- [ ] Refactor serializer to accept `DocumentTab.lists` context (or introduce block grouper)
-- [ ] Handle unordered lists (`Paragraph.bullet` + `glyphType == GLYPH_TYPE_UNSPECIFIED` → `- item`)
-- [ ] Handle ordered lists (`Paragraph.bullet` + `glyphType == DECIMAL` → `1. item`)
-- [ ] Handle nested lists via `bullet.nestingLevel` (indentation)
-- [ ] Handle list item spacing (single newline between items, blank line before/after list)
-- [ ] Look up list type via `DocumentTab.lists[listId].listProperties.nestingLevels[n].glyphType`
+- [x] Refactor serializer to use block grouper pre-processing pass (`block_grouper.py`)
+- [x] Handle unordered lists (`Paragraph.bullet` + `glyphType == GLYPH_TYPE_UNSPECIFIED` → `- item`)
+- [x] Handle ordered lists (`Paragraph.bullet` + `glyphType` in `DECIMAL`/`UPPER_ALPHA`/etc. → `1. item`)
+- [x] Handle nested lists via `bullet.nestingLevel` (4-space indentation per level)
+- [x] Handle list item spacing (single newline between items, blank line before/after list)
+- [x] Look up list type via `DocumentTab.lists[listId].listProperties.nestingLevels[n].glyphType`
 
 ##### 2.2.2: Testing
-- [ ] Unit tests for ordered, unordered, and nested lists
-- [ ] Test list grouping across consecutive paragraphs
+- [x] Unit tests for ordered, unordered, and nested lists (10 block grouper tests + 11 serializer list tests)
+- [x] Test list grouping across consecutive paragraphs
+- [x] Fixture-based test verifying real document lists render with bullet markers
 
 #### Phase 2.3: Tables
 
@@ -191,12 +192,14 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 ##### 2.6.1: Metadata Strategy Decision
 - [ ] Decide and implement the full representation strategy for non-Markdown elements (HTML comments, companion JSON, or both)
 - [ ] Define metadata format for each element type
+- [ ] Decide on `RichLink` metadata — currently serialized as plain `[title](uri)` (Phase 2.1), indistinguishable from a regular link. Decide whether to add inline metadata (e.g., `[title](uri)<!-- richLink: {"mimeType": "...", "richLinkId": "..."} -->`) for user visibility, upload warnings, and future-proofing if `insertRichLink` is ever added to the API. Note: no `insertRichLink` batchUpdate exists today, so rich links fall back to regular hyperlinks on upload regardless.
 
 ##### 2.6.2: Non-Markdown Element Handling
 
 **First-class ParagraphElements with full API read support** (see `TECH_SPEC.md` Section 5.9.1 for the full API capability matrix):
 - [ ] Handle `Person` mentions — first-class `ParagraphElement` with `personProperties.email` + `.name`; serialize as `<!-- person: {...} -->` inline comment. **Round-trippable** via `insertPerson` batchUpdate (see Phase 3.1)
 - [ ] Handle `DateElement` — first-class `ParagraphElement` with full `dateElementProperties` (format, locale, timezone, timestamp, displayText); serialize as `<!-- date: {...} -->` inline comment. **Round-trippable** via `insertDate` batchUpdate (see Phase 3.1)
+- [ ] Handle `RichLink` metadata per 2.6.1 decision — update `_visit_rich_link` in `markdown_serializer.py` if metadata is added
 - [ ] Handle `AutoText` (`type`: PAGE_NUMBER, PAGE_COUNT) — readable but **no write API** (`insertAutoText` does not exist); must be preserved in-place during upload
 - [ ] Handle equations (`Equation`) — opaque element (no content exposed by API, no `insertEquation`); serialize as placeholder comment
 
@@ -545,14 +548,15 @@ This document should be used for testing throughout development.
 - ✅ Phase 1.4: Basic Downloader — `MarkdownSerializer` (visitor-style traversal of `DocumentTab` → `Body` → `Paragraph` → `TextRun`, handles headings/bold/italic/whitespace normalization) and `Downloader` (multi-tab orchestration, recursive nested tabs, directory/file I/O, filename sanitization). Unsupported elements (tables, images, lists, etc.) are silently skipped — those are Phase 2. Location/Range `tabId`/`segmentId` deferred to Phase 3.
 - ✅ Phase 1.5: CLI Download Command — `download` wired to `Downloader.download_to_files()`, supports `--output`/`-o`, `--tabs`/`-t`, error handling, summary output
 - ✅ Phase 1.6: Python API — `Downloader.download()`, `download_to_files()`, `get_document_title()`, `get_tabs()` (returns `TabSummary` tree), `get_nested_tabs()`, `extract_document_id()`
-- ✅ Phase 1.7: Testing — 177 unit tests (serializer 36, downloader 32, CLI 13, transport 10, client 6, models 7, setup 27, gcloud 19) + 12 integration tests with live API (`tests/test_integration.py`, `@pytest.mark.integration`)
+- ✅ Phase 1.7: Testing — 227 unit tests (serializer 76, block grouper 10, downloader 32, CLI 13, transport 10, client 6, models 7, setup 27, gcloud 19) + 12 integration tests with live API (`tests/test_integration.py`, `@pytest.mark.integration`)
+
+- ✅ Phase 2.1: Simple inline/block elements — links (`TextStyle.link.url` → `[text](url)`), strikethrough (`~~text~~`), underline (`<u>text</u>`, suppressed for links), rich links (`[title](uri)`), horizontal rules (`---`), footnote references (`[^N]`) with footnote content from `DocumentTab.footnotes`
+- ✅ Phase 2.2: Lists — introduced `block_grouper.py` pre-processing pass that groups consecutive bullet paragraphs into `ListBlock` objects. Supports ordered (DECIMAL, ALPHA, ROMAN variants), unordered (GLYPH_TYPE_UNSPECIFIED), and nested lists (4-space indent per nesting level). Different `listId`s produce separate list blocks.
 
 **In Progress:**
 - **Phase 3:** Upload — client primitives and CLI `upload`/`list-tabs` scaffold done; **Markdown deserializer**, **`uploader.py`**, directory/tab mapping, and working upload CLI still to do
 
 **Up Next:**
-- **Phase 2.1:** Simple inline/block elements — links, strikethrough, horizontal rules, rich links, footnotes
-- **Phase 2.2:** Lists (requires serializer refactoring for stateful cross-paragraph grouping + `DocumentTab.lists` context)
 - **Phase 2.3-2.6:** Tables, code blocks (U+E907 detection), images, non-Markdown elements + metadata strategy
 
 **Remaining Phase 3 Tasks:**
