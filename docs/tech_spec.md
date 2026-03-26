@@ -1,8 +1,8 @@
 # Google Docs Markdown - Technical Specification
 
-**Document Version:** 1.4.0  
+**Document Version:** 1.5.0  
 **Date:** 2026-01-08  
-**Last Updated:** 2026-03-25 (API reference review: corrected U+E907 scope, documented first-class ParagraphElement types with batchUpdate write support for Person/DateElement; updated upload strategy for widget round-tripping)  
+**Last Updated:** 2026-03-26 (Phase 2.4–2.5 complete: code block detection via U+E907 bookends, image serialization via InlineObjectElement; CLI enhancements with file conflict handling and stale cleanup)  
 **Authors:** Mark Koh  
 **Status:** Active
 
@@ -43,11 +43,11 @@ The primary goals of this project are:
   - Preserve Markdown structure and formatting in Google Docs
 
 - **FR-4**: Image Management
-  - Extract images from Google Docs during download
-  - Store images locally in an `imgs` directory within the document's output folder (e.g., `My Doc/imgs/`)
-  - Upload local images to a configurable public storage service (S3, GCS, etc.)
-  - Inline image URLs in Markdown files with public URLs
-  - Replace local image references with public URLs after upload
+  - Extract images from Google Docs during download — **implemented**: images are serialized as `![alt](contentUri)` referencing Google-hosted URLs
+  - Store images locally in an `imgs` directory within the document's output folder (e.g., `My Doc/imgs/`) — **planned** (Phase 7)
+  - Upload local images to a configurable public storage service (S3, GCS, etc.) — **planned** (Phase 7)
+  - Inline image URLs in Markdown files with public URLs — **planned** (Phase 7)
+  - Replace local image references with public URLs after upload — **planned** (Phase 7)
 
 - **FR-5**: Change Detection and Diffing
   - Compare local Markdown content with online Google Docs content
@@ -111,9 +111,10 @@ The tool is organized into several distinct components that work together to pro
 
 ### 4.2 Component Responsibilities
 
-- **CLI** (`cli.py`): Parses command-line arguments via `typer`, orchestrates operations, provides user feedback. Commands: `download`, `upload` (stub), `diff` (stub), `list-tabs` (stub), `setup`.
-- **Downloader** (`downloader.py`): Orchestrates fetching a `Document` via `GoogleDocsClient`, iterating tabs recursively, serializing each tab via `MarkdownSerializer`, and writing `.md` files to a directory structure. Supports selective tab download via `tab_names` filter.
-- **MarkdownSerializer** (`markdown_serializer.py`): Converts a single `DocumentTab` Pydantic model to a Markdown string. Visitor-style traversal of `Body` -> `StructuralElement` -> `Paragraph` -> `ParagraphElement` -> `TextRun`. Handles headings, paragraphs, bold/italic formatting, whitespace normalization. Unsupported elements are silently skipped (extended in Phase 2).
+- **CLI** (`cli.py`): Parses command-line arguments via `typer`, orchestrates operations, provides user feedback. Commands: `download` (with `--force`, file conflict handling, stale cleanup), `upload` (stub), `diff` (stub), `list-tabs`, `setup`.
+- **Downloader** (`downloader.py`): Orchestrates fetching a `Document` via `GoogleDocsClient`, iterating tabs recursively, serializing each tab via `MarkdownSerializer`, and writing `.md` files to a directory structure. Supports selective tab download via `tab_names` filter, file conflict detection (`FileConflictError`), stale file cleanup (`find_stale_files`), and empty directory removal (`remove_empty_dirs`).
+- **MarkdownSerializer** (`markdown_serializer.py`): Converts a single `DocumentTab` Pydantic model to a Markdown string. Uses a block-grouper pre-processing pass (`block_grouper.py`) to group list items and code blocks before visitor-style traversal. Handles: headings, paragraphs, bold/italic/strikethrough/underline formatting, links, rich links, horizontal rules, footnotes, ordered/unordered/nested lists, tables (pipe format), code blocks (U+E907 boundary detection), and images (InlineObjectElement → `![alt](url)`). Remaining unsupported elements (Person, DateElement, AutoText, etc.) are silently skipped (Phase 2.6).
+- **BlockGrouper** (`block_grouper.py`): Pre-processing pass that groups `StructuralElement` lists into typed blocks: `ListBlock` (consecutive bullet paragraphs), `CodeBlock` (paragraphs between U+E907 bookend markers). All other elements pass through unchanged.
 - **Uploader** (`uploader.py`, planned): Will convert Markdown back to Google Docs via surgical `batchUpdate` requests. See Section 5.9 for the atomic-edit strategy.
 - **GoogleDocsClient** (`client.py`): High-level typed client that returns Pydantic models. Composes `GoogleDocsTransport`. Most consumers (CLI, downloader, uploader) should use this.
 - **GoogleDocsTransport** (`transport.py`): Low-level transport that handles authentication, API requests/responses, error handling, and retry logic. Returns raw dicts as received from the API. Used directly for scripts that need unmodified API responses (e.g., downloading test fixtures).
@@ -206,7 +207,8 @@ The diff engine is critical for efficient updates and conflict resolution:
   - `Paragraph`, `Table`, `TextRun`, etc. - Element types used throughout the document structure
 
 - **Markdown Conversion**:
-  - **Serialization (Pydantic → Markdown)**: `MarkdownSerializer` uses visitor-style dispatch on optional fields (`if element.paragraph:`, `if element.textRun:`) to traverse the Pydantic model tree and build Markdown strings directly. No markdown library needed. Note: the models use optional-field composition (not class hierarchies), so dispatch is via field presence checks, not `isinstance()`.
+  - **Serialization (Pydantic → Markdown)**: `MarkdownSerializer` uses a two-stage pipeline: (1) `block_grouper.py` groups `StructuralElement` lists into typed blocks (`ListBlock`, `CodeBlock`, or pass-through `StructuralElement`), then (2) visitor-style dispatch on optional fields (`if element.paragraph:`, `if element.textRun:`) traverses the Pydantic model tree and builds Markdown strings directly. No markdown library needed. Note: the models use optional-field composition (not class hierarchies), so dispatch is via field presence checks, not `isinstance()`. Block-level dispatch uses `isinstance()` on the block-grouper dataclasses.
+  - **Currently serialized elements**: headings (H1–H6, Title, Subtitle), paragraphs, bold, italic, strikethrough, underline, links, rich links, horizontal rules, footnotes, ordered/unordered/nested lists, tables (pipe format), code blocks (U+E907 detection), images (`InlineObjectElement` → `![alt](contentUri)`)
   - **Deserialization (Markdown → API requests)**: For the **update** case, the approach is to diff two Markdown strings (serialized current doc vs. local file) and map changes back to API indices for surgical `batchUpdate` requests. For the **create** case, `markdown-it-py` may be used to parse Markdown into tokens and generate `batchUpdate` requests. See Section 5.9 for details.
 
 - **Note**: Pydantic models provide both type checking and runtime validation. When using `GoogleDocsClient`, API responses are converted to Pydantic models automatically, enabling attribute access throughout the codebase. When using `GoogleDocsTransport` directly, raw dicts are returned for maximum fidelity (useful for test fixtures, debugging, etc.).
@@ -394,11 +396,14 @@ This means the atomic-edit upload strategy (Section 5.10) can leverage `insertPe
 
 #### 5.9.2 Code Block Detection Strategy
 
+**Status:** Implemented in Phase 2.4 (`block_grouper.py` and `markdown_serializer.py`).
+
 Google Docs has no formal "code block" structural element in the API. Code blocks are detected using a combination of:
 
-1. **U+E907 boundary markers**: A paragraph starting with `\ue907` followed by monospace-font paragraphs, ending with a paragraph containing `\ue907`
-2. **Monospace font heuristic**: All `TextRun`s within code block paragraphs use `fontFamily: "Roboto Mono"`
-3. **Output**: Bare fenced code blocks with no language identifier (the API does not expose the language label from the widget's internal state)
+1. **U+E907 boundary markers**: A paragraph starting with `\ue907` marks the start; a paragraph ending with `\ue907` marks the end. All paragraphs between (inclusive) are grouped into a `CodeBlock` dataclass by `block_grouper.py`.
+2. **Monospace font heuristic**: A helper `_paragraph_has_monospace_font()` detects monospace fonts (`Roboto Mono`, `Courier New`, `Consolas`, `Source Code Pro`). Currently available for validation but detection relies primarily on U+E907 markers.
+3. **Output**: `_visit_code_block()` in `markdown_serializer.py` renders bare fenced code blocks (` ``` `) with no language identifier (the API does not expose the language label from the widget's internal state). All U+E907 characters are stripped from the output.
+4. **U+E907 in non-code contexts**: `_visit_text_run()` also strips U+E907 from regular `TextRun.content`, handling smart chip placeholder occurrences outside code blocks.
 
 #### 5.9.3 Implications for Upload (Atomic Edits)
 
@@ -417,8 +422,8 @@ This eliminates the need to reconstruct widgets from scratch -- we only edit the
 
 #### 5.9.4 Serialization Behavior
 
-- **Download**: `U+E907` characters are stripped from Markdown output (they are not meaningful to users). However, the downloader's internal representation preserves their positions and indices for round-trip fidelity.
-- **Upload**: The diff engine must be aware of `U+E907` positions so it can avoid targeting them with edit operations.
+- **Download** (implemented): `U+E907` characters are stripped from Markdown output in two places: (1) `_visit_code_block()` strips markers when rendering `CodeBlock` content, (2) `_visit_text_run()` strips any remaining `U+E907` from inline text (smart chip placeholders).
+- **Upload** (planned): The diff engine must be aware of `U+E907` positions so it can avoid targeting them with edit operations. Preserving U+E907 index positions in the internal representation is deferred to Phase 3 (upload implementation).
 
 ### 5.10 Upload Strategy -- Atomic Edits, Not Reconstruction
 

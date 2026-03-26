@@ -5,18 +5,27 @@ A Python package and CLI tool for downloading and editing Google Docs as Markdow
 ## Features
 
 **Implemented:**
-- **Download Google Docs as Markdown**: Convert Google Docs to Markdown format with preserved headings, bold, and italic formatting
+- **Download Google Docs as Markdown**: Convert Google Docs to Markdown format with comprehensive element support:
+  - Headings (H1–H6, Title, Subtitle)
+  - Inline formatting (bold, italic, strikethrough, underline)
+  - Links and rich links (Google Drive files, etc.)
+  - Ordered, unordered, and nested lists
+  - Tables (Markdown pipe format with header detection)
+  - Code blocks (detected via Google Docs' internal U+E907 markers)
+  - Images (referenced via Google-hosted URLs with alt text)
+  - Horizontal rules
+  - Footnotes (references and definitions)
 - **Multi-Tab Support**: Handles documents with multiple tabs (including nested tabs) by downloading each tab into a separate markdown file organized in a directory structure
 - **Deterministic Behavior**: Consistent, reproducible conversions (same input always produces same output)
-- **Simple CLI**: Easy-to-use command-line interface with interactive prompts and selective tab download
+- **Smart CLI**: Command-line interface with interactive prompts, selective tab download, file conflict handling, and stale file cleanup
 - **Python API**: Programmatic access via `Downloader` and `MarkdownSerializer` classes
 
 **Planned (not yet implemented):**
+- Non-Markdown element handling: Person mentions, date chips, equations, etc. (Phase 2.6)
 - Upload Markdown to Google Docs (Phase 3)
-- Enhanced Markdown features: lists, tables, images, code blocks, links, etc. (Phase 2)
 - Change detection and smart diffing (Phase 4)
-- Image storage integration with S3/GCS (Phase 7)
-- Advanced feature preservation via HTML comments and JSON metadata (Phase 5)
+- Local image download and storage integration with S3/GCS (Phase 7)
+- Advanced feature preservation via HTML comments and JSON metadata (Phase 2.6 / Phase 5)
 
 ## Installation
 
@@ -74,16 +83,19 @@ Nested tabs produce nested directories (e.g., `My Project/Parent Tab/Child Tab.m
 google-docs-markdown download
 
 # Download with document URL
-google-docs-markdown download --document-url "https://docs.google.com/document/d/DOC_ID/edit"
+google-docs-markdown download "https://docs.google.com/document/d/DOC_ID/edit"
 
 # Specify output directory
-google-docs-markdown download --document-url "DOC_ID" --output my_doc
+google-docs-markdown download "DOC_ID" --output my_doc
 
 # Download specific tabs only
-google-docs-markdown download --document-url "DOC_ID" --tabs "Tab 1" --tabs "Tab 2"
+google-docs-markdown download "DOC_ID" --tabs "Tab 1" --tabs "Tab 2"
+
+# Force overwrite existing files and auto-delete stale files
+google-docs-markdown download "DOC_ID" --force
 
 # Short forms
-google-docs-markdown download --document-url "DOC_ID" -o my_doc -t "Tab 1"
+google-docs-markdown download "DOC_ID" -o my_doc -t "Tab 1" -f
 ```
 
 #### Upload Markdown to a Google Doc (Not Yet Implemented)
@@ -163,25 +175,29 @@ If you see an error about insufficient authentication scopes, your credentials d
 - Check that you have view/edit permissions on the document
 - Ensure your Google Cloud project has the Google Docs API enabled
 
-## Current Limitations (Phase 1)
+## Current Limitations
 
-The downloader currently handles **basic elements only**:
-- Headings (Title, Subtitle, H1–H6)
-- Paragraphs (normal text)
-- Inline formatting (bold, italic)
-- Multi-tab documents with nested tabs
+The downloader handles most common document elements (see Features above). The following are **not yet supported** and are silently skipped:
 
-**Not yet supported** (planned for Phase 2):
-- Lists (ordered and unordered)
-- Tables
-- Images
-- Code blocks
-- Links and rich links
-- Strikethrough, underline
-- Footnotes, headers, footers
-- Person chips, date chips, and other smart chips
+**Planned for Phase 2.6:**
+- Person mentions (smart chips)
+- Date elements (smart chips)
+- AutoText (page numbers, page counts)
+- Equations
+- Section breaks, column breaks
+- Table of contents
+- Suggestions (tracked changes)
+- Headers and footers
+- Colored text (foreground/background)
+- Title/Subtitle round-trip metadata (currently serialized as `#` / `*text*`)
 
-Unsupported elements are silently skipped in the current output.
+**Planned for Phase 3:**
+- Upload Markdown back to Google Docs
+
+**Other limitations:**
+- Images reference Google-hosted `contentUri` URLs directly (local download planned for Phase 7)
+- Code blocks have no language identifier (Google Docs API does not expose it)
+- Rich links are serialized as plain links (no visual distinction from regular hyperlinks)
 
 ## Notes
 

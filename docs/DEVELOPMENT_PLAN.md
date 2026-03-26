@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-26 (Phase 2.1–2.3 completed — inline elements, lists with block grouper, tables)  
-**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.3 — complete**; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
+**Last Updated:** 2026-03-26 (Phase 2.1–2.5 completed — inline elements, lists with block grouper, tables, code blocks, images; CLI enhancements with file conflict handling and stale cleanup)  
+**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.5 — complete**; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
 
 ## Overview
 
@@ -73,26 +73,31 @@ Unit tests and documentation should be written for each component and function a
 - [x] Support document URL/ID input (with interactive prompt via typer)
 - [x] Support output directory path (`--output` / `-o`)
 - [x] Add `--tabs` flag for selective tab download (specify which tabs to download)
+- [x] Add `--force` / `-f` flag for overwriting existing files and deleting stale files without prompting
+- [x] Add file conflict handling (`FileConflictError`) — prompts user to overwrite when files already exist
+- [x] Add stale file cleanup — detects `.md` files left over from removed tabs and offers to delete them
 - [x] Add interactive prompts for missing arguments (document URL prompted by typer)
 - [x] Update `pyproject.toml` entry point (`google-docs-markdown` and `gdm` aliases)
 
 #### 1.6: Python API - Basic Interface ✅
 - [x] Create `Downloader` class in `downloader.py` (named `Downloader`, not `GoogleDocMarkdown`)
 - [x] Implement `download(document_id)` → returns dict of tab_path → markdown (all docs treated as multi-tab)
-- [x] Implement `download_to_files(document_id, output_path)` → saves to directory, returns dict of tab_path → file Path
+- [x] Implement `download_to_files(document_id, output_path, overwrite=True)` → saves to directory, returns dict of tab_path → file Path. Raises `FileConflictError` when `overwrite=False` and files exist.
 - [x] Implement `get_document_title(document_id)` → returns title (available via `GoogleDocsClient.get_document().title`)
 - [x] Implement `get_tabs(document_id)` → returns list of `TabSummary` objects with tab names/IDs/nesting (available via `Document.tabs`)
 - [x] Implement `get_nested_tabs(document_id, tab_id)` → returns nested `TabSummary` children within a tab
 - [x] `extract_document_id(url)` → available as `GoogleDocsClient.extract_document_id()` (static method)
+- [x] `find_stale_files(output_dir, current_files)` → returns stale `.md` files from previous downloads
+- [x] `remove_empty_dirs(root)` → cleans up empty directories after stale file removal
 
 #### 1.7: Testing ✅
 - [x] Test with example Google Doc from `example_markdown/google_doc_urls.txt` (integration — requires live API) ✅
 - [x] Test with multi-tab Google Doc (integration — requires live API; skips nested-tab assertions when live doc lacks nested tabs) ✅
 - [x] Create unit tests for transport and client (including tab detection) ✅
-- [x] Create unit tests for `MarkdownSerializer` (36 tests: headings, formatting, fixtures, determinism) ✅
-- [x] Create unit tests for `Downloader` (32 tests: single-tab, multi-tab, nested, filtering, disk I/O, `get_document_title`, `get_tabs`, `get_nested_tabs`) ✅
-- [x] Create unit tests for CLI `download` command (4 tests: wiring, flags, error handling) ✅
-- [x] Create unit tests for CLI `list-tabs` command (3 tests: wiring, nested, error handling) ✅
+- [x] Create unit tests for `MarkdownSerializer` ✅
+- [x] Create unit tests for `Downloader` (including file conflict handling, stale file detection, overwrite flag) ✅
+- [x] Create unit tests for CLI `download` command (including `--force`, conflict prompts, stale cleanup) ✅
+- [x] Create unit tests for CLI `list-tabs` command ✅
 - [x] Create integration tests for end-to-end download (`tests/test_integration.py` — 12 tests, marked `@pytest.mark.integration`) ✅
 - [x] Verify deterministic output (same doc → same markdown) ✅
 - [x] Test directory creation and file naming for multi-tab documents ✅
@@ -155,35 +160,34 @@ Lists require a significant change to the serializer: consecutive `Paragraph` el
 - [x] Unit tests with fixture table data
 - [x] Test tables with formatted cell content
 
-#### Phase 2.4: Code Blocks (U+E907 boundary markers + monospace font heuristic)
+#### Phase 2.4: Code Blocks (U+E907 boundary markers + monospace font heuristic) ✅
 
 Google Docs code blocks are NOT a formal API element. They are detected via a combination of `U+E907` boundary markers and monospace font. See `TECH_SPEC.md` Section 5.9 for full details.
 
 ##### 2.4.1: Code Block Detection and Serialization
-- [ ] Detect code block boundaries via `U+E907` (`\ue907`) bookend characters in `TextRun.content`
-- [ ] Confirm with monospace font (`Roboto Mono`) on interior paragraph `TextRun`s
-- [ ] Group consecutive monospace paragraphs into a single fenced code block
-- [ ] Emit bare fenced code blocks with no language identifier (API does not expose language)
-- [ ] Preserve `U+E907` positions in internal representation for round-trip fidelity
-- [ ] Strip `U+E907` characters from Markdown output (not meaningful to users)
+- [x] Detect code block boundaries via `U+E907` (`\ue907`) bookend characters in `TextRun.content`
+- [x] Monospace font detection helper (`_paragraph_has_monospace_font`) supports `Roboto Mono`, `Courier New`, `Consolas`, `Source Code Pro`
+- [x] Group consecutive paragraphs between U+E907 bookends into `CodeBlock` objects via `block_grouper.py`
+- [x] Emit bare fenced code blocks with no language identifier (API does not expose language)
+- [x] Strip `U+E907` characters from Markdown output (not meaningful to users)
+- [x] Strip `U+E907` from inline `TextRun.content` in `_visit_text_run` (handles non-code-block occurrences like smart chip placeholders)
+- [ ] Preserve `U+E907` positions in internal representation for round-trip fidelity (deferred to Phase 3 — upload needs index mapping)
 
 ##### 2.4.2: Testing
-- [ ] Unit tests with fixture code block data
-- [ ] Test detection of code block boundaries
-- [ ] Test that non-code-block `U+E907` (smart chips) is handled separately
+- [x] Unit tests for code block detection and serialization (5 block grouper tests + 12 serializer tests covering single/multi-line code blocks, U+E907 stripping, mixed content)
 
-#### Phase 2.5: Images
+#### Phase 2.5: Images ✅
 
 ##### 2.5.1: Image Support
-- [ ] Handle `InlineObjectElement` → `![alt](url)`
-- [ ] Look up image data in `DocumentTab.inlineObjects[objectId].inlineObjectProperties.embeddedObject`
-- [ ] Download images from `contentUri` to local `imgs/` directory within the document's output folder
-- [ ] Generate Markdown image references with local paths
-- [ ] Handle image alt text (from `description` if available)
+- [x] Handle `InlineObjectElement` → `![alt](url)` via `_visit_inline_object` in `markdown_serializer.py`
+- [x] Look up image data in `DocumentTab.inlineObjects[objectId].inlineObjectProperties.embeddedObject`
+- [x] Handle image alt text (from `description` or `title` if available, falls back to empty string)
+- [x] Generate Markdown image references with Google-hosted `contentUri` URLs
+- [ ] Download images from `contentUri` to local `imgs/` directory within the document's output folder (deferred to Phase 7 — image storage integration)
+- [ ] Generate Markdown image references with local paths (deferred to Phase 7)
 
 ##### 2.5.2: Testing
-- [ ] Unit tests for image reference generation
-- [ ] Test image download and local path generation
+- [x] Unit tests for image reference generation (inline object lookup, alt text handling, missing/invalid objects, integration with paragraph rendering)
 
 #### Phase 2.6: Non-Markdown Elements, Metadata Strategy, and Suggestions
 
@@ -225,6 +229,8 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 - [ ] Verify all features work across tabs in multi-tab documents
 
 **Deliverable:** Can download complex Google Docs with tables, images, lists, code blocks, links, footnotes, headers/footers, section breaks, TOC, suggestions, smart chips, and all paragraph elements, with full support for multi-tab documents
+
+**Phase 2 progress note:** Phases 2.1–2.5 are complete. The serializer handles inline formatting, links, strikethrough, underline, rich links, horizontal rules, footnotes, ordered/unordered/nested lists, tables, code blocks (U+E907 detection), and images (contentUri references). Image download to local `imgs/` directory deferred to Phase 7 (image storage integration). Phase 2.6 (non-Markdown elements, metadata, suggestions) is next.
 
 ---
 
@@ -546,22 +552,25 @@ This document should be used for testing throughout development.
 - ✅ Phase 1.1: Project Setup
 - ✅ Phase 1.2: Google Docs API Transport & Client (transport for raw dicts, client for Pydantic models, with comprehensive unit tests for both)
 - ✅ Phase 1.3: Pydantic model generation and transport/client integration (`get_document`, `create_document`, `batch_update`)
-- ✅ Phase 1.4: Basic Downloader — `MarkdownSerializer` (visitor-style traversal of `DocumentTab` → `Body` → `Paragraph` → `TextRun`, handles headings/bold/italic/whitespace normalization) and `Downloader` (multi-tab orchestration, recursive nested tabs, directory/file I/O, filename sanitization). Unsupported elements (tables, images, lists, etc.) are silently skipped — those are Phase 2. Location/Range `tabId`/`segmentId` deferred to Phase 3.
-- ✅ Phase 1.5: CLI Download Command — `download` wired to `Downloader.download_to_files()`, supports `--output`/`-o`, `--tabs`/`-t`, error handling, summary output
-- ✅ Phase 1.6: Python API — `Downloader.download()`, `download_to_files()`, `get_document_title()`, `get_tabs()` (returns `TabSummary` tree), `get_nested_tabs()`, `extract_document_id()`
-- ✅ Phase 1.7: Testing — 241 unit tests (serializer 90, block grouper 10, downloader 32, CLI 13, transport 10, client 6, models 7, setup 27, gcloud 19, plus 27 more across other modules) + 12 integration tests with live API (`tests/test_integration.py`, `@pytest.mark.integration`)
+- ✅ Phase 1.4: Basic Downloader — `MarkdownSerializer` (visitor-style traversal of `DocumentTab` → `Body` → `Paragraph` → `TextRun`, handles headings/bold/italic/whitespace normalization) and `Downloader` (multi-tab orchestration, recursive nested tabs, directory/file I/O, filename sanitization). Location/Range `tabId`/`segmentId` deferred to Phase 3.
+- ✅ Phase 1.5: CLI Download Command — `download` wired to `Downloader.download_to_files()`, supports `--output`/`-o`, `--tabs`/`-t`, `--force`/`-f`, file conflict handling, stale file cleanup, error handling, summary output
+- ✅ Phase 1.6: Python API — `Downloader.download()`, `download_to_files(overwrite=)`, `get_document_title()`, `get_tabs()` (returns `TabSummary` tree), `get_nested_tabs()`, `extract_document_id()`, plus `find_stale_files()` and `remove_empty_dirs()` utility functions
+- ✅ Phase 1.7: Testing — 291 unit tests (serializer 102, block grouper 15, downloader 47, CLI 21, transport 15, client 6, models 7, setup 45, gcloud 21, plus others) + 12 integration tests with live API (`tests/test_integration.py`, `@pytest.mark.integration`)
 
 - ✅ Phase 2.1: Simple inline/block elements — links (`TextStyle.link.url` → `[text](url)`), strikethrough (`~~text~~`), underline (`<u>text</u>`, suppressed for links), rich links (`[title](uri)`), horizontal rules (`---`), footnote references (`[^N]`) with footnote content from `DocumentTab.footnotes`
 - ✅ Phase 2.2: Lists — introduced `block_grouper.py` pre-processing pass that groups consecutive bullet paragraphs into `ListBlock` objects. Supports ordered (DECIMAL, ALPHA, ROMAN variants), unordered (GLYPH_TYPE_UNSPECIFIED), and nested lists (4-space indent per nesting level). Different `listId`s produce separate list blocks.
-- ✅ Phase 2.3: Tables — `_visit_table` in `markdown_serializer.py` renders `Table` → Markdown pipe tables. Handles `tableRowStyle.tableHeader` for header detection (falls back to first row), multi-paragraph cells (`<br>` join), formatted cell content (reuses `_collect_paragraph_text`), pipe escaping. 10 unit tests + 2 fixture tests.
+- ✅ Phase 2.3: Tables — `_visit_table` in `markdown_serializer.py` renders `Table` → Markdown pipe tables. Handles `tableRowStyle.tableHeader` for header detection (falls back to first row), multi-paragraph cells (`<br>` join), formatted cell content (reuses `_collect_paragraph_text`), pipe escaping.
+- ✅ Phase 2.4: Code blocks — `CodeBlock` dataclass in `block_grouper.py` groups paragraphs between U+E907 bookend markers. `_visit_code_block` in `markdown_serializer.py` renders as bare fenced code blocks (no language identifier — API doesn't expose it). U+E907 stripped from all `TextRun.content` (handles both code block markers and smart chip placeholders). Monospace font helper (`_paragraph_has_monospace_font`) supports Roboto Mono, Courier New, Consolas, Source Code Pro.
+- ✅ Phase 2.5: Images — `_visit_inline_object` in `markdown_serializer.py` renders `InlineObjectElement` → `![alt](contentUri)`. Looks up `DocumentTab.inlineObjects[objectId]` for embedded object properties. Uses `description` or `title` for alt text. Currently references Google-hosted `contentUri` directly; local image download deferred to Phase 7 (image storage integration).
 
 **In Progress:**
 - **Phase 3:** Upload — client primitives and CLI `upload`/`list-tabs` scaffold done; **Markdown deserializer**, **`uploader.py`**, directory/tab mapping, and working upload CLI still to do
 
 **Up Next:**
-- **Phase 2.4-2.6:** Code blocks (U+E907 detection), images, non-Markdown elements + metadata strategy
+- **Phase 2.6:** Non-Markdown elements (Person, DateElement, AutoText, Equation, SectionBreak, ColumnBreak, TableOfContents), metadata strategy, suggestions, headers/footers
 
 **Remaining Phase 3 Tasks:**
 - `uploader.py` with atomic-edit strategy (diff Markdown strings → map to API indices → surgical batchUpdate), widget recreation via `insertPerson`/`insertDate` for round-trippable elements, RichLink-to-hyperlink fallback, create-new-document flow (may use `markdown-it-py`), multi-tab directory support, Python upload API, round-trip and integration tests
 - Location/Range `tabId` and `segmentId` handling (deferred from Phase 1.4)
+- U+E907 index preservation for round-trip fidelity (deferred from Phase 2.4)
 

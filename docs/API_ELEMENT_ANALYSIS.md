@@ -1,7 +1,7 @@
 # Google Docs API - Comprehensive Element Type Analysis
 
 **Date:** 2026-01-08  
-**Last Updated:** 2026-03-25 (Added U+E907 widget marker documentation; updated implementation recommendations from dataclasses to Pydantic)  
+**Last Updated:** 2026-03-26 (Updated element type mapping to reflect Phase 2.1–2.5 implementation status; code block detection and image serialization now implemented)  
 **Purpose:** Detailed analysis of Google Docs API element types, their relationships, and reusable sub-elements for the Google Docs Markdown tool
 
 ## Table of Contents
@@ -515,11 +515,14 @@ When a smart chip (person mention, status chip, file chip, etc.) exists within a
 
 ### Detection Strategy for Code Blocks
 
-Combine U+E907 boundary detection with monospace font heuristic:
-1. Identify a `TextRun` starting with `\ue907` in a non-monospace font
-2. Check if subsequent paragraphs contain exclusively monospace-font (`Roboto Mono`) `TextRun`s
-3. Look for a closing `\ue907` marker after the monospace paragraphs
-4. Group the interior paragraphs as a fenced code block (no language identifier -- API doesn't expose it)
+**Status:** Implemented in Phase 2.4 (`block_grouper.py`).
+
+The implemented approach uses U+E907 boundary detection:
+1. `_is_code_block_start()` identifies a paragraph whose first `TextRun` starts with `\ue907`
+2. All subsequent paragraphs are collected into a `CodeBlock` dataclass
+3. `_is_code_block_end()` identifies the closing paragraph whose last `TextRun` ends with `\ue907`
+4. `_visit_code_block()` in `markdown_serializer.py` strips `\ue907` and renders as a fenced code block (no language identifier — API doesn't expose it)
+5. A monospace font helper (`_paragraph_has_monospace_font`) is available for additional validation (supports `Roboto Mono`, `Courier New`, `Consolas`, `Source Code Pro`)
 
 ### Implications for Upload
 
@@ -547,24 +550,32 @@ Models are organized in `google_docs_markdown/models/`:
 
 **For Markdown Conversion:**
 
-| Google Docs Element | Markdown Equivalent |
-|---------------------|-------------------|
-| Paragraph (H1-H6) | `# Heading` |
-| Paragraph (normal) | Plain text |
-| TextRun (bold) | `**text**` |
-| TextRun (italic) | `*text*` |
-| TextRun (strikethrough) | `~~text~~` |
-| TextRun (link) | `[text](url)` |
-| Table | Markdown table |
-| InlineObjectElement (image) | `![alt](url)` |
-| HorizontalRule | `---` |
-| PageBreak | (preserve as HTML comment) |
-| DateElement | (preserve as HTML comment) |
-| Person | (preserve as JSON metadata) |
-| RichLink | `[title](uri)` |
-| FootnoteReference | `[^1]` |
-| Bullet (list) | `- item` or `1. item` |
-| Code block | Fenced code block |
+| Google Docs Element | Markdown Equivalent | Status |
+|---------------------|-------------------|--------|
+| Paragraph (H1-H6) | `# Heading` | ✅ Phase 1 |
+| Paragraph (normal) | Plain text | ✅ Phase 1 |
+| Paragraph (TITLE) | `# text` (same as H1) | ✅ Phase 1 (lossy — metadata planned for 2.6) |
+| Paragraph (SUBTITLE) | `*text*` (italic) | ✅ Phase 1 (lossy — metadata planned for 2.6) |
+| TextRun (bold) | `**text**` | ✅ Phase 1 |
+| TextRun (italic) | `*text*` | ✅ Phase 1 |
+| TextRun (strikethrough) | `~~text~~` | ✅ Phase 2.1 |
+| TextRun (underline) | `<u>text</u>` | ✅ Phase 2.1 |
+| TextRun (link) | `[text](url)` | ✅ Phase 2.1 |
+| RichLink | `[title](uri)` | ✅ Phase 2.1 |
+| HorizontalRule | `---` | ✅ Phase 2.1 |
+| FootnoteReference | `[^1]` + definitions | ✅ Phase 2.1 |
+| Bullet (list) | `- item` or `1. item` | ✅ Phase 2.2 |
+| Table | Markdown pipe table | ✅ Phase 2.3 |
+| Code block (U+E907) | Fenced code block | ✅ Phase 2.4 |
+| InlineObjectElement (image) | `![alt](contentUri)` | ✅ Phase 2.5 |
+| Person | `<!-- person: {...} -->` | Phase 2.6 |
+| DateElement | `<!-- date: {...} -->` | Phase 2.6 |
+| AutoText | (preserve as comment) | Phase 2.6 |
+| Equation | (placeholder comment) | Phase 2.6 |
+| PageBreak | (preserve as HTML comment) | Phase 2.6 |
+| SectionBreak | (HTML comment with style) | Phase 2.6 |
+| ColumnBreak | (HTML comment) | Phase 2.6 |
+| TableOfContents | (mark as auto-generated) | Phase 2.6 |
 
 ### 3. Model Organization
 
