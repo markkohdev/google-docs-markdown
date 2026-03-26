@@ -5,7 +5,18 @@ A Python package and CLI tool for downloading and editing Google Docs as Markdow
 ## Features
 
 **Implemented:**
-- **Download Google Docs as Markdown**: Convert Google Docs to Markdown format with preserved headings, bold, and italic formatting
+- **Download Google Docs as Markdown**: Full-fidelity conversion including:
+  - Text formatting: headings (H1–H6, Title, Subtitle), **bold**, *italic*, ~~strikethrough~~, <u>underline</u>
+  - Links and rich links (Google Docs smart chips for docs/sheets/slides)
+  - Ordered, unordered, and nested lists
+  - Tables (pipe tables with header detection, formatted cells, multi-paragraph cells)
+  - Code blocks (detected via U+E907 boundary markers and monospace font)
+  - Images (`![alt](url)` from inline objects)
+  - Footnotes (`[^N]` references with definitions)
+  - Horizontal rules
+  - Non-Markdown elements preserved as HTML comments: Person mentions (`<!-- person: {...} -->`), date chips (`<!-- date: {...} -->`), AutoText, equations, section breaks, column breaks, table of contents
+  - Suggestion tracking with visible markers (`<!-- suggestion:insert-start/end -->`)
+  - Document headers and footers
 - **Multi-Tab Support**: Handles documents with multiple tabs (including nested tabs) by downloading each tab into a separate markdown file organized in a directory structure
 - **Deterministic Behavior**: Consistent, reproducible conversions (same input always produces same output)
 - **Simple CLI**: Easy-to-use command-line interface with interactive prompts and selective tab download
@@ -13,10 +24,8 @@ A Python package and CLI tool for downloading and editing Google Docs as Markdow
 
 **Planned (not yet implemented):**
 - Upload Markdown to Google Docs (Phase 3)
-- Enhanced Markdown features: lists, tables, images, code blocks, links, etc. (Phase 2)
 - Change detection and smart diffing (Phase 4)
-- Image storage integration with S3/GCS (Phase 7)
-- Advanced feature preservation via HTML comments and JSON metadata (Phase 5)
+- Image download to local `imgs/` directory and storage integration with S3/GCS (Phase 7)
 
 ## Installation
 
@@ -163,25 +172,12 @@ If you see an error about insufficient authentication scopes, your credentials d
 - Check that you have view/edit permissions on the document
 - Ensure your Google Cloud project has the Google Docs API enabled
 
-## Current Limitations (Phase 1)
+## Current Limitations
 
-The downloader currently handles **basic elements only**:
-- Headings (Title, Subtitle, H1–H6)
-- Paragraphs (normal text)
-- Inline formatting (bold, italic)
-- Multi-tab documents with nested tabs
-
-**Not yet supported** (planned for Phase 2):
-- Lists (ordered and unordered)
-- Tables
-- Images
-- Code blocks
-- Links and rich links
-- Strikethrough, underline
-- Footnotes, headers, footers
-- Person chips, date chips, and other smart chips
-
-Unsupported elements are silently skipped in the current output.
+- **Upload not yet implemented**: The `upload` CLI command exists but is currently a stub (Phase 3)
+- **Image download**: Images are referenced by URL in the Markdown output but not downloaded locally (planned for Phase 7)
+- **Colored text**: Foreground/background text colors are not preserved in Markdown output
+- **Embedded objects**: Charts, drawings, and other embedded objects are not yet handled
 
 ## Notes
 
