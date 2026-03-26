@@ -1,6 +1,6 @@
 {
   "title": "Markdown Conversion Example - Multi-Tab",
-  "revisionId": "AIxLkSts2UCcJfxg7cvOf4DQWk1c4BkKSrfXrlHD5Q54FFgqlSctv9t7y20IIaCe8hWrFxfghkMJchBcObrovA",
+  "revisionId": "AIxLkSvSdJAviwAHJ7UnTMZU1HQJER6VVE8EMeZIXTdhKsKnWzqtNXLb-jFu97DfMz5s2a-xM0PU9DqEzsxYfA",
   "suggestionsViewMode": "SUGGESTIONS_INLINE",
   "documentId": "1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M",
   "tabs": [
@@ -2094,12 +2094,143 @@
             },
             {
               "startIndex": 1735,
-              "endIndex": 1754,
+              "endIndex": 1753,
               "paragraph": {
                 "elements": [
                   {
                     "startIndex": 1735,
-                    "endIndex": 1754,
+                    "endIndex": 1753,
+                    "textRun": {
+                      "content": "Links (Heading 3)\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "headingId": "h.2pqc582q3bbs",
+                  "namedStyleType": "HEADING_3",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1753,
+              "endIndex": 1787,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1753,
+                    "endIndex": 1786,
+                    "textRun": {
+                      "content": "This is a link to the “Child Tab”",
+                      "textStyle": {
+                        "underline": true,
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.06666667,
+                              "green": 0.33333334,
+                              "blue": 0.8
+                            }
+                          }
+                        },
+                        "weightedFontFamily": {
+                          "fontFamily": "Arial",
+                          "weight": 400
+                        },
+                        "link": {
+                          "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.lkp7hl41vf2d"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 1786,
+                    "endIndex": 1787,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "lineSpacing": 115,
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1787,
+              "endIndex": 1788,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1787,
+                    "endIndex": 1788,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "lineSpacing": 115,
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1788,
+              "endIndex": 1838,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1788,
+                    "endIndex": 1836,
+                    "textRun": {
+                      "content": "This is a chip linking to the “Single-Tab” doc: ",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 1836,
+                    "endIndex": 1837,
+                    "richLink": {
+                      "richLinkId": "kix.xnsehcq9cm6",
+                      "textStyle": {},
+                      "richLinkProperties": {
+                        "title": "Markdown Conversion Example - Single-Tab",
+                        "uri": "https://docs.google.com/document/d/1fLfF7Mx-Vt-ZZSYJ3ksfEIcH9gEV5Fnat4tPewazyug/edit?tab=t.0#heading=h.7fitws4wjggb",
+                        "mimeType": "application/vnd.google-apps.document"
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 1837,
+                    "endIndex": 1838,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "lineSpacing": 115,
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1838,
+              "endIndex": 1857,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1838,
+                    "endIndex": 1857,
                     "textRun": {
                       "content": "Images (Heading 3)\n",
                       "textStyle": {}
@@ -2115,13 +2246,13 @@
               }
             },
             {
-              "startIndex": 1754,
-              "endIndex": 1755,
+              "startIndex": 1857,
+              "endIndex": 1858,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1754,
-                    "endIndex": 1755,
+                    "startIndex": 1857,
+                    "endIndex": 1858,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2141,13 +2272,13 @@
               }
             },
             {
-              "startIndex": 1755,
-              "endIndex": 1858,
+              "startIndex": 1858,
+              "endIndex": 1961,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1755,
-                    "endIndex": 1858,
+                    "startIndex": 1858,
+                    "endIndex": 1961,
                     "textRun": {
                       "content": "The converter must be able to handle embedded image with the appropriate size, alignment, and cropping\n",
                       "textStyle": {
@@ -2167,13 +2298,13 @@
               }
             },
             {
-              "startIndex": 1858,
-              "endIndex": 1859,
+              "startIndex": 1961,
+              "endIndex": 1962,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1858,
-                    "endIndex": 1859,
+                    "startIndex": 1961,
+                    "endIndex": 1962,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2193,13 +2324,13 @@
               }
             },
             {
-              "startIndex": 1859,
-              "endIndex": 1861,
+              "startIndex": 1962,
+              "endIndex": 1964,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1859,
-                    "endIndex": 1860,
+                    "startIndex": 1962,
+                    "endIndex": 1963,
                     "inlineObjectElement": {
                       "inlineObjectId": "kix.z7gloano634x",
                       "textStyle": {
@@ -2211,8 +2342,8 @@
                     }
                   },
                   {
-                    "startIndex": 1860,
-                    "endIndex": 1861,
+                    "startIndex": 1963,
+                    "endIndex": 1964,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2233,13 +2364,13 @@
               }
             },
             {
-              "startIndex": 1861,
-              "endIndex": 1886,
+              "startIndex": 1964,
+              "endIndex": 1989,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1861,
-                    "endIndex": 1886,
+                    "startIndex": 1964,
+                    "endIndex": 1989,
                     "textRun": {
                       "content": "Colored Text (Heading 3)\n",
                       "textStyle": {}
@@ -2257,21 +2388,21 @@
               }
             },
             {
-              "startIndex": 1886,
-              "endIndex": 1991,
+              "startIndex": 1989,
+              "endIndex": 2094,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1886,
-                    "endIndex": 1896,
+                    "startIndex": 1989,
+                    "endIndex": 1999,
                     "textRun": {
                       "content": "This text ",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 1896,
-                    "endIndex": 1910,
+                    "startIndex": 1999,
+                    "endIndex": 2013,
                     "textRun": {
                       "content": "should be bold",
                       "textStyle": {
@@ -2280,16 +2411,16 @@
                     }
                   },
                   {
-                    "startIndex": 1910,
-                    "endIndex": 1922,
+                    "startIndex": 2013,
+                    "endIndex": 2025,
                     "textRun": {
                       "content": ". This text ",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 1922,
-                    "endIndex": 1938,
+                    "startIndex": 2025,
+                    "endIndex": 2041,
                     "textRun": {
                       "content": "should be italic",
                       "textStyle": {
@@ -2298,16 +2429,16 @@
                     }
                   },
                   {
-                    "startIndex": 1938,
-                    "endIndex": 1940,
+                    "startIndex": 2041,
+                    "endIndex": 2043,
                     "textRun": {
                       "content": ". ",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 1940,
-                    "endIndex": 1991,
+                    "startIndex": 2043,
+                    "endIndex": 2094,
                     "textRun": {
                       "content": "This text has a blue highlight and red font color.\n",
                       "textStyle": {
@@ -2341,13 +2472,13 @@
               }
             },
             {
-              "startIndex": 1991,
-              "endIndex": 1992,
+              "startIndex": 2094,
+              "endIndex": 2095,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1991,
-                    "endIndex": 1992,
+                    "startIndex": 2094,
+                    "endIndex": 2095,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2367,13 +2498,13 @@
               }
             },
             {
-              "startIndex": 1992,
-              "endIndex": 2045,
+              "startIndex": 2095,
+              "endIndex": 2148,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1992,
-                    "endIndex": 2044,
+                    "startIndex": 2095,
+                    "endIndex": 2147,
                     "textRun": {
                       "content": "Section 3: Data and Interactive Elements (Heading 2)",
                       "textStyle": {
@@ -2385,8 +2516,8 @@
                     }
                   },
                   {
-                    "startIndex": 2044,
-                    "endIndex": 2045,
+                    "startIndex": 2147,
+                    "endIndex": 2148,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2415,21 +2546,21 @@
               }
             },
             {
-              "startIndex": 2045,
-              "endIndex": 2064,
+              "startIndex": 2148,
+              "endIndex": 2167,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2045,
-                    "endIndex": 2063,
+                    "startIndex": 2148,
+                    "endIndex": 2166,
                     "textRun": {
                       "content": "Tables (Heading 3)",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 2063,
-                    "endIndex": 2064,
+                    "startIndex": 2166,
+                    "endIndex": 2167,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2459,13 +2590,13 @@
               }
             },
             {
-              "startIndex": 2064,
-              "endIndex": 2222,
+              "startIndex": 2167,
+              "endIndex": 2325,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2064,
-                    "endIndex": 2181,
+                    "startIndex": 2167,
+                    "endIndex": 2284,
                     "textRun": {
                       "content": "Tables are a crucial element for data representation and should be converted into Markdown table format (using pipes ",
                       "textStyle": {
@@ -2477,8 +2608,8 @@
                     }
                   },
                   {
-                    "startIndex": 2181,
-                    "endIndex": 2182,
+                    "startIndex": 2284,
+                    "endIndex": 2285,
                     "textRun": {
                       "content": "|",
                       "textStyle": {
@@ -2499,8 +2630,8 @@
                     }
                   },
                   {
-                    "startIndex": 2182,
-                    "endIndex": 2222,
+                    "startIndex": 2285,
+                    "endIndex": 2325,
                     "textRun": {
                       "content": "). Pinned headers should be maintained.\n",
                       "textStyle": {
@@ -2520,28 +2651,28 @@
               }
             },
             {
-              "startIndex": 2222,
-              "endIndex": 2339,
+              "startIndex": 2325,
+              "endIndex": 2442,
               "table": {
                 "rows": 4,
                 "columns": 3,
                 "tableRows": [
                   {
-                    "startIndex": 2223,
-                    "endIndex": 2254,
+                    "startIndex": 2326,
+                    "endIndex": 2357,
                     "tableCells": [
                       {
-                        "startIndex": 2224,
-                        "endIndex": 2234,
+                        "startIndex": 2327,
+                        "endIndex": 2337,
                         "content": [
                           {
-                            "startIndex": 2225,
-                            "endIndex": 2234,
+                            "startIndex": 2328,
+                            "endIndex": 2337,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2225,
-                                  "endIndex": 2233,
+                                  "startIndex": 2328,
+                                  "endIndex": 2336,
                                   "textRun": {
                                     "content": "Header 1",
                                     "textStyle": {
@@ -2554,8 +2685,8 @@
                                   }
                                 },
                                 {
-                                  "startIndex": 2233,
-                                  "endIndex": 2234,
+                                  "startIndex": 2336,
+                                  "endIndex": 2337,
                                   "textRun": {
                                     "content": "\n",
                                     "textStyle": {
@@ -2650,17 +2781,17 @@
                         }
                       },
                       {
-                        "startIndex": 2234,
-                        "endIndex": 2244,
+                        "startIndex": 2337,
+                        "endIndex": 2347,
                         "content": [
                           {
-                            "startIndex": 2235,
-                            "endIndex": 2244,
+                            "startIndex": 2338,
+                            "endIndex": 2347,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2235,
-                                  "endIndex": 2243,
+                                  "startIndex": 2338,
+                                  "endIndex": 2346,
                                   "textRun": {
                                     "content": "Header 2",
                                     "textStyle": {
@@ -2673,8 +2804,8 @@
                                   }
                                 },
                                 {
-                                  "startIndex": 2243,
-                                  "endIndex": 2244,
+                                  "startIndex": 2346,
+                                  "endIndex": 2347,
                                   "textRun": {
                                     "content": "\n",
                                     "textStyle": {
@@ -2769,17 +2900,17 @@
                         }
                       },
                       {
-                        "startIndex": 2244,
-                        "endIndex": 2254,
+                        "startIndex": 2347,
+                        "endIndex": 2357,
                         "content": [
                           {
-                            "startIndex": 2245,
-                            "endIndex": 2254,
+                            "startIndex": 2348,
+                            "endIndex": 2357,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2245,
-                                  "endIndex": 2253,
+                                  "startIndex": 2348,
+                                  "endIndex": 2356,
                                   "textRun": {
                                     "content": "Header 3",
                                     "textStyle": {
@@ -2792,8 +2923,8 @@
                                   }
                                 },
                                 {
-                                  "startIndex": 2253,
-                                  "endIndex": 2254,
+                                  "startIndex": 2356,
+                                  "endIndex": 2357,
                                   "textRun": {
                                     "content": "\n",
                                     "textStyle": {
@@ -2897,21 +3028,21 @@
                     }
                   },
                   {
-                    "startIndex": 2254,
-                    "endIndex": 2282,
+                    "startIndex": 2357,
+                    "endIndex": 2385,
                     "tableCells": [
                       {
-                        "startIndex": 2255,
-                        "endIndex": 2264,
+                        "startIndex": 2358,
+                        "endIndex": 2367,
                         "content": [
                           {
-                            "startIndex": 2256,
-                            "endIndex": 2264,
+                            "startIndex": 2359,
+                            "endIndex": 2367,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2256,
-                                  "endIndex": 2264,
+                                  "startIndex": 2359,
+                                  "endIndex": 2367,
                                   "textRun": {
                                     "content": "Data A1\n",
                                     "textStyle": {
@@ -3005,17 +3136,17 @@
                         }
                       },
                       {
-                        "startIndex": 2264,
-                        "endIndex": 2273,
+                        "startIndex": 2367,
+                        "endIndex": 2376,
                         "content": [
                           {
-                            "startIndex": 2265,
-                            "endIndex": 2273,
+                            "startIndex": 2368,
+                            "endIndex": 2376,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2265,
-                                  "endIndex": 2273,
+                                  "startIndex": 2368,
+                                  "endIndex": 2376,
                                   "textRun": {
                                     "content": "Data B1\n",
                                     "textStyle": {
@@ -3109,17 +3240,17 @@
                         }
                       },
                       {
-                        "startIndex": 2273,
-                        "endIndex": 2282,
+                        "startIndex": 2376,
+                        "endIndex": 2385,
                         "content": [
                           {
-                            "startIndex": 2274,
-                            "endIndex": 2282,
+                            "startIndex": 2377,
+                            "endIndex": 2385,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2274,
-                                  "endIndex": 2282,
+                                  "startIndex": 2377,
+                                  "endIndex": 2385,
                                   "textRun": {
                                     "content": "Data C1\n",
                                     "textStyle": {
@@ -3221,21 +3352,21 @@
                     }
                   },
                   {
-                    "startIndex": 2282,
-                    "endIndex": 2310,
+                    "startIndex": 2385,
+                    "endIndex": 2413,
                     "tableCells": [
                       {
-                        "startIndex": 2283,
-                        "endIndex": 2292,
+                        "startIndex": 2386,
+                        "endIndex": 2395,
                         "content": [
                           {
-                            "startIndex": 2284,
-                            "endIndex": 2292,
+                            "startIndex": 2387,
+                            "endIndex": 2395,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2284,
-                                  "endIndex": 2292,
+                                  "startIndex": 2387,
+                                  "endIndex": 2395,
                                   "textRun": {
                                     "content": "Data A2\n",
                                     "textStyle": {
@@ -3329,17 +3460,17 @@
                         }
                       },
                       {
-                        "startIndex": 2292,
-                        "endIndex": 2301,
+                        "startIndex": 2395,
+                        "endIndex": 2404,
                         "content": [
                           {
-                            "startIndex": 2293,
-                            "endIndex": 2301,
+                            "startIndex": 2396,
+                            "endIndex": 2404,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2293,
-                                  "endIndex": 2301,
+                                  "startIndex": 2396,
+                                  "endIndex": 2404,
                                   "textRun": {
                                     "content": "Data B2\n",
                                     "textStyle": {
@@ -3433,17 +3564,17 @@
                         }
                       },
                       {
-                        "startIndex": 2301,
-                        "endIndex": 2310,
+                        "startIndex": 2404,
+                        "endIndex": 2413,
                         "content": [
                           {
-                            "startIndex": 2302,
-                            "endIndex": 2310,
+                            "startIndex": 2405,
+                            "endIndex": 2413,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2302,
-                                  "endIndex": 2310,
+                                  "startIndex": 2405,
+                                  "endIndex": 2413,
                                   "textRun": {
                                     "content": "Data C2\n",
                                     "textStyle": {
@@ -3545,21 +3676,21 @@
                     }
                   },
                   {
-                    "startIndex": 2310,
-                    "endIndex": 2338,
+                    "startIndex": 2413,
+                    "endIndex": 2441,
                     "tableCells": [
                       {
-                        "startIndex": 2311,
-                        "endIndex": 2320,
+                        "startIndex": 2414,
+                        "endIndex": 2423,
                         "content": [
                           {
-                            "startIndex": 2312,
-                            "endIndex": 2320,
+                            "startIndex": 2415,
+                            "endIndex": 2423,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2312,
-                                  "endIndex": 2320,
+                                  "startIndex": 2415,
+                                  "endIndex": 2423,
                                   "textRun": {
                                     "content": "Data A3\n",
                                     "textStyle": {
@@ -3653,17 +3784,17 @@
                         }
                       },
                       {
-                        "startIndex": 2320,
-                        "endIndex": 2329,
+                        "startIndex": 2423,
+                        "endIndex": 2432,
                         "content": [
                           {
-                            "startIndex": 2321,
-                            "endIndex": 2329,
+                            "startIndex": 2424,
+                            "endIndex": 2432,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2321,
-                                  "endIndex": 2329,
+                                  "startIndex": 2424,
+                                  "endIndex": 2432,
                                   "textRun": {
                                     "content": "Data B3\n",
                                     "textStyle": {
@@ -3757,17 +3888,17 @@
                         }
                       },
                       {
-                        "startIndex": 2329,
-                        "endIndex": 2338,
+                        "startIndex": 2432,
+                        "endIndex": 2441,
                         "content": [
                           {
-                            "startIndex": 2330,
-                            "endIndex": 2338,
+                            "startIndex": 2433,
+                            "endIndex": 2441,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2330,
-                                  "endIndex": 2338,
+                                  "startIndex": 2433,
+                                  "endIndex": 2441,
                                   "textRun": {
                                     "content": "Data C3\n",
                                     "textStyle": {
@@ -3885,13 +4016,13 @@
               }
             },
             {
-              "startIndex": 2339,
-              "endIndex": 2340,
+              "startIndex": 2442,
+              "endIndex": 2443,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2339,
-                    "endIndex": 2340,
+                    "startIndex": 2442,
+                    "endIndex": 2443,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -3911,21 +4042,21 @@
               }
             },
             {
-              "startIndex": 2340,
-              "endIndex": 2373,
+              "startIndex": 2443,
+              "endIndex": 2476,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2340,
-                    "endIndex": 2372,
+                    "startIndex": 2443,
+                    "endIndex": 2475,
                     "textRun": {
                       "content": "Item Pickers (Chips) (Heading 3)",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 2372,
-                    "endIndex": 2373,
+                    "startIndex": 2475,
+                    "endIndex": 2476,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -3958,13 +4089,13 @@
               }
             },
             {
-              "startIndex": 2373,
-              "endIndex": 2524,
+              "startIndex": 2476,
+              "endIndex": 2627,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2373,
-                    "endIndex": 2524,
+                    "startIndex": 2476,
+                    "endIndex": 2627,
                     "textRun": {
                       "content": "Item Pickers (or Smart Chips) are special interactive elements in Google Docs. The converter must decide how to represent this in plain Markdown text.\n",
                       "textStyle": {
@@ -3984,13 +4115,13 @@
               }
             },
             {
-              "startIndex": 2524,
-              "endIndex": 2540,
+              "startIndex": 2627,
+              "endIndex": 2643,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2524,
-                    "endIndex": 2537,
+                    "startIndex": 2627,
+                    "endIndex": 2640,
                     "textRun": {
                       "content": "Project Lead:",
                       "textStyle": {
@@ -4003,8 +4134,8 @@
                     }
                   },
                   {
-                    "startIndex": 2537,
-                    "endIndex": 2538,
+                    "startIndex": 2640,
+                    "endIndex": 2641,
                     "textRun": {
                       "content": " ",
                       "textStyle": {
@@ -4016,8 +4147,8 @@
                     }
                   },
                   {
-                    "startIndex": 2538,
-                    "endIndex": 2539,
+                    "startIndex": 2641,
+                    "endIndex": 2642,
                     "person": {
                       "personId": "kix.8hz9hqapohto",
                       "textStyle": {
@@ -4033,8 +4164,8 @@
                     }
                   },
                   {
-                    "startIndex": 2539,
-                    "endIndex": 2540,
+                    "startIndex": 2642,
+                    "endIndex": 2643,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -4081,13 +4212,13 @@
               }
             },
             {
-              "startIndex": 2540,
-              "endIndex": 2556,
+              "startIndex": 2643,
+              "endIndex": 2659,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2540,
-                    "endIndex": 2556,
+                    "startIndex": 2643,
+                    "endIndex": 2659,
                     "textRun": {
                       "content": "Other person: \n",
                       "textStyle": {
@@ -4134,13 +4265,13 @@
               }
             },
             {
-              "startIndex": 2556,
-              "endIndex": 2571,
+              "startIndex": 2659,
+              "endIndex": 2674,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2556,
-                    "endIndex": 2568,
+                    "startIndex": 2659,
+                    "endIndex": 2671,
                     "textRun": {
                       "content": "Status Chip:",
                       "textStyle": {
@@ -4153,8 +4284,8 @@
                     }
                   },
                   {
-                    "startIndex": 2568,
-                    "endIndex": 2571,
+                    "startIndex": 2671,
+                    "endIndex": 2674,
                     "textRun": {
                       "content": " \n",
                       "textStyle": {
@@ -4201,13 +4332,13 @@
               }
             },
             {
-              "startIndex": 2571,
-              "endIndex": 2584,
+              "startIndex": 2674,
+              "endIndex": 2687,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2571,
-                    "endIndex": 2581,
+                    "startIndex": 2674,
+                    "endIndex": 2684,
                     "textRun": {
                       "content": "File Chip:",
                       "textStyle": {
@@ -4220,8 +4351,8 @@
                     }
                   },
                   {
-                    "startIndex": 2581,
-                    "endIndex": 2584,
+                    "startIndex": 2684,
+                    "endIndex": 2687,
                     "textRun": {
                       "content": " \n",
                       "textStyle": {
@@ -4268,13 +4399,13 @@
               }
             },
             {
-              "startIndex": 2584,
-              "endIndex": 2599,
+              "startIndex": 2687,
+              "endIndex": 2702,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2584,
-                    "endIndex": 2594,
+                    "startIndex": 2687,
+                    "endIndex": 2697,
                     "textRun": {
                       "content": "Date Chip:",
                       "textStyle": {
@@ -4287,8 +4418,8 @@
                     }
                   },
                   {
-                    "startIndex": 2594,
-                    "endIndex": 2595,
+                    "startIndex": 2697,
+                    "endIndex": 2698,
                     "textRun": {
                       "content": " ",
                       "textStyle": {
@@ -4300,8 +4431,8 @@
                     }
                   },
                   {
-                    "startIndex": 2595,
-                    "endIndex": 2596,
+                    "startIndex": 2698,
+                    "endIndex": 2699,
                     "dateElement": {
                       "dateId": "kix.tlnloqqa2nzn",
                       "textStyle": {
@@ -4320,8 +4451,8 @@
                     }
                   },
                   {
-                    "startIndex": 2596,
-                    "endIndex": 2599,
+                    "startIndex": 2699,
+                    "endIndex": 2702,
                     "textRun": {
                       "content": " \n",
                       "textStyle": {
@@ -4368,21 +4499,21 @@
               }
             },
             {
-              "startIndex": 2599,
-              "endIndex": 2623,
+              "startIndex": 2702,
+              "endIndex": 2726,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2599,
-                    "endIndex": 2622,
+                    "startIndex": 2702,
+                    "endIndex": 2725,
                     "textRun": {
                       "content": "Code Blocks (Heading 3)",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 2622,
-                    "endIndex": 2623,
+                    "startIndex": 2725,
+                    "endIndex": 2726,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -4414,13 +4545,13 @@
               }
             },
             {
-              "startIndex": 2623,
-              "endIndex": 2758,
+              "startIndex": 2726,
+              "endIndex": 2861,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2623,
-                    "endIndex": 2752,
+                    "startIndex": 2726,
+                    "endIndex": 2855,
                     "textRun": {
                       "content": "The tool must correctly identify and preserve pre-formatted text, typically using Markdown's fenced code blocks (three backticks ",
                       "textStyle": {
@@ -4432,8 +4563,8 @@
                     }
                   },
                   {
-                    "startIndex": 2752,
-                    "endIndex": 2755,
+                    "startIndex": 2855,
+                    "endIndex": 2858,
                     "textRun": {
                       "content": "```",
                       "textStyle": {
@@ -4454,8 +4585,8 @@
                     }
                   },
                   {
-                    "startIndex": 2755,
-                    "endIndex": 2758,
+                    "startIndex": 2858,
+                    "endIndex": 2861,
                     "textRun": {
                       "content": ").\n",
                       "textStyle": {
@@ -4475,13 +4606,13 @@
               }
             },
             {
-              "startIndex": 2758,
-              "endIndex": 2807,
+              "startIndex": 2861,
+              "endIndex": 2910,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2758,
-                    "endIndex": 2759,
+                    "startIndex": 2861,
+                    "endIndex": 2862,
                     "textRun": {
                       "content": "",
                       "textStyle": {
@@ -4493,8 +4624,8 @@
                     }
                   },
                   {
-                    "startIndex": 2759,
-                    "endIndex": 2762,
+                    "startIndex": 2862,
+                    "endIndex": 2865,
                     "textRun": {
                       "content": "def",
                       "textStyle": {
@@ -4515,8 +4646,8 @@
                     }
                   },
                   {
-                    "startIndex": 2762,
-                    "endIndex": 2763,
+                    "startIndex": 2865,
+                    "endIndex": 2866,
                     "textRun": {
                       "content": " ",
                       "textStyle": {
@@ -4528,8 +4659,8 @@
                     }
                   },
                   {
-                    "startIndex": 2763,
-                    "endIndex": 2806,
+                    "startIndex": 2866,
+                    "endIndex": 2909,
                     "textRun": {
                       "content": "calculate_markdown_conversion(doc_content):",
                       "textStyle": {
@@ -4550,8 +4681,8 @@
                     }
                   },
                   {
-                    "startIndex": 2806,
-                    "endIndex": 2807,
+                    "startIndex": 2909,
+                    "endIndex": 2910,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -4571,13 +4702,13 @@
               }
             },
             {
-              "startIndex": 2807,
-              "endIndex": 2852,
+              "startIndex": 2910,
+              "endIndex": 2955,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2807,
-                    "endIndex": 2811,
+                    "startIndex": 2910,
+                    "endIndex": 2914,
                     "textRun": {
                       "content": "    ",
                       "textStyle": {
@@ -4589,8 +4720,8 @@
                     }
                   },
                   {
-                    "startIndex": 2811,
-                    "endIndex": 2851,
+                    "startIndex": 2914,
+                    "endIndex": 2954,
                     "textRun": {
                       "content": "\"\"\"Placeholder for a Python function.\"\"\"",
                       "textStyle": {
@@ -4611,8 +4742,8 @@
                     }
                   },
                   {
-                    "startIndex": 2851,
-                    "endIndex": 2852,
+                    "startIndex": 2954,
+                    "endIndex": 2955,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -4632,13 +4763,13 @@
               }
             },
             {
-              "startIndex": 2852,
-              "endIndex": 2895,
+              "startIndex": 2955,
+              "endIndex": 2998,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2852,
-                    "endIndex": 2856,
+                    "startIndex": 2955,
+                    "endIndex": 2959,
                     "textRun": {
                       "content": "    ",
                       "textStyle": {
@@ -4650,8 +4781,8 @@
                     }
                   },
                   {
-                    "startIndex": 2856,
-                    "endIndex": 2858,
+                    "startIndex": 2959,
+                    "endIndex": 2961,
                     "textRun": {
                       "content": "if",
                       "textStyle": {
@@ -4672,8 +4803,8 @@
                     }
                   },
                   {
-                    "startIndex": 2858,
-                    "endIndex": 2859,
+                    "startIndex": 2961,
+                    "endIndex": 2962,
                     "textRun": {
                       "content": " ",
                       "textStyle": {
@@ -4685,8 +4816,8 @@
                     }
                   },
                   {
-                    "startIndex": 2859,
-                    "endIndex": 2878,
+                    "startIndex": 2962,
+                    "endIndex": 2981,
                     "textRun": {
                       "content": "\"table_of_contents\"",
                       "textStyle": {
@@ -4707,8 +4838,8 @@
                     }
                   },
                   {
-                    "startIndex": 2878,
-                    "endIndex": 2879,
+                    "startIndex": 2981,
+                    "endIndex": 2982,
                     "textRun": {
                       "content": " ",
                       "textStyle": {
@@ -4720,8 +4851,8 @@
                     }
                   },
                   {
-                    "startIndex": 2879,
-                    "endIndex": 2881,
+                    "startIndex": 2982,
+                    "endIndex": 2984,
                     "textRun": {
                       "content": "in",
                       "textStyle": {
@@ -4742,8 +4873,8 @@
                     }
                   },
                   {
-                    "startIndex": 2881,
-                    "endIndex": 2882,
+                    "startIndex": 2984,
+                    "endIndex": 2985,
                     "textRun": {
                       "content": " ",
                       "textStyle": {
@@ -4755,8 +4886,8 @@
                     }
                   },
                   {
-                    "startIndex": 2882,
-                    "endIndex": 2894,
+                    "startIndex": 2985,
+                    "endIndex": 2997,
                     "textRun": {
                       "content": "doc_content:",
                       "textStyle": {
@@ -4777,8 +4908,8 @@
                     }
                   },
                   {
-                    "startIndex": 2894,
-                    "endIndex": 2895,
+                    "startIndex": 2997,
+                    "endIndex": 2998,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -4798,13 +4929,13 @@
               }
             },
             {
-              "startIndex": 2895,
-              "endIndex": 2926,
+              "startIndex": 2998,
+              "endIndex": 3029,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2895,
-                    "endIndex": 2903,
+                    "startIndex": 2998,
+                    "endIndex": 3006,
                     "textRun": {
                       "content": "        ",
                       "textStyle": {
@@ -4816,8 +4947,8 @@
                     }
                   },
                   {
-                    "startIndex": 2903,
-                    "endIndex": 2909,
+                    "startIndex": 3006,
+                    "endIndex": 3012,
                     "textRun": {
                       "content": "return",
                       "textStyle": {
@@ -4838,8 +4969,8 @@
                     }
                   },
                   {
-                    "startIndex": 2909,
-                    "endIndex": 2910,
+                    "startIndex": 3012,
+                    "endIndex": 3013,
                     "textRun": {
                       "content": " ",
                       "textStyle": {
@@ -4851,8 +4982,8 @@
                     }
                   },
                   {
-                    "startIndex": 2910,
-                    "endIndex": 2925,
+                    "startIndex": 3013,
+                    "endIndex": 3028,
                     "textRun": {
                       "content": "\"TOC converted\"",
                       "textStyle": {
@@ -4873,8 +5004,8 @@
                     }
                   },
                   {
-                    "startIndex": 2925,
-                    "endIndex": 2926,
+                    "startIndex": 3028,
+                    "endIndex": 3029,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -4894,13 +5025,13 @@
               }
             },
             {
-              "startIndex": 2926,
-              "endIndex": 2936,
+              "startIndex": 3029,
+              "endIndex": 3039,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2926,
-                    "endIndex": 2930,
+                    "startIndex": 3029,
+                    "endIndex": 3033,
                     "textRun": {
                       "content": "    ",
                       "textStyle": {
@@ -4912,8 +5043,8 @@
                     }
                   },
                   {
-                    "startIndex": 2930,
-                    "endIndex": 2934,
+                    "startIndex": 3033,
+                    "endIndex": 3037,
                     "textRun": {
                       "content": "else",
                       "textStyle": {
@@ -4934,8 +5065,8 @@
                     }
                   },
                   {
-                    "startIndex": 2934,
-                    "endIndex": 2935,
+                    "startIndex": 3037,
+                    "endIndex": 3038,
                     "textRun": {
                       "content": ":",
                       "textStyle": {
@@ -4956,8 +5087,8 @@
                     }
                   },
                   {
-                    "startIndex": 2935,
-                    "endIndex": 2936,
+                    "startIndex": 3038,
+                    "endIndex": 3039,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -4977,13 +5108,13 @@
               }
             },
             {
-              "startIndex": 2936,
-              "endIndex": 2971,
+              "startIndex": 3039,
+              "endIndex": 3074,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2936,
-                    "endIndex": 2944,
+                    "startIndex": 3039,
+                    "endIndex": 3047,
                     "textRun": {
                       "content": "        ",
                       "textStyle": {
@@ -4995,8 +5126,8 @@
                     }
                   },
                   {
-                    "startIndex": 2944,
-                    "endIndex": 2950,
+                    "startIndex": 3047,
+                    "endIndex": 3053,
                     "textRun": {
                       "content": "return",
                       "textStyle": {
@@ -5017,8 +5148,8 @@
                     }
                   },
                   {
-                    "startIndex": 2950,
-                    "endIndex": 2951,
+                    "startIndex": 3053,
+                    "endIndex": 3054,
                     "textRun": {
                       "content": " ",
                       "textStyle": {
@@ -5030,8 +5161,8 @@
                     }
                   },
                   {
-                    "startIndex": 2951,
-                    "endIndex": 2970,
+                    "startIndex": 3054,
+                    "endIndex": 3073,
                     "textRun": {
                       "content": "\"Content converted\"",
                       "textStyle": {
@@ -5052,8 +5183,8 @@
                     }
                   },
                   {
-                    "startIndex": 2970,
-                    "endIndex": 2971,
+                    "startIndex": 3073,
+                    "endIndex": 3074,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -5073,13 +5204,13 @@
               }
             },
             {
-              "startIndex": 2971,
-              "endIndex": 2973,
+              "startIndex": 3074,
+              "endIndex": 3076,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2971,
-                    "endIndex": 2973,
+                    "startIndex": 3074,
+                    "endIndex": 3076,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -5099,13 +5230,13 @@
               }
             },
             {
-              "startIndex": 2973,
-              "endIndex": 2974,
+              "startIndex": 3076,
+              "endIndex": 3077,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2973,
-                    "endIndex": 2974,
+                    "startIndex": 3076,
+                    "endIndex": 3077,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {}
@@ -5120,13 +5251,13 @@
               }
             },
             {
-              "startIndex": 2974,
-              "endIndex": 3011,
+              "startIndex": 3077,
+              "endIndex": 3114,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2974,
-                    "endIndex": 3011,
+                    "startIndex": 3077,
+                    "endIndex": 3114,
                     "textRun": {
                       "content": "This is an inline suggestion heading\n",
                       "suggestedInsertionIds": [
@@ -5145,13 +5276,13 @@
               }
             },
             {
-              "startIndex": 3011,
-              "endIndex": 3040,
+              "startIndex": 3114,
+              "endIndex": 3143,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 3011,
-                    "endIndex": 3039,
+                    "startIndex": 3114,
+                    "endIndex": 3142,
                     "textRun": {
                       "content": "This is an inline suggestion",
                       "suggestedInsertionIds": [
@@ -5161,8 +5292,8 @@
                     }
                   },
                   {
-                    "startIndex": 3039,
-                    "endIndex": 3040,
+                    "startIndex": 3142,
+                    "endIndex": 3143,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {}
@@ -5208,13 +5339,13 @@
               }
             },
             {
-              "startIndex": 3040,
-              "endIndex": 3041,
+              "startIndex": 3143,
+              "endIndex": 3144,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 3040,
-                    "endIndex": 3041,
+                    "startIndex": 3143,
+                    "endIndex": 3144,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {}
@@ -5915,7 +6046,7 @@
             "inlineObjectProperties": {
               "embeddedObject": {
                 "imageProperties": {
-                  "contentUri": "https://lh7-rt.googleusercontent.com/docsz/AD_4nXegEl2qmQ2gff5NgEqBRGg2iFGenAXa-tZaS-cPpn4MBR7D4Qq8TCFPmEw5u5Q7PmIf9v0f150PoyKIPlUhQ2Yk9HX5kPY1qeHCQRcp_lFUUf5MLUQvySpGKtsZTtYILr5q9lKy5Ry85tNpFbq6ZSfmy2HX?key=kykgB3vc_XH5qBSBJk5OEQ",
+                  "contentUri": "https://lh7-rt.googleusercontent.com/docsz/AD_4nXftYD9eSjIoI4ibgOm3rJ1Mlc6W3y90EFbbimqIcay2oWh3QafgIvHIWNiR26Cpoq9q-qX-OrZSJVvv7dhUIK2PsY5xh-JayjrkU5vvw8iYsDXkgEwjrZKRCqAzCYJsYjLplXI_U7P1AVCa-FVPN8wm5l7Y?key=kykgB3vc_XH5qBSBJk5OEQ",
                   "cropProperties": {
                     "offsetRight": 0.7051282
                   }
