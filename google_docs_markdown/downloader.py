@@ -7,11 +7,23 @@ each tab to Markdown, and writes the result as a directory of .md files.
 from __future__ import annotations
 
 import re
+from dataclasses import dataclass
 from pathlib import Path
 
 from google_docs_markdown.client import GoogleDocsClient
 from google_docs_markdown.markdown_serializer import MarkdownSerializer
 from google_docs_markdown.models.document import Tab
+
+
+@dataclass(frozen=True)
+class TabSummary:
+    """Lightweight summary of a document tab (no content)."""
+
+    tab_id: str
+    title: str
+    nesting_level: int
+    parent_tab_id: str | None
+    child_tabs: list[TabSummary]
 
 
 class Downloader:
@@ -90,6 +102,54 @@ class Downloader:
 
         return written
 
+    def get_document_title(self, document_id: str) -> str:
+        """Return the title of a Google Doc.
+
+        Args:
+            document_id: Google Doc document ID or URL.
+
+        Returns:
+            The document title, or ``"Untitled Document"`` if unset.
+        """
+        doc = self._client.get_document(document_id)
+        return doc.title or "Untitled Document"
+
+    def get_tabs(self, document_id: str) -> list[TabSummary]:
+        """Return a flat-friendly tree of tab summaries for a document.
+
+        Args:
+            document_id: Google Doc document ID or URL.
+
+        Returns:
+            List of top-level :class:`TabSummary` objects. Each summary
+            contains nested ``child_tabs`` for recursive traversal.
+        """
+        doc = self._client.get_document(document_id)
+        return [_tab_to_summary(t) for t in (doc.tabs or [])]
+
+    def get_nested_tabs(self, document_id: str, tab_id: str) -> list[TabSummary]:
+        """Return the child tabs nested under a specific tab.
+
+        Args:
+            document_id: Google Doc document ID or URL.
+            tab_id: The ``tabId`` of the parent tab whose children to return.
+
+        Returns:
+            List of :class:`TabSummary` for the immediate children.
+
+        Raises:
+            ValueError: If no tab with the given *tab_id* exists.
+        """
+        doc = self._client.get_document(document_id)
+        target = _find_tab(doc.tabs or [], tab_id)
+        if target is None:
+            raise ValueError(f"No tab with tabId={tab_id!r} in document")
+        return [_tab_to_summary(t) for t in (target.childTabs or [])]
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
     def _collect_tabs(
         self,
         tabs: list[Tab],
@@ -132,3 +192,27 @@ def sanitize_filename(name: str) -> str:
     name = _UNSAFE_CHARS.sub("_", name)
     name = re.sub(r"_+", "_", name)
     return name or "Untitled"
+
+
+def _tab_to_summary(tab: Tab) -> TabSummary:
+    """Convert a Pydantic ``Tab`` model to a lightweight ``TabSummary``."""
+    props = tab.tabProperties
+    return TabSummary(
+        tab_id=(props.tabId or "") if props else "",
+        title=(props.title or "Untitled") if props else "Untitled",
+        nesting_level=(props.nestingLevel or 0) if props else 0,
+        parent_tab_id=(props.parentTabId) if props else None,
+        child_tabs=[_tab_to_summary(c) for c in (tab.childTabs or [])],
+    )
+
+
+def _find_tab(tabs: list[Tab], tab_id: str) -> Tab | None:
+    """Recursively search for a tab by ``tabId``."""
+    for tab in tabs:
+        if tab.tabProperties and tab.tabProperties.tabId == tab_id:
+            return tab
+        if tab.childTabs:
+            found = _find_tab(tab.childTabs, tab_id)
+            if found is not None:
+                return found
+    return None

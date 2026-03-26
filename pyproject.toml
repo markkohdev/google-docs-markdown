@@ -63,6 +63,11 @@ known-first-party = ["google_docs_markdown"]
 quote-style = "double"
 indent-style = "space"
 
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests that require live Google API credentials (deselect with '-m \"not integration\"')",
+]
+
 [tool.mypy]
 # Global options:
 python_version = "3.12"

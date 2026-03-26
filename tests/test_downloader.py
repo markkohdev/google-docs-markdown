@@ -13,7 +13,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from google_docs_markdown.downloader import Downloader, sanitize_filename
+from google_docs_markdown.downloader import Downloader, TabSummary, sanitize_filename
 from google_docs_markdown.models import Document
 
 RESOURCES_DIR = Path(__file__).parent / "resources" / "document_jsons"
@@ -211,3 +211,115 @@ class TestDownloaderDownloadToFiles:
         file_path = list(written.values())[0]
         assert file_path.exists()
         assert file_path.parent.name == "Untitled Document"
+
+
+# ---------------------------------------------------------------------------
+# Downloader.get_document_title
+# ---------------------------------------------------------------------------
+
+
+class TestGetDocumentTitle:
+    def test_returns_title(self) -> None:
+        client = _mock_client(_load_raw(SINGLE_TAB_JSON))
+        dl = Downloader(client=client)
+        assert dl.get_document_title("fake-id") == "Markdown Conversion Example - Single-Tab"
+
+    def test_returns_fallback_for_none(self) -> None:
+        raw = _load_raw(SINGLE_TAB_JSON)
+        raw["title"] = None
+        client = _mock_client(raw)
+        dl = Downloader(client=client)
+        assert dl.get_document_title("fake-id") == "Untitled Document"
+
+
+# ---------------------------------------------------------------------------
+# Downloader.get_tabs
+# ---------------------------------------------------------------------------
+
+
+class TestGetTabs:
+    def test_single_tab(self) -> None:
+        client = _mock_client(_load_raw(SINGLE_TAB_JSON))
+        dl = Downloader(client=client)
+        tabs = dl.get_tabs("fake-id")
+
+        assert len(tabs) == 1
+        assert tabs[0].title == "First tab"
+        assert tabs[0].tab_id == "t.0"
+        assert tabs[0].child_tabs == []
+
+    def test_multi_tab_structure(self) -> None:
+        client = _mock_client(_load_raw(MULTI_TAB_JSON))
+        dl = Downloader(client=client)
+        tabs = dl.get_tabs("fake-id")
+
+        assert len(tabs) == 2
+        assert tabs[0].title == "First tab"
+        assert tabs[0].tab_id == "t.0"
+        assert tabs[0].child_tabs == []
+
+        assert tabs[1].title == "Tab with child tab"
+        assert tabs[1].tab_id == "t.ytrmrxold3qv"
+        assert len(tabs[1].child_tabs) == 1
+
+        child = tabs[1].child_tabs[0]
+        assert child.title == "Child tab"
+        assert child.tab_id == "t.lkp7hl41vf2d"
+        assert child.nesting_level == 1
+        assert child.parent_tab_id == "t.ytrmrxold3qv"
+        assert len(child.child_tabs) == 1
+
+        grandchild = child.child_tabs[0]
+        assert grandchild.title == "Grandchild tab"
+        assert grandchild.nesting_level == 2
+        assert grandchild.parent_tab_id == "t.lkp7hl41vf2d"
+        assert grandchild.child_tabs == []
+
+    def test_empty_tabs(self) -> None:
+        raw = _load_raw(SINGLE_TAB_JSON)
+        raw["tabs"] = []
+        client = _mock_client(raw)
+        dl = Downloader(client=client)
+        assert dl.get_tabs("fake-id") == []
+
+    def test_returns_tab_summary_type(self) -> None:
+        client = _mock_client(_load_raw(SINGLE_TAB_JSON))
+        dl = Downloader(client=client)
+        tabs = dl.get_tabs("fake-id")
+        assert isinstance(tabs[0], TabSummary)
+
+
+# ---------------------------------------------------------------------------
+# Downloader.get_nested_tabs
+# ---------------------------------------------------------------------------
+
+
+class TestGetNestedTabs:
+    def test_returns_children(self) -> None:
+        client = _mock_client(_load_raw(MULTI_TAB_JSON))
+        dl = Downloader(client=client)
+        children = dl.get_nested_tabs("fake-id", "t.ytrmrxold3qv")
+
+        assert len(children) == 1
+        assert children[0].title == "Child tab"
+        assert children[0].tab_id == "t.lkp7hl41vf2d"
+
+    def test_returns_grandchildren(self) -> None:
+        client = _mock_client(_load_raw(MULTI_TAB_JSON))
+        dl = Downloader(client=client)
+        grandchildren = dl.get_nested_tabs("fake-id", "t.lkp7hl41vf2d")
+
+        assert len(grandchildren) == 1
+        assert grandchildren[0].title == "Grandchild tab"
+
+    def test_leaf_tab_returns_empty(self) -> None:
+        client = _mock_client(_load_raw(MULTI_TAB_JSON))
+        dl = Downloader(client=client)
+        children = dl.get_nested_tabs("fake-id", "t.a2r49ovghki6")
+        assert children == []
+
+    def test_unknown_tab_id_raises(self) -> None:
+        client = _mock_client(_load_raw(MULTI_TAB_JSON))
+        dl = Downloader(client=client)
+        with pytest.raises(ValueError, match="No tab with tabId"):
+            dl.get_nested_tabs("fake-id", "nonexistent")

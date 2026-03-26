@@ -12,15 +12,11 @@ from unittest.mock import Mock, patch
 from pytest import raises
 
 from google_docs_markdown import cli
+from google_docs_markdown.downloader import TabSummary
 
 
 class TestCLICommands:
     """Test that CLI commands exist and are callable."""
-
-    def test_list_tabs_command_exists(self) -> None:
-        """Test that list-tabs command exists and raises NotImplementedError."""
-        with raises(NotImplementedError, match="This command is not implemented yet"):
-            cli.list_tabs(document_url="test-doc-id")
 
     def test_upload_command_exists(self) -> None:
         """Test that upload command exists and raises NotImplementedError."""
@@ -90,6 +86,51 @@ class TestDownloadCommand:
 
         with raises((SystemExit, click.exceptions.Exit)):
             cli.download(document_url="doc-id", output="/out", tabs=None)
+
+
+class TestListTabsCommand:
+    """Test the list-tabs command wiring."""
+
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_list_tabs_calls_downloader(self, mock_dl_cls: Mock, capsys: object) -> None:
+        mock_dl = mock_dl_cls.return_value
+        mock_dl.get_tabs.return_value = [
+            TabSummary(tab_id="t.0", title="First tab", nesting_level=0, parent_tab_id=None, child_tabs=[]),
+        ]
+        mock_dl.get_document_title.return_value = "My Doc"
+
+        cli.list_tabs(document_url="doc-id")
+
+        mock_dl.get_tabs.assert_called_once_with("doc-id")
+
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_list_tabs_nested(self, mock_dl_cls: Mock, capsys: object) -> None:
+        mock_dl = mock_dl_cls.return_value
+        mock_dl.get_tabs.return_value = [
+            TabSummary(
+                tab_id="t.1",
+                title="Parent",
+                nesting_level=0,
+                parent_tab_id=None,
+                child_tabs=[
+                    TabSummary(tab_id="t.2", title="Child", nesting_level=1, parent_tab_id="t.1", child_tabs=[]),
+                ],
+            ),
+        ]
+        mock_dl.get_document_title.return_value = "My Doc"
+
+        cli.list_tabs(document_url="doc-id")
+        mock_dl.get_tabs.assert_called_once_with("doc-id")
+
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_list_tabs_error_handling(self, mock_dl_cls: Mock) -> None:
+        import click
+
+        mock_dl = mock_dl_cls.return_value
+        mock_dl.get_tabs.side_effect = RuntimeError("API error")
+
+        with raises((SystemExit, click.exceptions.Exit)):
+            cli.list_tabs(document_url="doc-id")
 
 
 class TestMain:

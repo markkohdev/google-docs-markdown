@@ -9,7 +9,7 @@ This package provides:
 """
 
 from google_docs_markdown.client import GoogleDocsClient
-from google_docs_markdown.downloader import Downloader
+from google_docs_markdown.downloader import Downloader, TabSummary
 from google_docs_markdown.markdown_serializer import MarkdownSerializer
 from google_docs_markdown.transport import GoogleDocsTransport, TabInfo
 
@@ -19,6 +19,7 @@ __all__ = [
     "GoogleDocsTransport",
     "MarkdownSerializer",
     "TabInfo",
+    "TabSummary",
 ]
 
 __version__ = "0.2.0"
