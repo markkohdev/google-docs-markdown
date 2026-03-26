@@ -162,15 +162,15 @@ class MarkdownSerializer:
             return None
 
         col_count = table.columns or (max(len(r) for r in rows) if rows else 0)
-        for row in rows:
-            while len(row) < col_count:
-                row.append("")
+        for r in rows:
+            while len(r) < col_count:
+                r.append("")
 
         separator = "| " + " | ".join("---" for _ in range(col_count)) + " |"
 
         lines: list[str] = []
-        for i, row in enumerate(rows):
-            line = "| " + " | ".join(row) + " |"
+        for i, r in enumerate(rows):
+            line = "| " + " | ".join(r) + " |"
             lines.append(line)
             if i == max(header_row_count - 1, 0):
                 lines.append(separator)

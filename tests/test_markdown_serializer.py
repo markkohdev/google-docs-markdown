@@ -28,6 +28,8 @@ from google_docs_markdown.models.elements import (
     ParagraphElement,
     RichLink,
     StructuralElement,
+    TableCell,
+    TableRow,
     TextRun,
 )
 from google_docs_markdown.models.styles import ParagraphStyle, TextStyle
@@ -858,10 +860,8 @@ class TestSerializerLists:
 # ---------------------------------------------------------------------------
 
 
-def _table_cell(text: str, bold: bool = False) -> "TableCell":
+def _table_cell(text: str, bold: bool = False) -> TableCell:
     """Build a TableCell containing a single paragraph with optional bold."""
-    from google_docs_markdown.models.elements import TableCell
-
     style = TextStyle(bold=True) if bold else None
     return TableCell(
         content=[
@@ -877,9 +877,8 @@ def _table_cell(text: str, bold: bool = False) -> "TableCell":
     )
 
 
-def _table_row(cells: list["TableCell"], header: bool = False) -> "TableRow":
+def _table_row(cells: list[TableCell], header: bool = False) -> TableRow:
     """Build a TableRow with optional header flag."""
-    from google_docs_markdown.models.elements import TableRow
     from google_docs_markdown.models.styles import TableRowStyle
 
     style = TableRowStyle(tableHeader=True) if header else None
@@ -901,12 +900,7 @@ class TestSerializerTables:
         )
         doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
         result = serializer.serialize(doc_tab)
-        expected = (
-            "| H1 | H2 |\n"
-            "| --- | --- |\n"
-            "| A1 | A2 |\n"
-            "| B1 | B2 |\n"
-        )
+        expected = "| H1 | H2 |\n| --- | --- |\n| A1 | A2 |\n| B1 | B2 |\n"
         assert result == expected
 
     def test_table_without_explicit_header(self, serializer: MarkdownSerializer) -> None:
@@ -923,11 +917,7 @@ class TestSerializerTables:
         )
         doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
         result = serializer.serialize(doc_tab)
-        expected = (
-            "| A1 | A2 |\n"
-            "| --- | --- |\n"
-            "| B1 | B2 |\n"
-        )
+        expected = "| A1 | A2 |\n| --- | --- |\n| B1 | B2 |\n"
         assert result == expected
 
     def test_table_with_bold_header_cells(self, serializer: MarkdownSerializer) -> None:
@@ -959,9 +949,7 @@ class TestSerializerTables:
                 StructuralElement(
                     paragraph=Paragraph(
                         elements=[
-                            ParagraphElement(
-                                textRun=TextRun(content="emphasis", textStyle=TextStyle(italic=True))
-                            ),
+                            ParagraphElement(textRun=TextRun(content="emphasis", textStyle=TextStyle(italic=True))),
                             ParagraphElement(textRun=TextRun(content="\n")),
                         ],
                         paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
@@ -1060,10 +1048,7 @@ class TestSerializerTables:
         )
         doc_tab = DocumentTab(body=Body(content=[StructuralElement(table=table)]))
         result = serializer.serialize(doc_tab)
-        expected = (
-            "| Col A | Col B |\n"
-            "| --- | --- |\n"
-        )
+        expected = "| Col A | Col B |\n| --- | --- |\n"
         assert result == expected
 
     def test_table_with_empty_cells(self, serializer: MarkdownSerializer) -> None:
