@@ -46,7 +46,7 @@ format-fix:
 
 # Run type checker
 type-check:
-	uv run mypy google_docs_markdown tests
+	uv run mypy google_docs_markdown tests scripts
 
 # Run all checks
 test: format-fix lint-fix format-check lint-check type-check run-tests

@@ -43,9 +43,7 @@ def main(
         raise typer.Exit(1)
 
     urls = [
-        line.strip()
-        for line in urls_file.read_text().splitlines()
-        if line.strip() and not line.strip().startswith("#")
+        line.strip() for line in urls_file.read_text().splitlines() if line.strip() and not line.strip().startswith("#")
     ]
 
     if not urls:
