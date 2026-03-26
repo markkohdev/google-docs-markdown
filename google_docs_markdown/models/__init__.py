@@ -7,6 +7,8 @@ from google_docs_markdown.models import requests as _requests
 from google_docs_markdown.models import responses as _responses
 from google_docs_markdown.models import styles as _styles
 from google_docs_markdown.models.base import GoogleDocsBaseModel
+
+# Common models
 from google_docs_markdown.models.common import (
     Color,
     Dimension,
@@ -14,6 +16,8 @@ from google_docs_markdown.models.common import (
     Range,
 )
 from google_docs_markdown.models.document import Body, Document, DocumentTab, Tab, TabProperties
+
+# Element models
 from google_docs_markdown.models.elements import (
     Paragraph,
     ParagraphElement,
@@ -21,6 +25,8 @@ from google_docs_markdown.models.elements import (
     Table,
     TextRun,
 )
+
+# Request/Response models
 from google_docs_markdown.models.requests import BatchUpdateDocumentRequest, InsertTextRequest, Request
 from google_docs_markdown.models.responses import BatchUpdateDocumentResponse, Response
 

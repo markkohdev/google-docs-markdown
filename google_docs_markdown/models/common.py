@@ -13,7 +13,7 @@ if TYPE_CHECKING:
         NamedStyles,
         NamedStylesSuggestionState,
     )
-    from google_docs_markdown.models.elements import StructuralElement
+    from google_docs_markdown.models.elements import DateElementProperties, StructuralElement
     from google_docs_markdown.models.styles import (
         Bullet,
         BulletSuggestionState,
@@ -186,10 +186,6 @@ class PositionedObjectProperties(GoogleDocsBaseModel):
     positioning: PositionedObjectPositioning | None = None
 
 
-class EmbeddedDrawingProperties(GoogleDocsBaseModel):
-    """EmbeddedDrawingProperties model from Google Docs API (currently empty)."""
-
-
 class EmbeddedObject(GoogleDocsBaseModel):
     """EmbeddedObject model from Google Docs API."""
 
@@ -213,6 +209,12 @@ class EmbeddedObjectBorder(GoogleDocsBaseModel):
     dashStyle: Literal["DASH_STYLE_UNSPECIFIED", "SOLID", "DOT", "DASH"] | None = None
     propertyState: Literal["RENDERED", "NOT_RENDERED"] | None = None
     width: Dimension | None = None
+
+
+class EmbeddedDrawingProperties(GoogleDocsBaseModel):
+    """EmbeddedDrawingProperties model from Google Docs API (currently empty)."""
+
+    pass
 
 
 class ImageProperties(GoogleDocsBaseModel):
@@ -388,6 +390,8 @@ class EmbeddedObjectBorderSuggestionState(GoogleDocsBaseModel):
 class EmbeddedDrawingPropertiesSuggestionState(GoogleDocsBaseModel):
     """EmbeddedDrawingPropertiesSuggestionState model from Google Docs API (currently empty)."""
 
+    pass
+
 
 class EmbeddedObjectSuggestionState(GoogleDocsBaseModel):
     """EmbeddedObjectSuggestionState model from Google Docs API."""
@@ -527,6 +531,23 @@ class CropPropertiesSuggestionState(GoogleDocsBaseModel):
     offsetLeftSuggested: bool | None = None
     offsetRightSuggested: bool | None = None
     offsetTopSuggested: bool | None = None
+
+
+class DateElementPropertiesSuggestionState(GoogleDocsBaseModel):
+    """DateElementPropertiesSuggestionState model from Google Docs API."""
+
+    dateFormatSuggested: bool | None = None
+    localeSuggested: bool | None = None
+    timeFormatSuggested: bool | None = None
+    timeZoneIdSuggested: bool | None = None
+    timestampSuggested: bool | None = None
+
+
+class SuggestedDateElementProperties(GoogleDocsBaseModel):
+    """SuggestedDateElementProperties model from Google Docs API."""
+
+    dateElementProperties: DateElementProperties | None = None
+    dateElementPropertiesSuggestionState: DateElementPropertiesSuggestionState | None = None
 
 
 class WriteControl(GoogleDocsBaseModel):
