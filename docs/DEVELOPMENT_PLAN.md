@@ -1,7 +1,7 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-25 (Phase 1.4-1.5 complete; Phase 2 restructured into 2.1-2.6; Phase 3 updated with atomic-edit upload strategy; Phase 5 metadata folded into Phase 2.6; PYDANTIC_STRATEGY.md archived)  
+**Last Updated:** 2026-03-25 (API reference review: Person/DateElement confirmed as first-class ParagraphElements with round-trip write support via `insertPerson`/`insertDate`; RichLink read-only limitation documented; Phase 6 tab CRUD API availability noted; U+E907 scope corrected in tech spec)  
 **Status:** Phase 1 — 1.1–1.5 complete (basic download pipeline working end-to-end); 1.6 partially done; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
 
 ## Overview
@@ -114,7 +114,7 @@ These elements can be handled by extending `MarkdownSerializer` with additional 
 - [ ] Handle links (`TextStyle.link.url` → `[text](url)`)
 - [ ] Handle strikethrough (`TextStyle.strikethrough` → `~~text~~`)
 - [ ] Handle underline (convert to emphasis or HTML `<u>` tag)
-- [ ] Handle rich links (`RichLink.richLinkProperties` → `[title](uri)`)
+- [ ] Handle rich links (`RichLink.richLinkProperties` → `[title](uri)`). **Note:** `RichLink` is a first-class `ParagraphElement` for reading, but there is no `insertRichLink` batchUpdate request — on upload, falls back to a regular hyperlink
 - [ ] Handle horizontal rules (`HorizontalRule` → `---`)
 - [ ] Handle footnote references (`FootnoteReference` → `[^N]`) and footnote content from `DocumentTab.footnotes`
 
@@ -192,14 +192,18 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 - [ ] Define metadata format for each element type
 
 ##### 2.6.2: Non-Markdown Element Handling
-- [ ] Handle `Person` chips (`personProperties.name` + `personProperties.email`)
-- [ ] Handle `DateElement` (`dateElementProperties.displayText`)
-- [ ] Handle `AutoText` (`type`: PAGE_NUMBER, PAGE_COUNT)
+
+**First-class ParagraphElements with full API read support** (see `TECH_SPEC.md` Section 5.9.1 for the full API capability matrix):
+- [ ] Handle `Person` mentions — first-class `ParagraphElement` with `personProperties.email` + `.name`; serialize as `<!-- person: {...} -->` inline comment. **Round-trippable** via `insertPerson` batchUpdate (see Phase 3.1)
+- [ ] Handle `DateElement` — first-class `ParagraphElement` with full `dateElementProperties` (format, locale, timezone, timestamp, displayText); serialize as `<!-- date: {...} -->` inline comment. **Round-trippable** via `insertDate` batchUpdate (see Phase 3.1)
+- [ ] Handle `AutoText` (`type`: PAGE_NUMBER, PAGE_COUNT) — readable but **no write API** (`insertAutoText` does not exist); must be preserved in-place during upload
+- [ ] Handle equations (`Equation`) — opaque element (no content exposed by API, no `insertEquation`); serialize as placeholder comment
+
+**Other non-Markdown elements:**
 - [ ] Handle colored text (`foregroundColor`, `backgroundColor`)
 - [ ] Handle column breaks (`ColumnBreak`)
 - [ ] Handle section breaks (`SectionBreak` → HTML comment with section style info)
 - [ ] Handle table of contents (`TableOfContents` → mark as auto-generated)
-- [ ] Handle equations (`Equation` → placeholder or LaTeX if feasible)
 
 ##### 2.6.3: Suggestion Handling
 - [ ] Serialize Google Docs suggestions (`suggestedInsertionIds` / `suggestedDeletionIds`) with visible markers (e.g., HTML comments around suggested text) so users can distinguish suggested vs. accepted content
@@ -232,8 +236,10 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 - [ ] Create `google_docs_markdown/uploader.py`
 - [ ] **Update flow:** Fetch current document → serialize to Markdown via `MarkdownSerializer` → text-diff against local Markdown → map diff ranges to document indices → generate surgical `batchUpdate` requests
 - [ ] Map diff operations to API requests: `DeleteContentRange` for deletions, `InsertText` for insertions, `UpdateParagraphStyle`/`UpdateTextStyle` for formatting changes
-- [ ] Preserve U+E907 widget boundaries (code blocks, smart chips) by targeting only text content indices
-- [ ] Process batch updates in correct order: deletions (end-to-start), insertions (start-to-end), style updates (any order)
+- [ ] Preserve U+E907 widget boundaries (code blocks, opaque smart chips) by targeting only text content indices
+- [ ] **Widget recreation:** Parse `<!-- person: {...} -->` comments and generate `insertPerson` requests with `personProperties`; parse `<!-- date: {...} -->` comments and generate `insertDate` requests with `dateElementProperties` (see `TECH_SPEC.md` Section 5.10.3)
+- [ ] **One-way element fallback:** Convert `RichLink` metadata to regular hyperlinks on upload (no `insertRichLink` API); preserve `AutoText` and `Equation` in-place only
+- [ ] Process batch updates in correct order: deletions (end-to-start), insertions (start-to-end), widget inserts, style updates (any order)
 - [ ] Handle `tabId` in Location/Range objects for multi-tab documents
 - [ ] Handle `segmentId` in Location/Range objects for headers/footers/footnotes
 - [ ] Handle directory structure (all documents treated as multi-tab)
@@ -243,6 +249,7 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 #### 3.2: Uploader -- Create New Documents
 - [ ] Parse Markdown into a sequence of `batchUpdate` `Request` objects (may use `markdown-it-py` for tokenization)
 - [ ] Map Markdown elements to API requests: headings, lists, tables, images, formatting, links
+- [ ] Map inline `<!-- person: {...} -->` comments to `insertPerson` requests and `<!-- date: {...} -->` comments to `insertDate` requests
 - [ ] Support creating documents from directory structure (directory name → document, files → tabs, subdirectories → nested tabs)
 
 #### 3.3: CLI - Upload Command
@@ -264,6 +271,9 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 - [x] Unit tests for `create_document` and `batch_update` on both transport and client (mocked Google API)
 - [ ] Test round-trip: download → upload → download (should match) for single-tab and multi-tab
 - [ ] Test that U+E907 widget boundaries are preserved during update
+- [ ] Test `insertPerson` round-trip: download Person → serialize to comment → upload recreates Person widget
+- [ ] Test `insertDate` round-trip: download DateElement → serialize to comment → upload recreates date widget
+- [ ] Test RichLink fallback: download RichLink → serialize to `[title](uri)` → upload creates regular hyperlink
 - [ ] Test creating new documents from Markdown
 - [ ] Test creating multi-tab documents from directory structure
 - [ ] Test updating existing documents (verify surgical edits)
@@ -346,11 +356,13 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 ### Phase 6: Advanced Tab Features
 **Goal:** Enhanced features for multi-tab document workflows
 
+**API Support:** The Google Docs API provides full CRUD for tabs via batchUpdate: `addDocumentTab` (create with `title`, `index`, `parentTabId` for nested tabs), `deleteTab` (cascading delete of child tabs), and `updateDocumentTabProperties` (rename, set icon emoji). This makes all tab management features below fully achievable.
+
 #### 6.1: Tab Management
 - [ ] Add CLI command to list tabs in a document
-- [ ] Add CLI command to create new tabs
-- [ ] Add CLI command to rename tabs
-- [ ] Add CLI command to delete tabs (with confirmation)
+- [ ] Add CLI command to create new tabs (via `addDocumentTab` — supports `parentTabId` for nested tab creation)
+- [ ] Add CLI command to rename tabs (via `updateDocumentTabProperties`)
+- [ ] Add CLI command to delete tabs with confirmation (via `deleteTab` — note: cascades to child tabs)
 
 #### 6.2: Bulk Operations
 - [ ] Support bulk download of multiple multi-tab documents
@@ -359,17 +371,17 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 
 #### 6.3: Tab Synchronization
 - [ ] Detect when tabs are added/removed in Google Docs
-- [ ] Handle tab reordering
-- [ ] Sync tab names between local files and Google Docs
+- [ ] Handle tab reordering (via `addDocumentTab` with `index`)
+- [ ] Sync tab names between local files and Google Docs (via `updateDocumentTabProperties`)
 
 #### 6.4: Testing
-- [ ] Test tab management operations
+- [ ] Test tab management operations (CRUD via batchUpdate)
 - [ ] Test bulk operations
 - [ ] Test synchronization scenarios
 
 **Deliverable:** Advanced tab management and bulk operations for multi-tab documents
 
-**Note:** Basic multi-tab support (detection, download, upload) is implemented in Phases 1-3. This phase adds advanced management features.
+**Note:** Basic multi-tab support (detection, download, upload) is implemented in Phases 1-3. This phase adds advanced management features. All tab CRUD operations have full API backing.
 
 ---
 
@@ -543,5 +555,5 @@ This document should be used for testing throughout development.
 - **Phase 1.4 remaining:** Location/Range `tabId` and `segmentId` handling (deferred to Phase 3 when upload needs them)
 
 **Remaining Phase 3 Tasks:**
-- `uploader.py` with atomic-edit strategy (diff Markdown strings → map to API indices → surgical batchUpdate), create-new-document flow (may use `markdown-it-py`), multi-tab directory support, Python upload API, round-trip and integration tests
+- `uploader.py` with atomic-edit strategy (diff Markdown strings → map to API indices → surgical batchUpdate), widget recreation via `insertPerson`/`insertDate` for round-trippable elements, RichLink-to-hyperlink fallback, create-new-document flow (may use `markdown-it-py`), multi-tab directory support, Python upload API, round-trip and integration tests
 

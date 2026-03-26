@@ -1,8 +1,8 @@
 # Google Docs Markdown - Technical Specification
 
-**Document Version:** 1.3.0  
+**Document Version:** 1.4.0  
 **Date:** 2026-01-08  
-**Last Updated:** 2026-03-25 (Phase 1 download pipeline complete; U+E907 widget marker findings; atomic-edit upload strategy; archived PYDANTIC_STRATEGY.md and consolidated here)  
+**Last Updated:** 2026-03-25 (API reference review: corrected U+E907 scope, documented first-class ParagraphElement types with batchUpdate write support for Person/DateElement; updated upload strategy for widget round-tripping)  
 **Authors:** Mark Koh  
 **Status:** Active
 
@@ -286,13 +286,17 @@ Markdown has limited support for many advanced Google Docs features. The tool mu
 
 The tool uses two serialization approaches based on whether users might want to edit the feature directly in Markdown:
 
-**1. Inline Comments (User-Editable Features)**
+**1. Inline Comments (User-Editable, Round-Trippable Features)**
 
-For features that users might want to edit directly in Markdown, serialize as HTML comments within the Markdown file:
+For features that users might want to edit directly in Markdown, serialize as HTML comments within the Markdown file. Features with dedicated `batchUpdate` insert requests can be **round-tripped** (recreated on upload):
 
-- **Date Pickers**: Serialize as HTML comments with structured data
-  - Example: `<!-- date-picker: {"type": "date", "value": "2026-01-08", "format": "YYYY-MM-DD"} -->`
+- **Date Elements** (round-trippable via `insertDate`): Serialize as HTML comments with structured data that maps to `DateElementProperties`
+  - Example: `<!-- date: {"timestamp": "1736294400", "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED", "locale": "en"} -->`
   - Users can edit the date value directly in the comment
+  - On upload, parse the comment and recreate the date widget via `insertDate` with full `dateElementProperties`
+- **Person Mentions** (round-trippable via `insertPerson`): Serialize as inline comments
+  - Example: `<!-- person: {"email": "john@example.com", "name": "John Doe"} -->`
+  - On upload, recreate the person widget via `insertPerson` with `personProperties`
 - **Specific Font Colors**: Serialize as HTML comments when color is non-standard or important
   - Example: `<!-- font-color: {"hex": "#FF5733", "name": "custom-orange"} -->`
   - Allows users to modify colors directly in Markdown
@@ -302,7 +306,6 @@ For features that users might want to edit directly in Markdown, serialize as HT
 
 For features that are complex, rarely edited, or require structured data, serialize as JSON:
 
-- **Person References**: Store as JSON with person IDs, names, and metadata
 - **Complex Formatting**: Advanced formatting features that don't map to Markdown
 - **Document-Level Metadata**: Features that apply to the entire document
 - **Embedded Objects**: Complex embedded content (charts, drawings, etc.)
@@ -326,29 +329,29 @@ For features that are complex, rarely edited, or require structured data, serial
 When uploading Markdown back to Google Docs:
 
 - **Parse Comments**: Extract HTML comments and convert back to Google Docs API format
+  - For `<!-- person: {...} -->` comments: generate `insertPerson` batchUpdate requests with `personProperties`
+  - For `<!-- date: {...} -->` comments: generate `insertDate` batchUpdate requests with `dateElementProperties`
+  - For other comments: convert to appropriate API format or preserve as-is
 - **Parse JSON**: Read JSON metadata (from file or bottom of Markdown) and apply to document
 - **Preserve Order**: Maintain the order of features as they appear in the original document
 - **Validation**: Validate that serialized data can be properly deserialized before upload
+- **One-Way Elements**: Some elements can be read but not recreated via the API (e.g., `RichLink` — no `insertRichLink` exists). On upload, these fall back to the closest available alternative (e.g., a regular hyperlink via `InsertText` + `UpdateTextStyle` with `link.url`).
 
 #### 5.8.3 Examples (Illustrative, actual implementations will depend on the API and the specific features being serialized/deserialized)
 
-**Date Picker in Markdown**:
+**Person Mention in Markdown** (round-trippable via `insertPerson`):
 ```markdown
-The meeting is scheduled for <!-- date-picker: {"type": "date", "value": "2026-01-15", "format": "YYYY-MM-DD"} -->.
+Assigned to <!-- person: {"email": "john@example.com", "name": "John Doe"} --> for review.
 ```
 
-**Person Reference in Companion JSON** (`document.metadata.json`):
-```json
-{
-  "personReferences": [
-    {
-      "id": "person123",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "position": {"startIndex": 45, "endIndex": 54}
-    }
-  ]
-}
+**Date Element in Markdown** (round-trippable via `insertDate`):
+```markdown
+The meeting is scheduled for <!-- date: {"timestamp": "1736899200", "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED", "locale": "en"} -->.
+```
+
+**Rich Link in Markdown** (download only — no `insertRichLink` API; falls back to regular hyperlink on upload):
+```markdown
+[Project Roadmap](https://docs.google.com/spreadsheets/d/abc123)
 ```
 
 **Complex Metadata at Bottom of Markdown**:
@@ -358,8 +361,7 @@ The meeting is scheduled for <!-- date-picker: {"type": "date", "value": "2026-0
 {
   "fontColors": {
     "custom-orange": "#FF5733"
-  },
-  "personReferences": [...]
+  }
 }
 ```
 ```
@@ -376,7 +378,19 @@ In practice, `U+E907` appears in two contexts:
 
 1. **Code block widget boundaries**: A `TextRun` with `content="\ue907"` (typically Arial font) appears immediately before the first line of a code block, and another with `content="\ue907\n"` appears immediately after the last line. These represent the code block container widget (which holds internal state like the language label shown in the Google Docs UI).
 
-2. **Smart chip placeholders**: When a smart chip (person, status, file, etc.) doesn't have a full `ParagraphElement` representation in the JSON, a `U+E907` character appears in the adjacent `TextRun.content` as a placeholder.
+2. **Opaque smart chip placeholders**: When a smart chip type has no dedicated `ParagraphElement` field in the API schema, a `U+E907` character appears in the adjacent `TextRun.content` as a placeholder. This applies to chip types like **status chips**, **file chips**, and **place chips** — none of which have a corresponding `ParagraphElement` field.
+
+**Important distinction:** Several "smart chip" types are **NOT** U+E907 placeholders — they are first-class `ParagraphElement` fields with full structured data:
+
+| Element | ParagraphElement Field | Read | Write (batchUpdate) |
+|---|---|---|---|
+| **Person** | `person` | Full: `personId`, `personProperties.email`, `personProperties.name`, `textStyle` | `insertPerson` with `personProperties` |
+| **DateElement** | `dateElement` | Full: `dateElementProperties` (format, locale, timezone, timestamp, displayText) | `insertDate` with `dateElementProperties` |
+| **RichLink** | `richLink` | Full: `richLinkProperties.title`, `.uri`, `.mimeType` | **No write API** — no `insertRichLink` request exists |
+| **AutoText** | `autoText` | `type` (PAGE_NUMBER, PAGE_COUNT), `textStyle` | **No write API** — no `insertAutoText` request exists |
+| **Equation** | `equation` | Opaque — only `suggestedDeletionIds`/`suggestedInsertionIds`, no content | **No write API** |
+
+This means the atomic-edit upload strategy (Section 5.10) can leverage `insertPerson` and `insertDate` to **recreate** these widgets when needed, rather than only preserving them in place.
 
 #### 5.9.2 Code Block Detection Strategy
 
@@ -420,7 +434,8 @@ The approach is to **diff two Markdown strings** and map the diff back to API in
 4. Map diff ranges back to document indices (using index information from the original `Document` model)
 5. Generate surgical `DeleteContentRange` + `InsertText` requests targeting ONLY changed regions
 6. Widget boundaries (`U+E907` markers) are naturally preserved because unchanged regions produce no operations
-7. Process batch updates in correct order: deletions (end-to-start), insertions (start-to-end), style updates (any order)
+7. For modified widget regions: use dedicated insert requests where available (see 5.10.3)
+8. Process batch updates in correct order: deletions (end-to-start), insertions (start-to-end), widget inserts, style updates (any order)
 
 This approach does NOT require parsing Markdown back into a `Document` Pydantic model. We don't reconstruct the document -- we patch it.
 
@@ -434,7 +449,20 @@ For creating a brand-new document from Markdown:
 
 This is a simpler one-directional pipeline. `markdown-it-py` may only be needed for this create flow, not the update flow.
 
-#### 5.10.3 Why Not Markdown -> Document Model?
+#### 5.10.3 Widget Recreation on Upload
+
+Some non-text elements have dedicated `batchUpdate` insert requests, enabling round-trip fidelity beyond simple text patching:
+
+- **`insertPerson`**: Recreate person mentions from serialized `<!-- person: {...} -->` comments. Requires `personProperties.email` (and optionally `name`) plus a `location` index.
+- **`insertDate`**: Recreate date elements from serialized `<!-- date: {...} -->` comments. Accepts full `dateElementProperties` (format, locale, timezone, timestamp) plus a `location` index.
+
+Elements **without** dedicated insert requests cannot be recreated and must be handled differently:
+
+- **`RichLink`**: No `insertRichLink` exists. Fall back to a regular hyperlink (`InsertText` + `UpdateTextStyle` with `link.url`). The rich link widget (with preview card) will be lost on upload.
+- **`AutoText`**: No `insertAutoText` exists. Must be preserved in-place via atomic edits (don't delete/recreate). If an AutoText element is removed from the local Markdown, it cannot be restored.
+- **`Equation`**: No `insertEquation` exists and no content is exposed by the API. Must be preserved in-place.
+
+#### 5.10.4 Why Not Markdown -> Document Model?
 
 Earlier design documents (now archived in `docs/archive/PYDANTIC_STRATEGY.md`) proposed a `MarkdownDeserializer` that would parse Markdown into a `Document` Pydantic model. This was abandoned because:
 
