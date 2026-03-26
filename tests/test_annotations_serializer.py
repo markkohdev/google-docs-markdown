@@ -1,4 +1,4 @@
-"""Tests for Phase 2.6 serializer features: non-markdown elements, annotations, metadata.
+"""Tests for non-Markdown element serialization: annotations, chips, and metadata.
 
 Tests person mentions, date elements, style comments, structural markers,
 suggestions, rich link metadata, opaque elements, chip placeholders, and
@@ -167,8 +167,7 @@ class TestDateElement:
         )
         doc = _make_doc_tab([elem])
         result = serializer.serialize(doc)
-        assert "2026-01-08<!-- /date -->" in result
-        assert "<!-- date:" in result
+        assert "<!-- date -->2026-01-08<!-- /date -->" in result
         assert "DATE_FORMAT_ISO8601" in result
 
     def test_date_with_timezone(self, serializer: MarkdownSerializer) -> None:
@@ -593,8 +592,8 @@ class TestHeadersFooters:
 # --- Fixture-Based Tests ---
 
 
-class TestFixturePhase26:
-    """Tests using the real Multi-Tab fixture to verify Phase 2.6 elements."""
+class TestFixtureAnnotations:
+    """Tests using the real Multi-Tab fixture to verify annotation elements."""
 
     @pytest.fixture
     def first_tab_result(self, serializer: MarkdownSerializer) -> str:
@@ -611,8 +610,8 @@ class TestFixturePhase26:
         assert "Mark Koh<!-- /person -->" in first_tab_result
 
     def test_date_elements(self, first_tab_result: str) -> None:
-        assert "<!-- date:" in first_tab_result
-        assert "2026-01-08<!-- /date -->" in first_tab_result
+        assert "<!-- date -->2026-01-08<!-- /date -->" in first_tab_result
+        assert "dateDefaults" in first_tab_result
 
     def test_chip_placeholders(self, first_tab_result: str) -> None:
         assert "<!-- chip-placeholder -->" in first_tab_result

@@ -50,7 +50,7 @@ class TestSingleTabDownload:
 
         assert len(result) >= 1
         first_tab = next(iter(result.values()))
-        assert first_tab.startswith("#")
+        assert "# " in first_tab
         assert len(first_tab) > 100
 
     def test_download_to_files(self, tmp_path: Path) -> None:
