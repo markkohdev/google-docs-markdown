@@ -9,6 +9,7 @@ from google_docs_markdown.block_grouper import (
     ListBlock,
     group_elements,
 )
+from google_docs_markdown.models.common import WeightedFontFamily
 from google_docs_markdown.models.elements import (
     Paragraph,
     ParagraphElement,
@@ -18,7 +19,6 @@ from google_docs_markdown.models.elements import (
     TextRun,
 )
 from google_docs_markdown.models.styles import Bullet, ParagraphStyle, TextStyle
-from google_docs_markdown.models.common import WeightedFontFamily
 
 
 def _para(text: str, list_id: str | None = None, nesting: int = 0) -> StructuralElement:
