@@ -1110,6 +1110,227 @@ class TestSerializerTables:
 
 
 # ---------------------------------------------------------------------------
+# Person, DateElement, AutoText, Equation tests
+# ---------------------------------------------------------------------------
+
+
+class TestSerializerPerson:
+    def test_person_basic(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.common import PersonProperties
+        from google_docs_markdown.models.elements import Person
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(textRun=TextRun(content="Authored by ")),
+                                ParagraphElement(
+                                    person=Person(
+                                        personId="kix.abc",
+                                        personProperties=PersonProperties(
+                                            name="Alice Smith",
+                                            email="alice@example.com",
+                                        ),
+                                    )
+                                ),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert '<!-- person: {"name": "Alice Smith", "email": "alice@example.com"} -->' in result
+        assert "Authored by" in result
+
+    def test_person_email_only(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.common import PersonProperties
+        from google_docs_markdown.models.elements import Person
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(
+                                    person=Person(
+                                        personProperties=PersonProperties(email="bob@example.com"),
+                                    )
+                                ),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert '<!-- person: {"email": "bob@example.com"} -->' in result
+
+    def test_person_no_properties_skipped(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import Person
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(person=Person()),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "person" not in result
+
+    def test_fixture_single_tab_person(self, serializer: MarkdownSerializer) -> None:
+        doc = _load_document(SINGLE_TAB_JSON)
+        tab = doc.tabs[0]  # type: ignore[index]
+        result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
+        assert '<!-- person: {"name": "Mark Koh", "email": "markkoh@spotify.com"} -->' in result
+
+
+class TestSerializerDateElement:
+    def test_date_element_basic(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import DateElement, DateElementProperties
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(
+                                    dateElement=DateElement(
+                                        dateElementProperties=DateElementProperties(
+                                            displayText="2026-01-08",
+                                            timestamp="2026-01-08T12:00:00Z",
+                                            dateFormat="DATE_FORMAT_ISO8601",
+                                            locale="en",
+                                        ),
+                                    )
+                                ),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- date:" in result
+        assert '"displayText": "2026-01-08"' in result
+        assert '"timestamp": "2026-01-08T12:00:00Z"' in result
+
+    def test_date_no_properties_skipped(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import DateElement
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(dateElement=DateElement()),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "date" not in result
+
+    def test_fixture_single_tab_date(self, serializer: MarkdownSerializer) -> None:
+        doc = _load_document(SINGLE_TAB_JSON)
+        tab = doc.tabs[0]  # type: ignore[index]
+        result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
+        assert "<!-- date:" in result
+        assert '"displayText": "2026-01-08"' in result
+
+
+class TestSerializerAutoText:
+    def test_autotext_page_number(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import AutoText
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(autoText=AutoText(type="PAGE_NUMBER")),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- autotext: PAGE_NUMBER -->" in result
+
+    def test_autotext_page_count(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import AutoText
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(autoText=AutoText(type="PAGE_COUNT")),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- autotext: PAGE_COUNT -->" in result
+
+
+class TestSerializerEquation:
+    def test_equation_placeholder(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import Equation
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(equation=Equation()),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- equation -->" in result
+
+
+# ---------------------------------------------------------------------------
 # Image tests
 # ---------------------------------------------------------------------------
 

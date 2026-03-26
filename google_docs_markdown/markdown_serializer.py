@@ -32,11 +32,15 @@ from google_docs_markdown.block_grouper import (
 from google_docs_markdown.models.common import Footnote
 from google_docs_markdown.models.document import DocumentTab
 from google_docs_markdown.models.elements import (
+    AutoText,
+    DateElement,
+    Equation,
     FootnoteReference,
     HorizontalRule,
     InlineObjectElement,
     Paragraph,
     ParagraphElement,
+    Person,
     RichLink,
     StructuralElement,
     Table,
@@ -256,6 +260,14 @@ class MarkdownSerializer:
             return self._visit_footnote_reference(element.footnoteReference)
         if element.inlineObjectElement:
             return self._visit_inline_object(element.inlineObjectElement)
+        if element.person:
+            return self._visit_person(element.person)
+        if element.dateElement:
+            return self._visit_date_element(element.dateElement)
+        if element.autoText:
+            return self._visit_auto_text(element.autoText)
+        if element.equation:
+            return self._visit_equation(element.equation)
         return None
 
     def _visit_text_run(self, text_run: TextRun) -> str | None:
@@ -324,6 +336,53 @@ class MarkdownSerializer:
 
         alt = embedded.description or embedded.title or ""
         return f"![{alt}]({image_props.contentUri})"
+
+    def _visit_person(self, person: Person) -> str | None:
+        """Render a Person mention as an HTML comment for round-trip fidelity."""
+        props = person.personProperties
+        if not props:
+            return None
+        parts: dict[str, str] = {}
+        if props.name:
+            parts["name"] = props.name
+        if props.email:
+            parts["email"] = props.email
+        if not parts:
+            return None
+        attrs = ", ".join(f'"{k}": "{v}"' for k, v in parts.items())
+        return f"<!-- person: {{{attrs}}} -->"
+
+    def _visit_date_element(self, date_elem: DateElement) -> str | None:
+        """Render a DateElement as an HTML comment for round-trip fidelity."""
+        dep = date_elem.dateElementProperties
+        if not dep:
+            return None
+        parts: dict[str, str] = {}
+        if dep.displayText:
+            parts["displayText"] = dep.displayText
+        if dep.timestamp:
+            parts["timestamp"] = dep.timestamp
+        if dep.dateFormat:
+            parts["dateFormat"] = dep.dateFormat
+        if dep.locale:
+            parts["locale"] = dep.locale
+        if dep.timeFormat:
+            parts["timeFormat"] = dep.timeFormat
+        if dep.timeZoneId:
+            parts["timeZoneId"] = dep.timeZoneId
+        if not parts:
+            return None
+        attrs = ", ".join(f'"{k}": "{v}"' for k, v in parts.items())
+        return f"<!-- date: {{{attrs}}} -->"
+
+    def _visit_auto_text(self, auto_text: AutoText) -> str | None:
+        """Render an AutoText element as an HTML comment (read-only, no write API)."""
+        text_type = auto_text.type or "TYPE_UNSPECIFIED"
+        return f"<!-- autotext: {text_type} -->"
+
+    def _visit_equation(self, _equation: Equation) -> str:
+        """Render an Equation as an HTML comment placeholder (opaque, no API content)."""
+        return "<!-- equation -->"
 
     def _visit_footnote_reference(self, ref: FootnoteReference) -> str | None:
         if not ref.footnoteNumber:
