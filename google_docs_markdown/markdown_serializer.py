@@ -10,9 +10,12 @@ Phase 2.2 scope: lists (ordered, unordered, nested) via block grouper
 pre-processing pass.
 Phase 2.3 scope: tables (pipe tables with header detection, formatted cell
 content, multi-paragraph cells via <br>, pipe escaping).
-
-Unsupported element types (images, code blocks, etc.) are silently skipped
-and will be added in later phases.
+Phase 2.4 scope: code blocks (U+E907 boundary detection, monospace font,
+fenced code blocks).
+Phase 2.5 scope: images (InlineObjectElement → ![alt](url)).
+Phase 2.6 scope: non-Markdown elements (Person, DateElement, AutoText,
+Equation, SectionBreak, ColumnBreak, TableOfContents, suggestions,
+headers/footers).
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from typing import Any
 
 from google_docs_markdown.block_grouper import (
     Block,
+    CodeBlock,
     ListBlock,
     group_elements,
 )
@@ -93,7 +97,24 @@ class MarkdownSerializer:
         """Dispatch a Block to the appropriate visitor."""
         if isinstance(block, ListBlock):
             return self._visit_list_block(block)
+        if isinstance(block, CodeBlock):
+            return self._visit_code_block(block)
         return self._visit_structural_element(block)
+
+    def _visit_code_block(self, block: CodeBlock) -> str:
+        """Render a CodeBlock as a fenced Markdown code block."""
+        lines: list[str] = []
+        for para in block.paragraphs:
+            line_parts: list[str] = []
+            for elem in para.elements or []:
+                if elem.textRun and elem.textRun.content:
+                    line_parts.append(elem.textRun.content)
+            raw = "".join(line_parts)
+            raw = raw.replace("\ue907", "")
+            raw = raw.rstrip("\n")
+            if raw:
+                lines.append(raw)
+        return "```\n" + "\n".join(lines) + "\n```"
 
     def _visit_list_block(self, block: ListBlock) -> str:
         """Render a ListBlock as a Markdown list."""
@@ -236,6 +257,10 @@ class MarkdownSerializer:
         """Return text content with Markdown formatting applied."""
         content = text_run.content
         if content is None:
+            return None
+
+        content = content.replace("\ue907", "")
+        if not content:
             return None
 
         style = text_run.textStyle

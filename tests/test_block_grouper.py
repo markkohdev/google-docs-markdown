@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from google_docs_markdown.block_grouper import (
+    CodeBlock,
     ListBlock,
     group_elements,
 )
@@ -16,7 +17,8 @@ from google_docs_markdown.models.elements import (
     Table,
     TextRun,
 )
-from google_docs_markdown.models.styles import Bullet, ParagraphStyle
+from google_docs_markdown.models.styles import Bullet, ParagraphStyle, TextStyle
+from google_docs_markdown.models.common import WeightedFontFamily
 
 
 def _para(text: str, list_id: str | None = None, nesting: int = 0) -> StructuralElement:
@@ -168,3 +170,89 @@ class TestGroupElements:
         assert isinstance(lb, ListBlock)
         assert not lb.items[0].is_ordered
         assert lb.items[1].is_ordered
+
+
+def _mono_text_run(content: str) -> TextRun:
+    """Build a TextRun with Roboto Mono font."""
+    return TextRun(
+        content=content,
+        textStyle=TextStyle(
+            weightedFontFamily=WeightedFontFamily(fontFamily="Roboto Mono", weight=400),
+        ),
+    )
+
+
+def _code_para(*runs: TextRun) -> StructuralElement:
+    """Build a StructuralElement wrapping a code-like paragraph."""
+    return StructuralElement(
+        paragraph=Paragraph(
+            elements=[ParagraphElement(textRun=r) for r in runs],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+    )
+
+
+class TestCodeBlockGrouping:
+    def test_code_block_detected(self) -> None:
+        """Paragraphs between U+E907 bookends form a CodeBlock."""
+        elements = [
+            _code_para(TextRun(content="\ue907"), _mono_text_run("def foo():\n")),
+            _code_para(_mono_text_run("    pass\n")),
+            _code_para(_mono_text_run("\ue907\n")),
+        ]
+        blocks = group_elements(elements)
+        assert len(blocks) == 1
+        assert isinstance(blocks[0], CodeBlock)
+        assert len(blocks[0].paragraphs) == 3
+
+    def test_code_block_between_regular_paragraphs(self) -> None:
+        elements = [
+            _para("Before"),
+            _code_para(TextRun(content="\ue907"), _mono_text_run("code\n")),
+            _code_para(_mono_text_run("\ue907\n")),
+            _para("After"),
+        ]
+        blocks = group_elements(elements)
+        assert len(blocks) == 3
+        assert isinstance(blocks[0], StructuralElement)
+        assert isinstance(blocks[1], CodeBlock)
+        assert isinstance(blocks[2], StructuralElement)
+
+    def test_non_code_block_not_grouped(self) -> None:
+        """Regular paragraphs without U+E907 are not grouped as code."""
+        elements = [
+            _para("Hello"),
+            _para("World"),
+        ]
+        blocks = group_elements(elements)
+        assert len(blocks) == 2
+        assert all(isinstance(b, StructuralElement) for b in blocks)
+
+    def test_start_and_end_on_same_paragraph(self) -> None:
+        """A single-line code block with U+E907 on both ends."""
+        elements = [
+            _code_para(
+                TextRun(content="\ue907"),
+                _mono_text_run("single line"),
+                TextRun(content="\ue907\n"),
+            ),
+        ]
+        blocks = group_elements(elements)
+        assert len(blocks) == 1
+        assert isinstance(blocks[0], CodeBlock)
+        assert len(blocks[0].paragraphs) == 1
+
+    def test_multiple_code_blocks(self) -> None:
+        """Two separate code blocks produce two CodeBlock objects."""
+        elements = [
+            _code_para(TextRun(content="\ue907"), _mono_text_run("block1\n")),
+            _code_para(_mono_text_run("\ue907\n")),
+            _para("Between"),
+            _code_para(TextRun(content="\ue907"), _mono_text_run("block2\n")),
+            _code_para(_mono_text_run("\ue907\n")),
+        ]
+        blocks = group_elements(elements)
+        assert len(blocks) == 3
+        assert isinstance(blocks[0], CodeBlock)
+        assert isinstance(blocks[1], StructuralElement)
+        assert isinstance(blocks[2], CodeBlock)

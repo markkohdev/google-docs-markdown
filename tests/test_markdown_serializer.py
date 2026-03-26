@@ -1110,6 +1110,143 @@ class TestSerializerTables:
 
 
 # ---------------------------------------------------------------------------
+# Code block tests
+# ---------------------------------------------------------------------------
+
+
+def _mono_run(content: str) -> ParagraphElement:
+    """Build a ParagraphElement with a Roboto Mono text run."""
+    from google_docs_markdown.models.common import WeightedFontFamily
+
+    return ParagraphElement(
+        textRun=TextRun(
+            content=content,
+            textStyle=TextStyle(
+                weightedFontFamily=WeightedFontFamily(fontFamily="Roboto Mono", weight=400),
+            ),
+        )
+    )
+
+
+def _plain_run(content: str) -> ParagraphElement:
+    """Build a ParagraphElement with a plain (Arial) text run."""
+    from google_docs_markdown.models.common import WeightedFontFamily
+
+    return ParagraphElement(
+        textRun=TextRun(
+            content=content,
+            textStyle=TextStyle(
+                weightedFontFamily=WeightedFontFamily(fontFamily="Arial", weight=400),
+            ),
+        )
+    )
+
+
+def _make_code_block_doc(
+    code_lines: list[str],
+    *,
+    before_text: str | None = None,
+    after_text: str | None = None,
+) -> DocumentTab:
+    """Build a DocumentTab with a code block surrounded by optional text."""
+    elements: list[StructuralElement] = []
+
+    if before_text:
+        elements.append(
+            StructuralElement(
+                paragraph=Paragraph(
+                    elements=[ParagraphElement(textRun=TextRun(content=before_text + "\n"))],
+                    paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                )
+            )
+        )
+
+    start_para = Paragraph(
+        elements=[_plain_run("\ue907"), _mono_run(code_lines[0] + "\n")],
+        paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+    )
+    elements.append(StructuralElement(paragraph=start_para))
+
+    for line in code_lines[1:-1] if len(code_lines) > 2 else []:
+        mid_para = Paragraph(
+            elements=[_mono_run(line + "\n")],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        elements.append(StructuralElement(paragraph=mid_para))
+
+    if len(code_lines) > 1:
+        end_para = Paragraph(
+            elements=[_mono_run(code_lines[-1]), _plain_run("\ue907\n")],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        elements.append(StructuralElement(paragraph=end_para))
+
+    if after_text:
+        elements.append(
+            StructuralElement(
+                paragraph=Paragraph(
+                    elements=[ParagraphElement(textRun=TextRun(content=after_text + "\n"))],
+                    paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                )
+            )
+        )
+
+    return DocumentTab(body=Body(content=elements))
+
+
+class TestSerializerCodeBlocks:
+    def test_simple_code_block(self, serializer: MarkdownSerializer) -> None:
+        doc = _make_code_block_doc(["def foo():", "    pass"])
+        result = serializer.serialize(doc)
+        assert "```\ndef foo():\n    pass\n```" in result
+
+    def test_code_block_strips_ue907(self, serializer: MarkdownSerializer) -> None:
+        doc = _make_code_block_doc(["x = 1", "print(x)"])
+        result = serializer.serialize(doc)
+        assert "\ue907" not in result
+
+    def test_code_block_between_paragraphs(self, serializer: MarkdownSerializer) -> None:
+        doc = _make_code_block_doc(
+            ["hello()", "world()"],
+            before_text="Before",
+            after_text="After",
+        )
+        result = serializer.serialize(doc)
+        assert "Before" in result
+        assert "After" in result
+        assert "```\nhello()\nworld()\n```" in result
+
+    def test_code_block_multiline(self, serializer: MarkdownSerializer) -> None:
+        doc = _make_code_block_doc(["line1", "line2", "line3"])
+        result = serializer.serialize(doc)
+        assert "```\nline1\nline2\nline3\n```" in result
+
+    def test_code_block_single_line(self, serializer: MarkdownSerializer) -> None:
+        """A single-line code block with start+end markers on same paragraph."""
+        para = Paragraph(
+            elements=[
+                _plain_run("\ue907"),
+                _mono_run("single_line()"),
+                _plain_run("\ue907\n"),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc)
+        assert "```\nsingle_line()\n```" in result
+        assert "\ue907" not in result
+
+    def test_fixture_single_tab_code_block(self, serializer: MarkdownSerializer) -> None:
+        """Verify that the real single-tab fixture produces a fenced code block."""
+        doc = _load_document(SINGLE_TAB_JSON)
+        tab = doc.tabs[0]  # type: ignore[index]
+        result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
+        assert "```\n" in result
+        assert "def calculate_markdown_conversion(doc_content):" in result
+        assert "\ue907" not in result
+
+
+# ---------------------------------------------------------------------------
 # Integration tests with real JSON fixtures
 # ---------------------------------------------------------------------------
 
