@@ -1331,6 +1331,126 @@ class TestSerializerEquation:
 
 
 # ---------------------------------------------------------------------------
+# Headers & Footers tests
+# ---------------------------------------------------------------------------
+
+
+class TestSerializerHeaders:
+    def test_header_rendered(self, serializer: MarkdownSerializer) -> None:
+        headers = {
+            "kix.hdr1": {
+                "headerId": "kix.hdr1",
+                "content": [
+                    {
+                        "paragraph": {
+                            "elements": [{"textRun": {"content": "Page Header\n"}}],
+                            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                        }
+                    }
+                ],
+            }
+        }
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="Body text\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            ),
+            headers=headers,
+        )
+        result = serializer.serialize(doc)
+        assert "Body text" in result
+        assert "<!-- header: kix.hdr1 -->" in result
+        assert "Page Header" in result
+        assert "<!-- /header -->" in result
+
+    def test_footer_rendered(self, serializer: MarkdownSerializer) -> None:
+        footers = {
+            "kix.ftr1": {
+                "footerId": "kix.ftr1",
+                "content": [
+                    {
+                        "paragraph": {
+                            "elements": [{"textRun": {"content": "Page Footer\n"}}],
+                            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                        }
+                    }
+                ],
+            }
+        }
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="Body text\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            ),
+            footers=footers,
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- footer: kix.ftr1 -->" in result
+        assert "Page Footer" in result
+        assert "<!-- /footer -->" in result
+
+    def test_no_headers_or_footers(self, serializer: MarkdownSerializer) -> None:
+        doc = _make_doc_tab([("Hello", "NORMAL_TEXT")])
+        result = serializer.serialize(doc)
+        assert "header" not in result
+        assert "footer" not in result
+
+    def test_multiple_headers(self, serializer: MarkdownSerializer) -> None:
+        headers = {
+            "kix.hdr1": {
+                "headerId": "kix.hdr1",
+                "content": [
+                    {
+                        "paragraph": {
+                            "elements": [{"textRun": {"content": "Default Header\n"}}],
+                            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                        }
+                    }
+                ],
+            },
+            "kix.hdr2": {
+                "headerId": "kix.hdr2",
+                "content": [
+                    {
+                        "paragraph": {
+                            "elements": [{"textRun": {"content": "First Page Header\n"}}],
+                            "paragraphStyle": {"namedStyleType": "NORMAL_TEXT"},
+                        }
+                    }
+                ],
+            },
+        }
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="Body\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            ),
+            headers=headers,
+        )
+        result = serializer.serialize(doc)
+        assert "Default Header" in result
+        assert "First Page Header" in result
+
+
+# ---------------------------------------------------------------------------
 # Suggestion tests
 # ---------------------------------------------------------------------------
 

@@ -29,7 +29,7 @@ from google_docs_markdown.block_grouper import (
     ListBlock,
     group_elements,
 )
-from google_docs_markdown.models.common import Footnote
+from google_docs_markdown.models.common import Footer, Footnote, Header
 from google_docs_markdown.models.document import DocumentTab
 from google_docs_markdown.models.elements import (
     AutoText,
@@ -101,6 +101,14 @@ class MarkdownSerializer:
         if footnote_defs:
             paragraphs.extend(footnote_defs)
 
+        header_sections = self._serialize_headers(document_tab.headers)
+        if header_sections:
+            paragraphs.extend(header_sections)
+
+        footer_sections = self._serialize_footers(document_tab.footers)
+        if footer_sections:
+            paragraphs.extend(footer_sections)
+
         return _join_paragraphs(paragraphs)
 
     def _visit_block(self, block: Block) -> str | None:
@@ -163,6 +171,35 @@ class MarkdownSerializer:
                 defs.append("\n".join(lines))
 
         return defs
+
+    def _serialize_headers(self, headers: dict[str, Any] | None) -> list[str]:
+        """Render document headers as Markdown sections."""
+        if not headers:
+            return []
+        return self._serialize_header_footer_dict(headers, "header", Header)
+
+    def _serialize_footers(self, footers: dict[str, Any] | None) -> list[str]:
+        """Render document footers as Markdown sections."""
+        if not footers:
+            return []
+        return self._serialize_header_footer_dict(footers, "footer", Footer)
+
+    def _serialize_header_footer_dict(
+        self, items: dict[str, Any], kind: str, model_cls: type
+    ) -> list[str]:
+        """Shared logic for serializing header/footer dicts."""
+        sections: list[str] = []
+        for item_id, raw in items.items():
+            obj = raw if isinstance(raw, model_cls) else model_cls.model_validate(raw)
+            content_parts: list[str] = []
+            for element in obj.content or []:
+                result = self._visit_structural_element(element)
+                if result is not None and result.strip():
+                    content_parts.append(result.strip())
+            if content_parts:
+                body = "\n\n".join(content_parts)
+                sections.append(f"<!-- {kind}: {item_id} -->\n\n{body}\n\n<!-- /{kind} -->")
+        return sections
 
     def _visit_structural_element(self, element: StructuralElement) -> str | None:
         """Return Markdown for a StructuralElement, or None to skip."""
