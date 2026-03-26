@@ -1,5 +1,7 @@
 """CLI interface for Google Docs Markdown tool."""
 
+from collections.abc import Callable
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -18,6 +20,37 @@ def _resolve_document_url(document_url: str | None) -> str:
     return url
 
 
+def _prompt_stale_cleanup(
+    written: dict[str, Path],
+    find_stale_files: Callable[[Path, set[Path]], list[Path]],
+    remove_empty_dirs: Callable[[Path], None],
+    *,
+    force: bool = False,
+) -> None:
+    """Check for leftover .md files from removed tabs and offer to delete them."""
+    import os
+
+    if not written:
+        return
+    written_paths = list(written.values())
+    output_dir = Path(os.path.commonpath(written_paths))
+    if output_dir.is_file():
+        output_dir = output_dir.parent
+
+    stale = find_stale_files(output_dir, set(written_paths))
+    if not stale:
+        return
+
+    typer.echo("\nThe following files are no longer in the document:")
+    for p in stale:
+        typer.echo(f"  {p}")
+    if force or typer.confirm("Delete?", default=False):
+        for p in stale:
+            p.unlink()
+            typer.echo(f"  Deleted {p}")
+        remove_empty_dirs(output_dir)
+
+
 @app.command()
 def download(
     document_url: Annotated[
@@ -29,15 +62,27 @@ def download(
         typer.Option(
             "-o",
             "--output",
-            help="Output directory path (defaults to a directory named after the document title)",
+            help=(
+                "Parent directory for output (a subdirectory named after the"
+                " document title is created inside it; defaults to current directory)"
+            ),
         ),
     ] = None,
     tabs: Annotated[
         list[str] | None, typer.Option("-t", "--tabs", help="Specific tabs to download (defaults to all tabs)")
     ] = None,
+    force: Annotated[
+        bool,
+        typer.Option("-f", "--force", help="Overwrite existing files and delete stale files without prompting"),
+    ] = False,
 ) -> None:
     """Download a Google Doc as Markdown."""
-    from google_docs_markdown.downloader import Downloader
+    from google_docs_markdown.downloader import (
+        Downloader,
+        FileConflictError,
+        find_stale_files,
+        remove_empty_dirs,
+    )
 
     document_url = _resolve_document_url(document_url)
     dl = Downloader()
@@ -48,6 +93,19 @@ def download(
             document_url,
             output_dir=output,
             tab_names=tabs or None,
+            overwrite=force,
+        )
+    except FileConflictError as exc:
+        typer.echo("The following files already exist:")
+        for p in exc.existing_paths:
+            typer.echo(f"  {p}")
+        if not typer.confirm("Overwrite?"):
+            raise typer.Abort() from exc
+        written = dl.download_to_files(
+            document_url,
+            output_dir=output,
+            tab_names=tabs or None,
+            overwrite=True,
         )
     except Exception as exc:
         typer.echo(f"Error: {exc}", err=True)
@@ -56,6 +114,8 @@ def download(
     for tab_path, file_path in written.items():
         typer.echo(f"  {tab_path} -> {file_path}")
     typer.echo(f"Downloaded {len(written)} tab(s).")
+
+    _prompt_stale_cleanup(written, find_stale_files, remove_empty_dirs, force=force)
 
 
 @app.command("list-tabs")

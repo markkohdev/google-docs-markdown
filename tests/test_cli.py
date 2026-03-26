@@ -9,10 +9,11 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import Mock, patch
 
+import typer
 from pytest import raises
 
 from google_docs_markdown import cli
-from google_docs_markdown.downloader import TabSummary
+from google_docs_markdown.downloader import FileConflictError, TabSummary
 
 
 class TestCLICommands:
@@ -49,6 +50,7 @@ class TestDownloadCommand:
             "doc-id",
             output_dir="/out",
             tab_names=None,
+            overwrite=False,
         )
 
     @patch("google_docs_markdown.downloader.Downloader")
@@ -62,6 +64,7 @@ class TestDownloadCommand:
             "doc-id",
             output_dir="/out",
             tab_names=["Tab A"],
+            overwrite=False,
         )
 
     @patch("google_docs_markdown.downloader.Downloader")
@@ -75,7 +78,48 @@ class TestDownloadCommand:
             "doc-id",
             output_dir=None,
             tab_names=None,
+            overwrite=False,
         )
+
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_download_force_passes_overwrite(self, mock_dl_cls: Mock) -> None:
+        mock_dl = mock_dl_cls.return_value
+        mock_dl.download_to_files.return_value = {"Tab": Path("/out/Tab.md")}
+
+        cli.download(document_url="doc-id", output="/out", tabs=None, force=True)
+
+        mock_dl.download_to_files.assert_called_once_with(
+            "doc-id",
+            output_dir="/out",
+            tab_names=None,
+            overwrite=True,
+        )
+
+    @patch("typer.confirm", return_value=True)
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_download_conflict_confirm_overwrites(self, mock_dl_cls: Mock, mock_confirm: Mock) -> None:
+        mock_dl = mock_dl_cls.return_value
+        conflict = FileConflictError([Path("/out/Tab.md")])
+        mock_dl.download_to_files.side_effect = [conflict, {"Tab": Path("/out/Tab.md")}]
+
+        cli.download(document_url="doc-id", output="/out", tabs=None)
+
+        assert mock_dl.download_to_files.call_count == 2
+        second_call = mock_dl.download_to_files.call_args_list[1]
+        assert second_call.kwargs["overwrite"] is True
+        mock_confirm.assert_called_once()
+
+    @patch("typer.confirm", return_value=False)
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_download_conflict_decline_aborts(self, mock_dl_cls: Mock, mock_confirm: Mock) -> None:
+        mock_dl = mock_dl_cls.return_value
+        conflict = FileConflictError([Path("/out/Tab.md")])
+        mock_dl.download_to_files.side_effect = conflict
+
+        with raises((SystemExit, typer.Abort)):
+            cli.download(document_url="doc-id", output="/out", tabs=None)
+
+        mock_dl.download_to_files.assert_called_once()
 
     @patch("google_docs_markdown.downloader.Downloader")
     def test_download_error_handling(self, mock_dl_cls: Mock) -> None:
@@ -86,6 +130,86 @@ class TestDownloadCommand:
 
         with raises((SystemExit, click.exceptions.Exit)):
             cli.download(document_url="doc-id", output="/out", tabs=None)
+
+
+class TestStaleFileCleanup:
+    """Test the stale file detection and cleanup prompt."""
+
+    def _setup_stale(self, tmp_path: Path) -> tuple[Path, Path]:
+        """Create a doc dir with one current and one stale .md file."""
+        doc_dir = tmp_path / "Doc"
+        doc_dir.mkdir()
+        stale = doc_dir / "Old Tab.md"
+        stale.write_text("stale content")
+        current = doc_dir / "Tab.md"
+        current.write_text("current content")
+        return current, stale
+
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_force_deletes_stale_without_prompt(self, mock_dl_cls: Mock, tmp_path: Path) -> None:
+        current, stale = self._setup_stale(tmp_path)
+        mock_dl = mock_dl_cls.return_value
+        mock_dl.download_to_files.return_value = {"Tab": current}
+
+        cli.download(document_url="doc-id", output=str(tmp_path), tabs=None, force=True)
+
+        assert not stale.exists()
+        assert current.exists()
+
+    @patch("typer.confirm", return_value=True)
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_stale_files_deleted_when_confirmed(self, mock_dl_cls: Mock, mock_confirm: Mock, tmp_path: Path) -> None:
+        current, stale = self._setup_stale(tmp_path)
+        mock_dl = mock_dl_cls.return_value
+        mock_dl.download_to_files.return_value = {"Tab": current}
+
+        cli.download(document_url="doc-id", output=str(tmp_path), tabs=None)
+
+        assert not stale.exists()
+        assert current.exists()
+        mock_confirm.assert_called()
+
+    @patch("typer.confirm", return_value=False)
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_stale_files_kept_when_declined(self, mock_dl_cls: Mock, mock_confirm: Mock, tmp_path: Path) -> None:
+        current, stale = self._setup_stale(tmp_path)
+        mock_dl = mock_dl_cls.return_value
+        mock_dl.download_to_files.return_value = {"Tab": current}
+
+        cli.download(document_url="doc-id", output=str(tmp_path), tabs=None)
+
+        assert stale.exists()
+
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_no_prompt_when_no_stale_files(self, mock_dl_cls: Mock, tmp_path: Path) -> None:
+        doc_dir = tmp_path / "Doc"
+        doc_dir.mkdir()
+        current = doc_dir / "Tab.md"
+        current.write_text("content")
+
+        mock_dl = mock_dl_cls.return_value
+        mock_dl.download_to_files.return_value = {"Tab": current}
+
+        cli.download(document_url="doc-id", output=str(tmp_path), tabs=None, force=True)
+
+    @patch("google_docs_markdown.downloader.Downloader")
+    def test_empty_dirs_cleaned_after_force_deletion(self, mock_dl_cls: Mock, tmp_path: Path) -> None:
+        doc_dir = tmp_path / "Doc"
+        doc_dir.mkdir()
+        nested = doc_dir / "Removed Tab"
+        nested.mkdir()
+        stale = nested / "Child.md"
+        stale.write_text("stale")
+        current = doc_dir / "Tab.md"
+        current.write_text("current")
+
+        mock_dl = mock_dl_cls.return_value
+        mock_dl.download_to_files.return_value = {"Tab": current}
+
+        cli.download(document_url="doc-id", output=str(tmp_path), tabs=None, force=True)
+
+        assert not stale.exists()
+        assert not nested.exists()
 
 
 class TestListTabsCommand:
