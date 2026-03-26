@@ -20,7 +20,8 @@ if TYPE_CHECKING:
         TabsCriteria,
         WriteControl,
     )
-    from google_docs_markdown.models.document import DocumentStyle
+    from google_docs_markdown.models.document import DocumentStyle, TabProperties
+    from google_docs_markdown.models.elements import DateElementProperties
     from google_docs_markdown.models.styles import (
         ParagraphStyle,
         SectionStyle,
@@ -33,6 +34,7 @@ if TYPE_CHECKING:
 class Request(GoogleDocsBaseModel):
     """Request model from Google Docs API."""
 
+    addDocumentTab: AddDocumentTabRequest | None = None
     createFooter: CreateFooterRequest | None = None
     createFootnote: CreateFootnoteRequest | None = None
     createHeader: CreateHeaderRequest | None = None
@@ -44,8 +46,10 @@ class Request(GoogleDocsBaseModel):
     deleteNamedRange: DeleteNamedRangeRequest | None = None
     deleteParagraphBullets: DeleteParagraphBulletsRequest | None = None
     deletePositionedObject: DeletePositionedObjectRequest | None = None
+    deleteTab: DeleteTabRequest | None = None
     deleteTableColumn: DeleteTableColumnRequest | None = None
     deleteTableRow: DeleteTableRowRequest | None = None
+    insertDate: InsertDateRequest | None = None
     insertInlineImage: InsertInlineImageRequest | None = None
     insertPageBreak: InsertPageBreakRequest | None = None
     insertPerson: InsertPersonRequest | None = None
@@ -61,6 +65,7 @@ class Request(GoogleDocsBaseModel):
     replaceNamedRangeContent: ReplaceNamedRangeContentRequest | None = None
     unmergeTableCells: UnmergeTableCellsRequest | None = None
     updateDocumentStyle: UpdateDocumentStyleRequest | None = None
+    updateDocumentTabProperties: UpdateDocumentTabPropertiesRequest | None = None
     updateParagraphStyle: UpdateParagraphStyleRequest | None = None
     updateSectionStyle: UpdateSectionStyleRequest | None = None
     updateTableCellStyle: UpdateTableCellStyleRequest | None = None
@@ -74,6 +79,12 @@ class BatchUpdateDocumentRequest(GoogleDocsBaseModel):
 
     requests: list[Request] | None = None
     writeControl: WriteControl | None = None
+
+
+class AddDocumentTabRequest(GoogleDocsBaseModel):
+    """AddDocumentTabRequest model from Google Docs API."""
+
+    tabProperties: TabProperties | None = None
 
 
 class CreateFooterRequest(GoogleDocsBaseModel):
@@ -172,6 +183,12 @@ class DeletePositionedObjectRequest(GoogleDocsBaseModel):
     tabId: str | None = None
 
 
+class DeleteTabRequest(GoogleDocsBaseModel):
+    """DeleteTabRequest model from Google Docs API."""
+
+    tabId: str | None = None
+
+
 class DeleteTableColumnRequest(GoogleDocsBaseModel):
     """DeleteTableColumnRequest model from Google Docs API."""
 
@@ -182,6 +199,14 @@ class DeleteTableRowRequest(GoogleDocsBaseModel):
     """DeleteTableRowRequest model from Google Docs API."""
 
     tableCellLocation: TableCellLocation | None = None
+
+
+class InsertDateRequest(GoogleDocsBaseModel):
+    """InsertDateRequest model from Google Docs API."""
+
+    dateElementProperties: DateElementProperties | None = None
+    endOfSegmentLocation: EndOfSegmentLocation | None = None
+    location: Location | None = None
 
 
 class InsertInlineImageRequest(GoogleDocsBaseModel):
@@ -298,6 +323,13 @@ class UpdateDocumentStyleRequest(GoogleDocsBaseModel):
     documentStyle: DocumentStyle | None = None
     fields: str | None = None
     tabId: str | None = None
+
+
+class UpdateDocumentTabPropertiesRequest(GoogleDocsBaseModel):
+    """UpdateDocumentTabPropertiesRequest model from Google Docs API."""
+
+    fields: str | None = None
+    tabProperties: TabProperties | None = None
 
 
 class UpdateParagraphStyleRequest(GoogleDocsBaseModel):

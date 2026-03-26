@@ -45,6 +45,8 @@ MODEL_ORGANIZATION = {
         "Person",
         "RichLink",
         "InlineObjectElement",
+        "DateElement",
+        "DateElementProperties",
     ],
     "styles.py": [
         "ParagraphStyle",
@@ -69,6 +71,7 @@ MODEL_ORGANIZATION = {
     "requests.py": [
         "Request",
         "BatchUpdateDocumentRequest",
+        "AddDocumentTabRequest",
         "CreateFooterRequest",
         "CreateHeaderRequest",
         "CreateFootnoteRequest",
@@ -80,8 +83,10 @@ MODEL_ORGANIZATION = {
         "DeleteNamedRangeRequest",
         "DeleteParagraphBulletsRequest",
         "DeletePositionedObjectRequest",
+        "DeleteTabRequest",
         "DeleteTableColumnRequest",
         "DeleteTableRowRequest",
+        "InsertDateRequest",
         "InsertInlineImageRequest",
         "InsertPageBreakRequest",
         "InsertPersonRequest",
@@ -97,6 +102,7 @@ MODEL_ORGANIZATION = {
         "ReplaceNamedRangeContentRequest",
         "UnmergeTableCellsRequest",
         "UpdateDocumentStyleRequest",
+        "UpdateDocumentTabPropertiesRequest",
         "UpdateParagraphStyleRequest",
         "UpdateSectionStyleRequest",
         "UpdateTableCellStyleRequest",
@@ -107,6 +113,7 @@ MODEL_ORGANIZATION = {
     "responses.py": [
         "Response",
         "BatchUpdateDocumentResponse",
+        "AddDocumentTabResponse",
         "CreateFooterResponse",
         "CreateHeaderResponse",
         "CreateFootnoteResponse",
@@ -190,6 +197,9 @@ MODEL_ORGANIZATION = {
         # Crop properties
         "CropProperties",
         "CropPropertiesSuggestionState",
+        # Date element suggestion states
+        "DateElementPropertiesSuggestionState",
+        "SuggestedDateElementProperties",
         # Write control
         "WriteControl",
         # Substring match
@@ -266,111 +276,80 @@ def parse_schemas_file(schemas_path: Path) -> dict[str, dict[str, Any]]:
 
             i += 1
 
-        if fields:
-            models[class_name] = {"fields": fields}
+        models[class_name] = {"fields": fields}
 
     return models
 
 
 def convert_type_to_pydantic(type_str: str) -> str:
-    """Convert TypedDict type annotation to Pydantic type annotation."""
+    """Convert TypedDict type annotation to Pydantic-compatible annotation.
+
+    Uses modern union syntax (``X | None``) and lowercase generics
+    (``list``, ``dict``) which work at parse time thanks to
+    ``from __future__ import annotations``.
+    """
     type_str = type_str.strip()
 
     # Fix known typos in source file
     type_str = type_str.replace("Bod", "Body").replace("Bodyy", "Body")
 
-    # Handle _list[T] -> Optional[List[T]]
     if type_str.startswith("_list["):
-        inner = type_str[6:-1]  # Extract content inside brackets
+        inner = type_str[6:-1]
         inner_converted = convert_inner_type(inner)
-        return f"Optional[List[{inner_converted}]]"
+        return f"list[{inner_converted}] | None"
 
-    # Handle dict[str, typing.Any] -> Optional[Dict[str, Any]]
     if type_str.startswith("dict["):
         inner = type_str[5:-1]
-        # Parse dict[K, V]
         parts = inner.split(",", 1)
         if len(parts) == 2:
-            key_type = parts[0].strip()
-            value_type = parts[1].strip()
-            # For dict keys/values, don't double-wrap in Optional
-            key_converted = convert_inner_type(key_type)
-            value_converted = convert_inner_type(value_type)
-            return f"Optional[Dict[{key_converted}, {value_converted}]]"
+            key_converted = convert_inner_type(parts[0].strip())
+            value_converted = convert_inner_type(parts[1].strip())
+            return f"dict[{key_converted}, {value_converted}] | None"
 
-    # Handle Literal types - convert to typing_extensions.Literal and clean up
     if "Literal[" in type_str:
-        # Replace typing_extensions.Literal with Literal (we'll import it)
         literal_cleaned = type_str.replace("typing_extensions.Literal", "Literal")
-        # Clean up multi-line formatting - remove extra spaces but preserve structure
-        # First, remove leading/trailing spaces from the entire literal
-        literal_cleaned = literal_cleaned.strip()
-        # Replace multiple spaces/newlines with single space, but preserve quotes
-        literal_cleaned = re.sub(r"\s+", " ", literal_cleaned)
-        # Clean up spaces around brackets and commas
+        literal_cleaned = re.sub(r"\s+", " ", literal_cleaned.strip())
         literal_cleaned = re.sub(r"\s*\[\s*", "[", literal_cleaned)
         literal_cleaned = re.sub(r"\s*\]\s*", "]", literal_cleaned)
         literal_cleaned = re.sub(r"\s*,\s*", ", ", literal_cleaned)
-        # Remove trailing comma before closing bracket
         literal_cleaned = re.sub(r",\s*\]", "]", literal_cleaned)
-        return f"Optional[{literal_cleaned}]"
+        return f"{literal_cleaned} | None"
 
-    # Handle basic types
-    type_mapping = {
-        "str": "str",
-        "int": "int",
-        "float": "float",
-        "bool": "bool",
-        "typing.Any": "Any",
-    }
+    simple = {"str": "str", "int": "int", "float": "float", "bool": "bool", "typing.Any": "Any"}
+    if type_str in simple:
+        return f"{simple[type_str]} | None"
 
-    if type_str in type_mapping:
-        return f"Optional[{type_mapping[type_str]}]"
-
-    # Handle forward references (model names) - use string annotation
     if re.match(r"^[A-Z][a-zA-Z0-9_]*$", type_str):
-        return f'Optional["{type_str}"]'
+        return f"{type_str} | None"
 
-    # For other types, wrap in Optional
-    return f"Optional[{type_str}]"
+    return f"{type_str} | None"
 
 
 def convert_inner_type(type_str: str) -> str:
-    """Convert inner type (for List, Dict) without wrapping in Optional."""
+    """Convert inner type (for list, dict) without wrapping in ``| None``."""
     type_str = type_str.strip()
 
-    # Fix known typos
     type_str = type_str.replace("Bod", "Body").replace("Bodyy", "Body")
 
-    # Handle basic types
-    type_mapping = {
-        "str": "str",
-        "int": "int",
-        "float": "float",
-        "bool": "bool",
-        "typing.Any": "Any",
-    }
+    simple = {"str": "str", "int": "int", "float": "float", "bool": "bool", "typing.Any": "Any"}
+    if type_str in simple:
+        return simple[type_str]
 
-    if type_str in type_mapping:
-        return type_mapping[type_str]
-
-    # Handle forward references
-    if re.match(r"^[A-Z][a-zA-Z0-9_]*$", type_str):
-        return f'"{type_str}"'
-
-    # Return as-is (might be a complex type)
+    # With ``from __future__ import annotations`` the annotation is already a
+    # string, so we don't need to quote model names.
     return type_str
 
 
 def generate_model_code(class_name: str, fields: dict[str, str], base_class: str = "GoogleDocsBaseModel") -> str:
     """Generate Pydantic model code for a class."""
     lines = [f"class {class_name}({base_class}):"]
-    lines.append(f'    """{class_name} model from Google Docs API."""')
-    lines.append("")
-
     if not fields:
+        lines.append(f'    """{class_name} model from Google Docs API (currently empty)."""')
+        lines.append("")
         lines.append("    pass")
     else:
+        lines.append(f'    """{class_name} model from Google Docs API."""')
+        lines.append("")
         for field_name, field_type in fields.items():
             pydantic_type = convert_type_to_pydantic(field_type)
             lines.append(f"    {field_name}: {pydantic_type} = None")
@@ -378,51 +357,113 @@ def generate_model_code(class_name: str, fields: dict[str, str], base_class: str
     return "\n".join(lines)
 
 
-def get_imports_for_file(model_names: list[str], all_models: dict[str, dict[str, Any]]) -> set[str]:
-    """Determine what imports are needed for a file based on model dependencies."""
-    imports = {"from __future__ import annotations", "from typing import Optional, List, Dict, Any"}
+FILE_TO_MODULE = {
+    "common.py": "google_docs_markdown.models.common",
+    "document.py": "google_docs_markdown.models.document",
+    "elements.py": "google_docs_markdown.models.elements",
+    "styles.py": "google_docs_markdown.models.styles",
+    "requests.py": "google_docs_markdown.models.requests",
+    "responses.py": "google_docs_markdown.models.responses",
+}
 
-    # Check for Literal usage
+RESERVED_TYPE_NAMES = {"Literal", "Optional", "List", "Dict", "Any", "Body"}
+
+
+def _extract_referenced_models(field_type: str) -> set[str]:
+    """Return PascalCase identifiers in *field_type* that look like model names."""
+    candidates = set(re.findall(r"\b([A-Z][a-zA-Z0-9_]*)\b", field_type))
+    return candidates - RESERVED_TYPE_NAMES
+
+
+def _compute_type_checking_imports(
+    file_name: str,
+    model_names: list[str],
+    all_models: dict[str, dict[str, Any]],
+) -> dict[str, list[str]]:
+    """Return ``{module_path: [name, ...]}`` for cross-module references.
+
+    These will be emitted inside an ``if TYPE_CHECKING:`` block.
+    """
+    model_to_file: dict[str, str] = {}
+    for fn, names in MODEL_ORGANIZATION.items():
+        for name in names:
+            model_to_file[name] = fn
+
+    external: dict[str, set[str]] = {}
     for model_name in model_names:
         if model_name not in all_models:
             continue
-        fields = all_models[model_name]["fields"]
-        for field_type in fields.values():
-            if "Literal[" in field_type or "typing_extensions.Literal" in field_type:
-                imports.add("from typing_extensions import Literal")
-                break
+        for field_type in all_models[model_name]["fields"].values():
+            for ref in _extract_referenced_models(field_type):
+                ref_file = model_to_file.get(ref)
+                if ref_file and ref_file != file_name and ref in all_models:
+                    external.setdefault(ref_file, set()).add(ref)
 
-    return imports
+    return {FILE_TO_MODULE[f]: sorted(names) for f, names in sorted(external.items())}
 
 
 def generate_file_content(
     file_name: str, model_names: list[str], all_models: dict[str, dict[str, Any]], base_import: str
 ) -> str:
     """Generate the complete content for a model file."""
-    lines = []
-    lines.append('"""Generated Pydantic models for Google Docs API."""')
+    lines: list[str] = ['"""Generated Pydantic models for Google Docs API."""', ""]
+    lines.append("from __future__ import annotations")
     lines.append("")
 
-    # Add imports
-    imports = get_imports_for_file(model_names, all_models)
-    for imp in sorted(imports):
-        lines.append(imp)
-
-    lines.append("")
-    lines.append(f"from {base_import}.base import GoogleDocsBaseModel")
-    lines.append("")
-
-    # Add model definitions
+    # --- determine typing imports ---
+    needs_any = False
+    needs_literal = False
     for model_name in model_names:
         if model_name not in all_models:
-            print(f"Warning: Model {model_name} not found in parsed models")
             continue
+        for ft in all_models[model_name]["fields"].values():
+            if "typing.Any" in ft:
+                needs_any = True
+            if "Literal[" in ft or "typing_extensions.Literal" in ft:
+                needs_literal = True
 
-        fields = all_models[model_name]["fields"]
-        model_code = generate_model_code(model_name, fields)
-        lines.append(model_code)
+    tc_imports = _compute_type_checking_imports(file_name, model_names, all_models)
+
+    typing_parts: list[str] = []
+    if tc_imports:
+        typing_parts.append("TYPE_CHECKING")
+    if needs_any:
+        typing_parts.append("Any")
+    if needs_literal:
+        typing_parts.append("Literal")
+
+    if typing_parts:
+        lines.append(f"from typing import {', '.join(typing_parts)}")
         lines.append("")
 
+    lines.append(f"from {base_import}.base import GoogleDocsBaseModel")
+
+    # --- TYPE_CHECKING block ---
+    if tc_imports:
+        lines.append("")
+        lines.append("if TYPE_CHECKING:")
+        for module, names in tc_imports.items():
+            if len(names) <= 3:
+                lines.append(f"    from {module} import {', '.join(names)}")
+            else:
+                lines.append(f"    from {module} import (")
+                for name in names:
+                    lines.append(f"        {name},")
+                lines.append("    )")
+
+    lines.append("")
+
+    # --- model definitions ---
+    for model_name in model_names:
+        if model_name not in all_models:
+            print(f"  Warning: Model {model_name} not found in parsed schemas")
+            continue
+        fields = all_models[model_name]["fields"]
+        model_code = generate_model_code(model_name, fields)
+        lines.append("")
+        lines.append(model_code)
+
+    lines.append("")
     return "\n".join(lines)
 
 
@@ -501,29 +542,48 @@ class GoogleDocsBaseModel(BaseModel):
     init_lines = [
         '"""Google Docs API Pydantic models."""',
         "",
-        "# Core document models",
-        "from google_docs_markdown.models.document import Document, DocumentTab, Body, Tab, TabProperties",
+        "from google_docs_markdown.models import common as _common",
+        "from google_docs_markdown.models import document as _document",
+        "from google_docs_markdown.models import elements as _elements",
+        "from google_docs_markdown.models import requests as _requests",
+        "from google_docs_markdown.models import responses as _responses",
+        "from google_docs_markdown.models import styles as _styles",
+        "from google_docs_markdown.models.base import GoogleDocsBaseModel",
+        "",
+        "# Common models",
+        "from google_docs_markdown.models.common import (",
+        "    Color,",
+        "    Dimension,",
+        "    Location,",
+        "    Range,",
+        ")",
+        "from google_docs_markdown.models.document import Body, Document, DocumentTab, Tab, TabProperties",
         "",
         "# Element models",
         "from google_docs_markdown.models.elements import (",
-        "    StructuralElement,",
         "    Paragraph,",
-        "    Table,",
         "    ParagraphElement,",
+        "    StructuralElement,",
+        "    Table,",
         "    TextRun,",
         ")",
         "",
         "# Request/Response models",
-        "from google_docs_markdown.models.requests import Request, BatchUpdateDocumentRequest",
-        "from google_docs_markdown.models.responses import Response, BatchUpdateDocumentResponse",
+        "from google_docs_markdown.models.requests import BatchUpdateDocumentRequest, InsertTextRequest, Request",
+        "from google_docs_markdown.models.responses import BatchUpdateDocumentResponse, Response",
         "",
-        "# Common models",
-        "from google_docs_markdown.models.common import (",
-        "    Location,",
-        "    Range,",
-        "    Color,",
-        "    Dimension,",
-        ")",
+        "# Collect all model classes into a shared namespace for forward reference resolution",
+        "_namespace: dict[str, type] = {}",
+        "for _module in [_common, _styles, _elements, _document, _requests, _responses]:",
+        "    for _name in dir(_module):",
+        "        _obj = getattr(_module, _name)",
+        "        if isinstance(_obj, type) and issubclass(_obj, GoogleDocsBaseModel):",
+        "            _namespace[_name] = _obj",
+        "",
+        "# Rebuild all models so Pydantic can resolve cross-module forward references",
+        "for _model_cls in _namespace.values():",
+        "    if hasattr(_model_cls, 'model_rebuild'):",
+        "        _model_cls.model_rebuild(_types_namespace=_namespace)  # type: ignore[union-attr]",
         "",
         "__all__ = [",
         "    # Document",
@@ -543,6 +603,7 @@ class GoogleDocsBaseModel(BaseModel):
         '    "Response",',
         '    "BatchUpdateDocumentRequest",',
         '    "BatchUpdateDocumentResponse",',
+        '    "InsertTextRequest",',
         "    # Common",
         '    "Location",',
         '    "Range",',

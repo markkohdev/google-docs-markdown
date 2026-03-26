@@ -211,8 +211,9 @@ class InlineObjectElement(GoogleDocsBaseModel):
 class DateElement(GoogleDocsBaseModel):
     """DateElement model from Google Docs API."""
 
-    dateId: str | None = None
     dateElementProperties: DateElementProperties | None = None
+    dateId: str | None = None
+    suggestedDateElementPropertiesChanges: dict[str, Any] | None = None
     suggestedDeletionIds: list[str] | None = None
     suggestedInsertionIds: list[str] | None = None
     suggestedTextStyleChanges: dict[str, Any] | None = None
@@ -225,10 +226,11 @@ class DateElementProperties(GoogleDocsBaseModel):
     dateFormat: (
         Literal[
             "DATE_FORMAT_UNSPECIFIED",
+            "DATE_FORMAT_CUSTOM",
+            "DATE_FORMAT_MONTH_DAY_ABBREVIATED",
+            "DATE_FORMAT_MONTH_DAY_FULL",
+            "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED",
             "DATE_FORMAT_ISO8601",
-            "DATE_FORMAT_LONG",
-            "DATE_FORMAT_MEDIUM",
-            "DATE_FORMAT_SHORT",
         ]
         | None
     ) = None
@@ -238,9 +240,10 @@ class DateElementProperties(GoogleDocsBaseModel):
         Literal[
             "TIME_FORMAT_UNSPECIFIED",
             "TIME_FORMAT_DISABLED",
-            "TIME_FORMAT_12H",
-            "TIME_FORMAT_24H",
+            "TIME_FORMAT_HOUR_MINUTE",
+            "TIME_FORMAT_HOUR_MINUTE_TIMEZONE",
         ]
         | None
     ) = None
+    timeZoneId: str | None = None
     timestamp: str | None = None

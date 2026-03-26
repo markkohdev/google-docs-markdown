@@ -1,10 +1,10 @@
 # Google Docs Markdown - Technical Specification
 
-**Document Version:** 1.2.0  
+**Document Version:** 1.4.0  
 **Date:** 2026-01-08  
-**Last Updated:** 2026-01-08 (Updated to reflect Pydantic models approach)  
+**Last Updated:** 2026-03-25 (API reference review: corrected U+E907 scope, documented first-class ParagraphElement types with batchUpdate write support for Person/DateElement; updated upload strategy for widget round-tripping)  
 **Authors:** Mark Koh  
-**Status:** Draft
+**Status:** Active
 
 ## 1. Introduction
 
@@ -80,25 +80,27 @@ The primary goals of this project are:
 The tool is organized into several distinct components that work together to provide the core functionality:
 
 ```
-┌─────────────┐
-│   CLI       │  User-facing command-line interface
-└──────┬──────┘
-       │
-┌──────▼──────────────────────────────────────┐
-│   Python API (GoogleDocMarkdown)           │  High-level API for programmatic access
+┌─────────────────────────────────────────────┐
+│   CLI (cli.py, typer)                       │  User-facing command-line interface
 └──────┬──────────────────────────────────────┘
        │
 ┌──────▼──────────────────────────────────────┐
-│   Core Libraries                            │
-│   ┌──────────────────────────────────────┐ │
-│   │  GoogleDocsClient (client.py)        │ │  Typed client (Pydantic models)
-│   │  GoogleDocsTransport (transport.py)  │ │  Raw API transport (dicts)
-│   │  Downloader                          │ │  Converts Docs → Markdown
-│   │  Uploader                            │ │  Converts Markdown → Docs
-│   │  Diff Engine                         │ │  Compares content and generates updates
-│   │  Image Manager                       │ │  Handles image extraction/upload
-│   │  Data Models (models/)               │ │  Pydantic models for API objects
-│   └──────────────────────────────────────┘ │
+│   Downloader / Uploader                     │  High-level orchestration
+│   ┌──────────────────────────────────────┐  │
+│   │  Downloader (downloader.py)          │  │  Fetches doc, serializes tabs, writes files
+│   │  MarkdownSerializer (markdown_       │  │  Pydantic DocumentTab → Markdown string
+│   │    serializer.py)                    │  │
+│   │  Uploader (uploader.py) [planned]    │  │  Markdown → batchUpdate requests
+│   └──────────────────────────────────────┘  │
+└──────┬──────────────────────────────────────┘
+       │
+┌──────▼──────────────────────────────────────┐
+│   API Client Layer                          │
+│   ┌──────────────────────────────────────┐  │
+│   │  GoogleDocsClient (client.py)        │  │  Typed client (Pydantic models)
+│   │  GoogleDocsTransport (transport.py)  │  │  Raw API transport (dicts)
+│   │  Data Models (models/)               │  │  Pydantic models for API objects
+│   └──────────────────────────────────────┘  │
 └──────┬──────────────────────────────────────┘
        │
 ┌──────▼──────┐
@@ -109,15 +111,13 @@ The tool is organized into several distinct components that work together to pro
 
 ### 4.2 Component Responsibilities
 
-- **CLI**: Parses command-line arguments, orchestrates operations, provides user feedback
-- **Python API**: Provides high-level methods for common operations (download, upload, etc.)
+- **CLI** (`cli.py`): Parses command-line arguments via `typer`, orchestrates operations, provides user feedback. Commands: `download`, `upload` (stub), `diff` (stub), `list-tabs` (stub), `setup`.
+- **Downloader** (`downloader.py`): Orchestrates fetching a `Document` via `GoogleDocsClient`, iterating tabs recursively, serializing each tab via `MarkdownSerializer`, and writing `.md` files to a directory structure. Supports selective tab download via `tab_names` filter.
+- **MarkdownSerializer** (`markdown_serializer.py`): Converts a single `DocumentTab` Pydantic model to a Markdown string. Visitor-style traversal of `Body` -> `StructuralElement` -> `Paragraph` -> `ParagraphElement` -> `TextRun`. Handles headings, paragraphs, bold/italic formatting, whitespace normalization. Unsupported elements are silently skipped (extended in Phase 2).
+- **Uploader** (`uploader.py`, planned): Will convert Markdown back to Google Docs via surgical `batchUpdate` requests. See Section 5.9 for the atomic-edit strategy.
 - **GoogleDocsClient** (`client.py`): High-level typed client that returns Pydantic models. Composes `GoogleDocsTransport`. Most consumers (CLI, downloader, uploader) should use this.
 - **GoogleDocsTransport** (`transport.py`): Low-level transport that handles authentication, API requests/responses, error handling, and retry logic. Returns raw dicts as received from the API. Used directly for scripts that need unmodified API responses (e.g., downloading test fixtures).
-- **Downloader**: Converts Google Docs API responses to Markdown format
-- **Uploader**: Converts Markdown to Google Docs API batch update requests
-- **Diff Engine**: Compares Markdown content with Google Docs content and generates minimal update operations
-- **Image Manager**: Extracts images from documents, uploads to storage, manages local/public URL mapping
-- **Data Models** (`models/`): Pydantic models representing Google Docs API response objects, enabling attribute-based access (`doc.title`) and runtime validation
+- **Data Models** (`models/`): Pydantic models representing Google Docs API response objects, enabling attribute-based access (`doc.title`) and runtime validation. Generated from `google-api-python-client-stubs` via `scripts/generate_models.py`. Organized into `document.py`, `elements.py`, `styles.py`, `common.py`, `requests.py`, `responses.py`.
 
 ## 5. Detailed Design
 
@@ -206,9 +206,8 @@ The diff engine is critical for efficient updates and conflict resolution:
   - `Paragraph`, `Table`, `TextRun`, etc. - Element types used throughout the document structure
 
 - **Markdown Conversion**:
-  - **Serialization (Pydantic → Markdown)**: Use Visitor Pattern to traverse Pydantic models and build Markdown strings directly (no markdown library needed)
-  - **Deserialization (Markdown → Pydantic)**: Use `markdown-it-py` to parse Markdown into tokens, then convert tokens to Pydantic models
-  - See `docs/PYDANTIC_STRATEGY.md` for detailed implementation patterns
+  - **Serialization (Pydantic → Markdown)**: `MarkdownSerializer` uses visitor-style dispatch on optional fields (`if element.paragraph:`, `if element.textRun:`) to traverse the Pydantic model tree and build Markdown strings directly. No markdown library needed. Note: the models use optional-field composition (not class hierarchies), so dispatch is via field presence checks, not `isinstance()`.
+  - **Deserialization (Markdown → API requests)**: For the **update** case, the approach is to diff two Markdown strings (serialized current doc vs. local file) and map changes back to API indices for surgical `batchUpdate` requests. For the **create** case, `markdown-it-py` may be used to parse Markdown into tokens and generate `batchUpdate` requests. See Section 5.9 for details.
 
 - **Note**: Pydantic models provide both type checking and runtime validation. When using `GoogleDocsClient`, API responses are converted to Pydantic models automatically, enabling attribute access throughout the codebase. When using `GoogleDocsTransport` directly, raw dicts are returned for maximum fidelity (useful for test fixtures, debugging, etc.).
 
@@ -287,13 +286,17 @@ Markdown has limited support for many advanced Google Docs features. The tool mu
 
 The tool uses two serialization approaches based on whether users might want to edit the feature directly in Markdown:
 
-**1. Inline Comments (User-Editable Features)**
+**1. Inline Comments (User-Editable, Round-Trippable Features)**
 
-For features that users might want to edit directly in Markdown, serialize as HTML comments within the Markdown file:
+For features that users might want to edit directly in Markdown, serialize as HTML comments within the Markdown file. Features with dedicated `batchUpdate` insert requests can be **round-tripped** (recreated on upload):
 
-- **Date Pickers**: Serialize as HTML comments with structured data
-  - Example: `<!-- date-picker: {"type": "date", "value": "2026-01-08", "format": "YYYY-MM-DD"} -->`
+- **Date Elements** (round-trippable via `insertDate`): Serialize as HTML comments with structured data that maps to `DateElementProperties`
+  - Example: `<!-- date: {"timestamp": "1736294400", "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED", "locale": "en"} -->`
   - Users can edit the date value directly in the comment
+  - On upload, parse the comment and recreate the date widget via `insertDate` with full `dateElementProperties`
+- **Person Mentions** (round-trippable via `insertPerson`): Serialize as inline comments
+  - Example: `<!-- person: {"email": "john@example.com", "name": "John Doe"} -->`
+  - On upload, recreate the person widget via `insertPerson` with `personProperties`
 - **Specific Font Colors**: Serialize as HTML comments when color is non-standard or important
   - Example: `<!-- font-color: {"hex": "#FF5733", "name": "custom-orange"} -->`
   - Allows users to modify colors directly in Markdown
@@ -303,7 +306,6 @@ For features that users might want to edit directly in Markdown, serialize as HT
 
 For features that are complex, rarely edited, or require structured data, serialize as JSON:
 
-- **Person References**: Store as JSON with person IDs, names, and metadata
 - **Complex Formatting**: Advanced formatting features that don't map to Markdown
 - **Document-Level Metadata**: Features that apply to the entire document
 - **Embedded Objects**: Complex embedded content (charts, drawings, etc.)
@@ -327,29 +329,29 @@ For features that are complex, rarely edited, or require structured data, serial
 When uploading Markdown back to Google Docs:
 
 - **Parse Comments**: Extract HTML comments and convert back to Google Docs API format
+  - For `<!-- person: {...} -->` comments: generate `insertPerson` batchUpdate requests with `personProperties`
+  - For `<!-- date: {...} -->` comments: generate `insertDate` batchUpdate requests with `dateElementProperties`
+  - For other comments: convert to appropriate API format or preserve as-is
 - **Parse JSON**: Read JSON metadata (from file or bottom of Markdown) and apply to document
 - **Preserve Order**: Maintain the order of features as they appear in the original document
 - **Validation**: Validate that serialized data can be properly deserialized before upload
+- **One-Way Elements**: Some elements can be read but not recreated via the API (e.g., `RichLink` — no `insertRichLink` exists). On upload, these fall back to the closest available alternative (e.g., a regular hyperlink via `InsertText` + `UpdateTextStyle` with `link.url`).
 
 #### 5.8.3 Examples (Illustrative, actual implementations will depend on the API and the specific features being serialized/deserialized)
 
-**Date Picker in Markdown**:
+**Person Mention in Markdown** (round-trippable via `insertPerson`):
 ```markdown
-The meeting is scheduled for <!-- date-picker: {"type": "date", "value": "2026-01-15", "format": "YYYY-MM-DD"} -->.
+Assigned to <!-- person: {"email": "john@example.com", "name": "John Doe"} --> for review.
 ```
 
-**Person Reference in Companion JSON** (`document.metadata.json`):
-```json
-{
-  "personReferences": [
-    {
-      "id": "person123",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "position": {"startIndex": 45, "endIndex": 54}
-    }
-  ]
-}
+**Date Element in Markdown** (round-trippable via `insertDate`):
+```markdown
+The meeting is scheduled for <!-- date: {"timestamp": "1736899200", "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED", "locale": "en"} -->.
+```
+
+**Rich Link in Markdown** (download only — no `insertRichLink` API; falls back to regular hyperlink on upload):
+```markdown
+[Project Roadmap](https://docs.google.com/spreadsheets/d/abc123)
 ```
 
 **Complex Metadata at Bottom of Markdown**:
@@ -359,11 +361,114 @@ The meeting is scheduled for <!-- date-picker: {"type": "date", "value": "2026-0
 {
   "fontColors": {
     "custom-orange": "#FF5733"
-  },
-  "personReferences": [...]
+  }
 }
 ```
 ```
+
+### 5.9 U+E907 Widget Markers and Non-Text Element Handling
+
+The Google Docs API uses the Unicode Private Use Area character `U+E907` as a placeholder for non-text elements within `TextRun.content`. From the API documentation:
+
+> "The text of this run. Any non-text elements in the run are replaced with the Unicode character U+E907."
+
+#### 5.9.1 Where U+E907 Appears
+
+In practice, `U+E907` appears in two contexts:
+
+1. **Code block widget boundaries**: A `TextRun` with `content="\ue907"` (typically Arial font) appears immediately before the first line of a code block, and another with `content="\ue907\n"` appears immediately after the last line. These represent the code block container widget (which holds internal state like the language label shown in the Google Docs UI).
+
+2. **Opaque smart chip placeholders**: When a smart chip type has no dedicated `ParagraphElement` field in the API schema, a `U+E907` character appears in the adjacent `TextRun.content` as a placeholder. This applies to chip types like **status chips**, **file chips**, and **place chips** — none of which have a corresponding `ParagraphElement` field.
+
+**Important distinction:** Several "smart chip" types are **NOT** U+E907 placeholders — they are first-class `ParagraphElement` fields with full structured data:
+
+| Element | ParagraphElement Field | Read | Write (batchUpdate) |
+|---|---|---|---|
+| **Person** | `person` | Full: `personId`, `personProperties.email`, `personProperties.name`, `textStyle` | `insertPerson` with `personProperties` |
+| **DateElement** | `dateElement` | Full: `dateElementProperties` (format, locale, timezone, timestamp, displayText) | `insertDate` with `dateElementProperties` |
+| **RichLink** | `richLink` | Full: `richLinkProperties.title`, `.uri`, `.mimeType` | **No write API** — no `insertRichLink` request exists |
+| **AutoText** | `autoText` | `type` (PAGE_NUMBER, PAGE_COUNT), `textStyle` | **No write API** — no `insertAutoText` request exists |
+| **Equation** | `equation` | Opaque — only `suggestedDeletionIds`/`suggestedInsertionIds`, no content | **No write API** |
+
+This means the atomic-edit upload strategy (Section 5.10) can leverage `insertPerson` and `insertDate` to **recreate** these widgets when needed, rather than only preserving them in place.
+
+#### 5.9.2 Code Block Detection Strategy
+
+Google Docs has no formal "code block" structural element in the API. Code blocks are detected using a combination of:
+
+1. **U+E907 boundary markers**: A paragraph starting with `\ue907` followed by monospace-font paragraphs, ending with a paragraph containing `\ue907`
+2. **Monospace font heuristic**: All `TextRun`s within code block paragraphs use `fontFamily: "Roboto Mono"`
+3. **Output**: Bare fenced code blocks with no language identifier (the API does not expose the language label from the widget's internal state)
+
+#### 5.9.3 Implications for Upload (Atomic Edits)
+
+The `U+E907` characters represent widget containers whose internal state (code block language, chip metadata, etc.) is invisible to the API. This has a critical implication for the upload strategy:
+
+**Principle: Edit inside widget boundaries, don't reconstruct widgets.**
+
+When uploading changes to a document that contains code blocks or smart chips:
+
+1. The diff engine identifies changed text regions
+2. `batchUpdate` requests target ONLY the text content indices within widget boundaries
+3. The `U+E907` boundary characters are left untouched
+4. Result: widget containers survive with their internal state (language labels, chip metadata) intact
+
+This eliminates the need to reconstruct widgets from scratch -- we only edit the text content around and within them. When a widget has NOT changed, the diff produces zero operations for that range.
+
+#### 5.9.4 Serialization Behavior
+
+- **Download**: `U+E907` characters are stripped from Markdown output (they are not meaningful to users). However, the downloader's internal representation preserves their positions and indices for round-trip fidelity.
+- **Upload**: The diff engine must be aware of `U+E907` positions so it can avoid targeting them with edit operations.
+
+### 5.10 Upload Strategy -- Atomic Edits, Not Reconstruction
+
+The upload strategy differs fundamentally between updating an existing document and creating a new one.
+
+#### 5.10.1 Update Existing Document (Common Case)
+
+The approach is to **diff two Markdown strings** and map the diff back to API indices:
+
+1. Fetch the current document via `GoogleDocsClient.get_document()`
+2. Serialize it to Markdown using `MarkdownSerializer` (same code path as download)
+3. Text-diff the serialized version against the user's local Markdown
+4. Map diff ranges back to document indices (using index information from the original `Document` model)
+5. Generate surgical `DeleteContentRange` + `InsertText` requests targeting ONLY changed regions
+6. Widget boundaries (`U+E907` markers) are naturally preserved because unchanged regions produce no operations
+7. For modified widget regions: use dedicated insert requests where available (see 5.10.3)
+8. Process batch updates in correct order: deletions (end-to-start), insertions (start-to-end), widget inserts, style updates (any order)
+
+This approach does NOT require parsing Markdown back into a `Document` Pydantic model. We don't reconstruct the document -- we patch it.
+
+#### 5.10.2 Create New Document
+
+For creating a brand-new document from Markdown:
+
+1. Create a blank document via `GoogleDocsClient.create_document()`
+2. Parse the Markdown (potentially using `markdown-it-py`) into a sequence of `batchUpdate` `Request` objects
+3. Submit the requests to populate the document
+
+This is a simpler one-directional pipeline. `markdown-it-py` may only be needed for this create flow, not the update flow.
+
+#### 5.10.3 Widget Recreation on Upload
+
+Some non-text elements have dedicated `batchUpdate` insert requests, enabling round-trip fidelity beyond simple text patching:
+
+- **`insertPerson`**: Recreate person mentions from serialized `<!-- person: {...} -->` comments. Requires `personProperties.email` (and optionally `name`) plus a `location` index.
+- **`insertDate`**: Recreate date elements from serialized `<!-- date: {...} -->` comments. Accepts full `dateElementProperties` (format, locale, timezone, timestamp) plus a `location` index.
+
+Elements **without** dedicated insert requests cannot be recreated and must be handled differently:
+
+- **`RichLink`**: No `insertRichLink` exists. Fall back to a regular hyperlink (`InsertText` + `UpdateTextStyle` with `link.url`). The rich link widget (with preview card) will be lost on upload.
+- **`AutoText`**: No `insertAutoText` exists. Must be preserved in-place via atomic edits (don't delete/recreate). If an AutoText element is removed from the local Markdown, it cannot be restored.
+- **`Equation`**: No `insertEquation` exists and no content is exposed by the API. Must be preserved in-place.
+
+#### 5.10.4 Why Not Markdown -> Document Model?
+
+Earlier design documents (now archived in `docs/archive/PYDANTIC_STRATEGY.md`) proposed a `MarkdownDeserializer` that would parse Markdown into a `Document` Pydantic model. This was abandoned because:
+
+- The API needs `batchUpdate` `Request` objects, not a `Document` model
+- The update case benefits from surgical edits that preserve widget state (U+E907 containers)
+- Diffing at the Markdown text level is simpler and more robust than structural model comparison
 
 ## 6. Resources
 

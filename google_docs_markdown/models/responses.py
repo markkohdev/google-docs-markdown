@@ -8,11 +8,13 @@ from google_docs_markdown.models.base import GoogleDocsBaseModel
 
 if TYPE_CHECKING:
     from google_docs_markdown.models.common import WriteControl
+    from google_docs_markdown.models.document import TabProperties
 
 
 class Response(GoogleDocsBaseModel):
     """Response model from Google Docs API."""
 
+    addDocumentTab: AddDocumentTabResponse | None = None
     createFooter: CreateFooterResponse | None = None
     createFootnote: CreateFootnoteResponse | None = None
     createHeader: CreateHeaderResponse | None = None
@@ -28,6 +30,12 @@ class BatchUpdateDocumentResponse(GoogleDocsBaseModel):
     documentId: str | None = None
     replies: list[Response] | None = None
     writeControl: WriteControl | None = None
+
+
+class AddDocumentTabResponse(GoogleDocsBaseModel):
+    """AddDocumentTabResponse model from Google Docs API."""
+
+    tabProperties: TabProperties | None = None
 
 
 class CreateFooterResponse(GoogleDocsBaseModel):

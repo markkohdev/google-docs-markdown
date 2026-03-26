@@ -1,4 +1,4 @@
-.PHONY: help test lint format type-check check all clean update-docs update-models update-all
+.PHONY: help test lint format type-check check all clean update-docs update-models update-api-reference update-all
 
 help:
 	@echo "Available commands:"
@@ -12,7 +12,8 @@ help:
 	@echo "  make clean       - Clean cache files"
 	@echo "  make update-docs    - Re-download all test doc JSONs from Google Docs API"
 	@echo "  make update-models  - Update stubs and regenerate Pydantic models if needed"
-	@echo "  make update-all     - Update docs and models"
+	@echo "  make update-api-reference - Re-download Google Docs API reference text"
+	@echo "  make update-all     - Update docs, models, and API reference"
 
 # Run tests
 run-tests:
@@ -60,8 +61,12 @@ update-docs:
 update-models:
 	uv run python scripts/update_models.py
 
+# Re-download Google Docs API reference as plain text
+update-api-reference:
+	uv run scripts/download_api_reference.py
+
 # Update all generated artifacts (docs, models, etc.)
-update-all: update-docs update-models
+update-all: update-docs update-models update-api-reference
 
 # Alias for check
 all: check
