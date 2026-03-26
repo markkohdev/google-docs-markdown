@@ -1,5 +1,5 @@
 ---
-description: Create and submit or update a pull request on GitHub for the current branch
+description: "Create and submit or update a pull request on GitHub for the current branch. Append DRAFT or REGULAR to skip the draft/regular prompt."
 ---
 
 # Generate Pull Request
@@ -85,7 +85,7 @@ _This PR was generated using the /generate-pr command via <Claude Code/Cursor/> 
 **If no PR exists:**
 
 - Write the PR description to a temporary file (e.g., `<REPO_ROOT>/.chat-outputs/<CHAT_SESSION_START_DATETIME>/pr_body.md`)
-- **Before creating:** Ask the user whether they want to create it as a **Pull Request** or a **Draft Pull Request**
+- **Determine draft vs. regular:** Check the user's input for the keywords `DRAFT` or `REGULAR` (case-insensitive). If the user included `DRAFT`, create a draft PR. If the user included `REGULAR`, create a regular PR. If neither keyword was provided, ask the user whether they want a **Pull Request** or a **Draft Pull Request**.
 - Create PR:
   - For a regular PR: `gh pr create --title "<descriptive-title>" --body-file pr_body.md --base <default-branch> --head <current-branch>`
   - For a draft PR: `gh pr create --draft --title "<descriptive-title>" --body-file pr_body.md --base <default-branch> --head <current-branch>`
