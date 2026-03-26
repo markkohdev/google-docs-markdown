@@ -34,6 +34,7 @@ from google_docs_markdown.models.document import DocumentTab
 from google_docs_markdown.models.elements import (
     FootnoteReference,
     HorizontalRule,
+    InlineObjectElement,
     Paragraph,
     ParagraphElement,
     RichLink,
@@ -63,6 +64,7 @@ class MarkdownSerializer:
 
     def __init__(self) -> None:
         self._footnote_refs: list[tuple[str, str]] = []
+        self._inline_objects: dict[str, Any] | None = None
 
     def serialize(self, document_tab: DocumentTab) -> str:
         """Convert a DocumentTab to Markdown.
@@ -78,6 +80,7 @@ class MarkdownSerializer:
             return ""
 
         self._footnote_refs = []
+        self._inline_objects = document_tab.inlineObjects
 
         blocks = group_elements(document_tab.body.content, document_tab.lists)
 
@@ -251,6 +254,8 @@ class MarkdownSerializer:
             return self._visit_rich_link(element.richLink)
         if element.footnoteReference:
             return self._visit_footnote_reference(element.footnoteReference)
+        if element.inlineObjectElement:
+            return self._visit_inline_object(element.inlineObjectElement)
         return None
 
     def _visit_text_run(self, text_run: TextRun) -> str | None:
@@ -294,6 +299,31 @@ class MarkdownSerializer:
             return None
         title = props.title or props.uri
         return f"[{title}]({props.uri})"
+
+    def _visit_inline_object(self, obj: InlineObjectElement) -> str | None:
+        """Render an InlineObjectElement as a Markdown image reference."""
+        if not obj.inlineObjectId or not self._inline_objects:
+            return None
+
+        raw = self._inline_objects.get(obj.inlineObjectId)
+        if raw is None:
+            return None
+
+        from google_docs_markdown.models.common import InlineObject
+
+        inline_obj = raw if isinstance(raw, InlineObject) else InlineObject.model_validate(raw)
+
+        props = inline_obj.inlineObjectProperties
+        if not props or not props.embeddedObject:
+            return None
+
+        embedded = props.embeddedObject
+        image_props = embedded.imageProperties
+        if not image_props or not image_props.contentUri:
+            return None
+
+        alt = embedded.description or embedded.title or ""
+        return f"![{alt}]({image_props.contentUri})"
 
     def _visit_footnote_reference(self, ref: FootnoteReference) -> str | None:
         if not ref.footnoteNumber:

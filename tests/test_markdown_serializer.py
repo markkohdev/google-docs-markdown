@@ -1110,6 +1110,106 @@ class TestSerializerTables:
 
 
 # ---------------------------------------------------------------------------
+# Image tests
+# ---------------------------------------------------------------------------
+
+
+def _make_image_doc(
+    object_id: str = "kix.img1",
+    content_uri: str = "https://example.com/image.png",
+    description: str | None = None,
+    title: str | None = None,
+) -> DocumentTab:
+    """Build a DocumentTab with an inline image."""
+    from google_docs_markdown.models.elements import InlineObjectElement
+
+    elements: list[StructuralElement] = [
+        StructuralElement(
+            paragraph=Paragraph(
+                elements=[
+                    ParagraphElement(
+                        inlineObjectElement=InlineObjectElement(inlineObjectId=object_id),
+                    ),
+                    ParagraphElement(textRun=TextRun(content="\n")),
+                ],
+                paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+            )
+        )
+    ]
+
+    embedded_obj: dict[str, Any] = {
+        "imageProperties": {"contentUri": content_uri},
+    }
+    if description:
+        embedded_obj["description"] = description
+    if title:
+        embedded_obj["title"] = title
+
+    inline_objects = {
+        object_id: {
+            "objectId": object_id,
+            "inlineObjectProperties": {"embeddedObject": embedded_obj},
+        }
+    }
+
+    return DocumentTab(body=Body(content=elements), inlineObjects=inline_objects)
+
+
+class TestSerializerImages:
+    def test_image_basic(self, serializer: MarkdownSerializer) -> None:
+        doc = _make_image_doc()
+        result = serializer.serialize(doc)
+        assert "![](https://example.com/image.png)" in result
+
+    def test_image_with_description(self, serializer: MarkdownSerializer) -> None:
+        doc = _make_image_doc(description="A cat photo")
+        result = serializer.serialize(doc)
+        assert "![A cat photo](https://example.com/image.png)" in result
+
+    def test_image_with_title_fallback(self, serializer: MarkdownSerializer) -> None:
+        doc = _make_image_doc(title="My Image")
+        result = serializer.serialize(doc)
+        assert "![My Image](https://example.com/image.png)" in result
+
+    def test_image_description_preferred_over_title(self, serializer: MarkdownSerializer) -> None:
+        doc = _make_image_doc(description="Alt text", title="Title text")
+        result = serializer.serialize(doc)
+        assert "![Alt text](https://example.com/image.png)" in result
+
+    def test_image_no_inline_objects(self, serializer: MarkdownSerializer) -> None:
+        """InlineObjectElement with no matching inlineObjects dict skips."""
+        from google_docs_markdown.models.elements import InlineObjectElement
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(
+                                    inlineObjectElement=InlineObjectElement(inlineObjectId="missing"),
+                                ),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            ),
+        )
+        result = serializer.serialize(doc)
+        assert "![" not in result
+
+    def test_fixture_single_tab_image(self, serializer: MarkdownSerializer) -> None:
+        """Verify real fixture produces an image reference."""
+        doc = _load_document(SINGLE_TAB_JSON)
+        tab = doc.tabs[0]  # type: ignore[index]
+        result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
+        assert "![" in result
+        assert "](https://lh7-rt.googleusercontent.com/" in result
+
+
+# ---------------------------------------------------------------------------
 # Code block tests
 # ---------------------------------------------------------------------------
 
