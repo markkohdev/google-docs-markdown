@@ -1,4 +1,4 @@
-.PHONY: help test lint format type-check check all clean update-docs update-models update-api-reference update-all
+.PHONY: help test lint format type-check check all clean update-docs update-models update-api-reference update-all convert-test-docs
 
 help:
 	@echo "Available commands:"
@@ -14,6 +14,7 @@ help:
 	@echo "  make update-models  - Update stubs and regenerate Pydantic models if needed"
 	@echo "  make update-api-reference - Re-download Google Docs API reference text"
 	@echo "  make update-all     - Update docs, models, and API reference"
+	@echo "  make convert-test-docs - Convert test docs to Markdown in test_outputs/"
 
 # Run tests
 run-tests:
@@ -64,6 +65,10 @@ update-models:
 # Re-download Google Docs API reference as plain text
 update-api-reference:
 	uv run scripts/download_api_reference.py
+
+# Convert test docs to Markdown in test_outputs/
+convert-test-docs:
+	uv run python scripts/convert_test_docs.py
 
 # Update all generated artifacts (docs, models, etc.)
 update-all: update-docs update-models update-api-reference
