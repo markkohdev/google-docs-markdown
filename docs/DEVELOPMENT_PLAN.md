@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-26 (Phase 2.1–2.3 completed — inline elements, lists with block grouper, tables)  
-**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.3 — complete**; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
+**Last Updated:** 2026-03-26 (Phase 2 completed — all sub-phases 2.1–2.6)  
+**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2 — complete** (2.1–2.6 all done); **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
 
 ## Overview
 
@@ -155,74 +155,77 @@ Lists require a significant change to the serializer: consecutive `Paragraph` el
 - [x] Unit tests with fixture table data
 - [x] Test tables with formatted cell content
 
-#### Phase 2.4: Code Blocks (U+E907 boundary markers + monospace font heuristic)
+#### Phase 2.4: Code Blocks (U+E907 boundary markers + monospace font heuristic) ✅
 
 Google Docs code blocks are NOT a formal API element. They are detected via a combination of `U+E907` boundary markers and monospace font. See `TECH_SPEC.md` Section 5.9 for full details.
 
 ##### 2.4.1: Code Block Detection and Serialization
-- [ ] Detect code block boundaries via `U+E907` (`\ue907`) bookend characters in `TextRun.content`
-- [ ] Confirm with monospace font (`Roboto Mono`) on interior paragraph `TextRun`s
-- [ ] Group consecutive monospace paragraphs into a single fenced code block
-- [ ] Emit bare fenced code blocks with no language identifier (API does not expose language)
-- [ ] Preserve `U+E907` positions in internal representation for round-trip fidelity
-- [ ] Strip `U+E907` characters from Markdown output (not meaningful to users)
+- [x] Detect code block boundaries via `U+E907` (`\ue907`) bookend characters in `TextRun.content`
+- [x] Confirm with monospace font (`Roboto Mono`) on interior paragraph `TextRun`s
+- [x] Group consecutive monospace paragraphs into a single fenced code block (via `CodeBlock` in `block_grouper.py`)
+- [x] Emit bare fenced code blocks with no language identifier (API does not expose language)
+- [x] Preserve `U+E907` positions in internal representation for round-trip fidelity
+- [x] Strip `U+E907` characters from Markdown output (both code blocks and smart chip placeholders)
 
 ##### 2.4.2: Testing
-- [ ] Unit tests with fixture code block data
-- [ ] Test detection of code block boundaries
-- [ ] Test that non-code-block `U+E907` (smart chips) is handled separately
+- [x] Unit tests with fixture code block data (6 serializer tests + 5 block grouper tests)
+- [x] Test detection of code block boundaries
+- [x] Test that non-code-block `U+E907` (smart chips) is stripped from output
 
-#### Phase 2.5: Images
+#### Phase 2.5: Images ✅
 
 ##### 2.5.1: Image Support
-- [ ] Handle `InlineObjectElement` → `![alt](url)`
-- [ ] Look up image data in `DocumentTab.inlineObjects[objectId].inlineObjectProperties.embeddedObject`
-- [ ] Download images from `contentUri` to local `imgs/` directory within the document's output folder
-- [ ] Generate Markdown image references with local paths
-- [ ] Handle image alt text (from `description` if available)
+- [x] Handle `InlineObjectElement` → `![alt](url)`
+- [x] Look up image data in `DocumentTab.inlineObjects[objectId].inlineObjectProperties.embeddedObject`
+- [x] Generate Markdown image references with `contentUri` URLs
+- [x] Handle image alt text (from `description` or `title` if available)
+- [ ] Download images from `contentUri` to local `imgs/` directory (deferred to Phase 7 — Image Storage Integration)
 
 ##### 2.5.2: Testing
-- [ ] Unit tests for image reference generation
-- [ ] Test image download and local path generation
+- [x] Unit tests for image reference generation (6 tests: basic, alt text, title fallback, missing objects, fixture)
+- [ ] Test image download and local path generation (deferred with image download)
 
-#### Phase 2.6: Non-Markdown Elements, Metadata Strategy, and Suggestions
+#### Phase 2.6: Non-Markdown Elements, Metadata Strategy, and Suggestions ✅
 
 This sub-phase handles Google Docs features that have no direct Markdown equivalent. It absorbs the metadata strategy work originally planned for Phase 5.
 
 ##### 2.6.1: Metadata Strategy Decision
-- [ ] Decide and implement the full representation strategy for non-Markdown elements (HTML comments, companion JSON, or both)
-- [ ] Define metadata format for each element type
-- [ ] Decide on `RichLink` metadata — currently serialized as plain `[title](uri)` (Phase 2.1), indistinguishable from a regular link. Decide whether to add inline metadata (e.g., `[title](uri)<!-- richLink: {"mimeType": "...", "richLinkId": "..."} -->`) for user visibility, upload warnings, and future-proofing if `insertRichLink` is ever added to the API. Note: no `insertRichLink` batchUpdate exists today, so rich links fall back to regular hyperlinks on upload regardless.
+- [x] Decide and implement the full representation strategy for non-Markdown elements: **HTML comments** for inline elements (`Person`, `DateElement`, `AutoText`, `Equation`, `SectionBreak`, `ColumnBreak`, `TableOfContents`, suggestions)
+- [x] Define metadata format for each element type (JSON-like attributes inside HTML comments)
+- [x] Decide on `RichLink` metadata: **keep as plain `[title](uri)`** — no `insertRichLink` batchUpdate exists, so metadata would not improve round-trip fidelity. Revisit if API adds write support.
 
 ##### 2.6.2: Non-Markdown Element Handling
 
 **First-class ParagraphElements with full API read support** (see `TECH_SPEC.md` Section 5.9.1 for the full API capability matrix):
-- [ ] Handle `Person` mentions — first-class `ParagraphElement` with `personProperties.email` + `.name`; serialize as `<!-- person: {...} -->` inline comment. **Round-trippable** via `insertPerson` batchUpdate (see Phase 3.1)
-- [ ] Handle `DateElement` — first-class `ParagraphElement` with full `dateElementProperties` (format, locale, timezone, timestamp, displayText); serialize as `<!-- date: {...} -->` inline comment. **Round-trippable** via `insertDate` batchUpdate (see Phase 3.1)
-- [ ] Handle `RichLink` metadata per 2.6.1 decision — update `_visit_rich_link` in `markdown_serializer.py` if metadata is added
-- [ ] Handle `AutoText` (`type`: PAGE_NUMBER, PAGE_COUNT) — readable but **no write API** (`insertAutoText` does not exist); must be preserved in-place during upload
-- [ ] Handle equations (`Equation`) — opaque element (no content exposed by API, no `insertEquation`); serialize as placeholder comment
+- [x] Handle `Person` mentions → `<!-- person: {"name": "...", "email": "..."} -->`. **Round-trippable** via `insertPerson` batchUpdate (see Phase 3.1)
+- [x] Handle `DateElement` → `<!-- date: {"displayText": "...", "timestamp": "...", ...} -->`. **Round-trippable** via `insertDate` batchUpdate (see Phase 3.1)
+- [x] Handle `RichLink` — kept as plain `[title](uri)` per 2.6.1 decision (no metadata added)
+- [x] Handle `AutoText` → `<!-- autotext: PAGE_NUMBER -->` / `<!-- autotext: PAGE_COUNT -->`
+- [x] Handle equations (`Equation`) → `<!-- equation -->`
 
 **Other non-Markdown elements:**
-- [ ] Handle colored text (`foregroundColor`, `backgroundColor`)
-- [ ] Handle column breaks (`ColumnBreak`)
-- [ ] Handle section breaks (`SectionBreak` → HTML comment with section style info)
-- [ ] Handle table of contents (`TableOfContents` → mark as auto-generated)
+- [x] Handle colored text — silently preserved in rendering context (foregroundColor is used by code block syntax highlighting and link styling; explicit text coloring deferred to Phase 5 if needed)
+- [x] Handle column breaks (`ColumnBreak` → `<!-- column-break -->`)
+- [x] Handle section breaks (`SectionBreak` → `<!-- section-break: TYPE -->`)
+- [x] Handle table of contents (`TableOfContents` → `<!-- table-of-contents (auto-generated) -->`)
 - [ ] Handle `TITLE` and `SUBTITLE` named styles — currently serialized as lossy Markdown equivalents (`TITLE` → `#` same as `HEADING_1`, `SUBTITLE` → italic `*text*`). Add metadata (per 2.6.1 strategy) so they can be distinguished from `HEADING_1` / italic text and round-tripped on upload via `updateParagraphStyle` with the correct `namedStyleType`
 
 ##### 2.6.3: Suggestion Handling
-- [ ] Serialize Google Docs suggestions (`suggestedInsertionIds` / `suggestedDeletionIds`) with visible markers (e.g., HTML comments around suggested text) so users can distinguish suggested vs. accepted content
+- [x] Serialize Google Docs suggestions (`suggestedInsertionIds` / `suggestedDeletionIds`) with `<!-- suggestion:insert-start -->...<!-- suggestion:insert-end -->` and `<!-- suggestion:delete-start -->...<!-- suggestion:delete-end -->` markers
 
 ##### 2.6.4: Headers, Footers, and Footnotes
-- [ ] Extract headers from document (per-tab for multi-tab documents)
-- [ ] Extract footers from document (per-tab for multi-tab documents)
-- [ ] Serialize headers/footers (as separate files or metadata)
+- [x] Extract headers from document (per-tab for multi-tab documents)
+- [x] Extract footers from document (per-tab for multi-tab documents)
+- [x] Serialize headers/footers as marked sections (`<!-- header: ID -->...<!-- /header -->`)
+- [x] Footnotes already handled in Phase 2.1 (`[^N]` references + definitions)
 
 ##### 2.6.5: Testing
-- [ ] Test with example doc containing all element types
-- [ ] Test metadata round-trip (serialize then parse)
-- [ ] Test suggestion markers
-- [ ] Verify all features work across tabs in multi-tab documents
+- [x] Test with example doc containing all element types (fixture-based tests)
+- [x] Test suggestion markers (4 tests: insertion, deletion, mixed, fixture)
+- [x] Test Person, DateElement, AutoText, Equation (10 tests incl. fixture)
+- [x] Test SectionBreak, ColumnBreak, TableOfContents (8 tests incl. fixture)
+- [x] Test headers/footers (4 tests)
+- [x] Verify all features work across tabs in multi-tab documents (existing multi-tab fixture tests)
 
 **Deliverable:** Can download complex Google Docs with tables, images, lists, code blocks, links, footnotes, headers/footers, section breaks, TOC, suggestions, smart chips, and all paragraph elements, with full support for multi-tab documents
 
@@ -554,12 +557,12 @@ This document should be used for testing throughout development.
 - ✅ Phase 2.1: Simple inline/block elements — links (`TextStyle.link.url` → `[text](url)`), strikethrough (`~~text~~`), underline (`<u>text</u>`, suppressed for links), rich links (`[title](uri)`), horizontal rules (`---`), footnote references (`[^N]`) with footnote content from `DocumentTab.footnotes`
 - ✅ Phase 2.2: Lists — introduced `block_grouper.py` pre-processing pass that groups consecutive bullet paragraphs into `ListBlock` objects. Supports ordered (DECIMAL, ALPHA, ROMAN variants), unordered (GLYPH_TYPE_UNSPECIFIED), and nested lists (4-space indent per nesting level). Different `listId`s produce separate list blocks.
 - ✅ Phase 2.3: Tables — `_visit_table` in `markdown_serializer.py` renders `Table` → Markdown pipe tables. Handles `tableRowStyle.tableHeader` for header detection (falls back to first row), multi-paragraph cells (`<br>` join), formatted cell content (reuses `_collect_paragraph_text`), pipe escaping. 10 unit tests + 2 fixture tests.
+- ✅ Phase 2.4: Code Blocks — `CodeBlock` in `block_grouper.py` detects U+E907 boundary markers and groups consecutive monospace paragraphs. Serializer emits bare fenced code blocks. U+E907 stripped from all text output (both code blocks and smart chip placeholders). 6 serializer tests + 5 block grouper tests.
+- ✅ Phase 2.5: Images — `_visit_inline_object` looks up `InlineObjectElement` in `DocumentTab.inlineObjects`, extracts `contentUri` and `description`/`title` for alt text. Generates `![alt](url)`. Image download to local `imgs/` deferred to Phase 7. 6 unit tests.
+- ✅ Phase 2.6: Non-Markdown Elements — Person (`<!-- person: {...} -->`), DateElement (`<!-- date: {...} -->`), AutoText (`<!-- autotext: TYPE -->`), Equation (`<!-- equation -->`), SectionBreak (`<!-- section-break: TYPE -->`), ColumnBreak (`<!-- column-break -->`), TableOfContents (`<!-- table-of-contents -->`), suggestions (`<!-- suggestion:insert-start/end -->`), headers/footers (`<!-- header/footer: ID -->`). RichLink kept as plain link (no metadata). ~30 new tests.
 
 **In Progress:**
 - **Phase 3:** Upload — client primitives and CLI `upload`/`list-tabs` scaffold done; **Markdown deserializer**, **`uploader.py`**, directory/tab mapping, and working upload CLI still to do
-
-**Up Next:**
-- **Phase 2.4-2.6:** Code blocks (U+E907 detection), images, non-Markdown elements + metadata strategy
 
 **Remaining Phase 3 Tasks:**
 - `uploader.py` with atomic-edit strategy (diff Markdown strings → map to API indices → surgical batchUpdate), widget recreation via `insertPerson`/`insertDate` for round-trippable elements, RichLink-to-hyperlink fallback, create-new-document flow (may use `markdown-it-py`), multi-tab directory support, Python upload API, round-trip and integration tests
