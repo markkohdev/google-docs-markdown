@@ -15,7 +15,7 @@ fenced code blocks).
 Phase 2.5 scope: images (InlineObjectElement → ![alt](url)).
 Phase 2.6 scope: non-Markdown elements (Person, DateElement, AutoText,
 Equation, SectionBreak, ColumnBreak, TableOfContents, suggestions,
-headers/footers).
+style annotations, headers/footers, embedded metadata).
 """
 
 from __future__ import annotations
@@ -29,20 +29,34 @@ from google_docs_markdown.block_grouper import (
     ListBlock,
     group_elements,
 )
-from google_docs_markdown.models.common import Footnote
+from google_docs_markdown.comment_tags import TagType, opening_tag, wrap_tag
+from google_docs_markdown.models.common import (
+    Footer,
+    Footnote,
+    Header,
+    OptionalColor,
+)
 from google_docs_markdown.models.document import DocumentTab
 from google_docs_markdown.models.elements import (
+    AutoText,
+    ColumnBreak,
+    DateElement,
+    Equation,
     FootnoteReference,
     HorizontalRule,
     InlineObjectElement,
+    PageBreak,
     Paragraph,
     ParagraphElement,
+    Person,
     RichLink,
     StructuralElement,
     Table,
     TableCell,
+    TableOfContents,
     TextRun,
 )
+from google_docs_markdown.models.styles import TextStyle
 
 _HEADING_PREFIX: dict[str, str] = {
     "TITLE": "#",
@@ -53,6 +67,21 @@ _HEADING_PREFIX: dict[str, str] = {
     "HEADING_5": "#####",
     "HEADING_6": "######",
 }
+
+_CHIP_PLACEHOLDER = "<!-- chip-placeholder -->"
+
+_COMMON_GDOCS_FONTS = frozenset(
+    {
+        "Arial",
+        "Proxima Nova",
+        "Roboto",
+        "Times New Roman",
+        "Georgia",
+        "Verdana",
+        "Trebuchet MS",
+        "Calibri",
+    }
+)
 
 
 class MarkdownSerializer:
@@ -65,6 +94,11 @@ class MarkdownSerializer:
     def __init__(self) -> None:
         self._footnote_refs: list[tuple[str, str]] = []
         self._inline_objects: dict[str, Any] | None = None
+        self._default_font: str | None = None
+        self._default_font_size: float | None = None
+        self._default_fg_hex: str | None = None
+        self._named_style_sizes: dict[str, float] = {}
+        self._current_para_style: str | None = None
 
     def serialize(self, document_tab: DocumentTab) -> str:
         """Convert a DocumentTab to Markdown.
@@ -81,6 +115,7 @@ class MarkdownSerializer:
 
         self._footnote_refs = []
         self._inline_objects = document_tab.inlineObjects
+        self._extract_default_styles(document_tab)
 
         blocks = group_elements(document_tab.body.content, document_tab.lists)
 
@@ -94,7 +129,11 @@ class MarkdownSerializer:
         if footnote_defs:
             paragraphs.extend(footnote_defs)
 
-        return _join_paragraphs(paragraphs)
+        header_blocks = self._serialize_headers(document_tab.headers)
+        footer_blocks = self._serialize_footers(document_tab.footers)
+
+        all_parts = header_blocks + paragraphs + footer_blocks
+        return _join_paragraphs(all_parts)
 
     def _visit_block(self, block: Block) -> str | None:
         """Dispatch a Block to the appropriate visitor."""
@@ -163,6 +202,10 @@ class MarkdownSerializer:
             return self._visit_paragraph(element.paragraph)
         if element.table:
             return self._visit_table(element.table)
+        if element.sectionBreak:
+            return self._visit_section_break(element)
+        if element.tableOfContents:
+            return self._visit_table_of_contents(element.tableOfContents)
         return None
 
     def _visit_table(self, table: Table) -> str | None:
@@ -222,14 +265,19 @@ class MarkdownSerializer:
         if paragraph.paragraphStyle:
             style_type = paragraph.paragraphStyle.namedStyleType
 
+        self._current_para_style = style_type
         text = self._collect_paragraph_text(paragraph.elements or [])
+        self._current_para_style = None
 
         heading_prefix = _HEADING_PREFIX.get(style_type or "")
         if heading_prefix and text:
-            return f"{heading_prefix} {text}"
+            rendered = f"{heading_prefix} {text}"
+            if style_type == "TITLE":
+                return f"{opening_tag(TagType.TITLE)}\n{rendered}"
+            return rendered
 
         if style_type == "SUBTITLE" and text:
-            return f"*{text}*"
+            return f"{opening_tag(TagType.SUBTITLE)}\n*{text}*"
 
         return text
 
@@ -256,6 +304,18 @@ class MarkdownSerializer:
             return self._visit_footnote_reference(element.footnoteReference)
         if element.inlineObjectElement:
             return self._visit_inline_object(element.inlineObjectElement)
+        if element.person:
+            return self._visit_person(element.person)
+        if element.dateElement:
+            return self._visit_date_element(element.dateElement)
+        if element.autoText:
+            return self._visit_auto_text(element.autoText)
+        if element.equation:
+            return self._visit_equation(element.equation)
+        if element.pageBreak:
+            return self._visit_page_break(element.pageBreak)
+        if element.columnBreak:
+            return self._visit_column_break(element.columnBreak)
         return None
 
     def _visit_text_run(self, text_run: TextRun) -> str | None:
@@ -264,9 +324,11 @@ class MarkdownSerializer:
         if content is None:
             return None
 
-        content = content.replace("\ue907", "")
+        content = content.replace("\ue907", _CHIP_PLACEHOLDER)
         if not content:
             return None
+
+        has_chip = _CHIP_PLACEHOLDER in content
 
         style = text_run.textStyle
         bold = style and style.bold
@@ -276,7 +338,7 @@ class MarkdownSerializer:
         underline = style and style.underline and not link
 
         has_formatting = bold or italic or strikethrough or underline
-        if has_formatting:
+        if has_formatting and not has_chip:
             content = _apply_inline_formatting(
                 content,
                 bold=bool(bold),
@@ -284,9 +346,42 @@ class MarkdownSerializer:
                 strikethrough=bool(strikethrough),
                 underline=bool(underline),
             )
+        elif has_formatting and has_chip:
+            parts = content.split(_CHIP_PLACEHOLDER)
+            formatted_parts = []
+            for part in parts:
+                if part:
+                    part = _apply_inline_formatting(
+                        part,
+                        bold=bool(bold),
+                        italic=bool(italic),
+                        strikethrough=bool(strikethrough),
+                        underline=bool(underline),
+                    )
+                formatted_parts.append(part)
+            content = _CHIP_PLACEHOLDER.join(formatted_parts)
 
         if link and link.url:
             content = _apply_link(content, link.url)
+
+        style_props = self._extract_non_default_style(style)
+        if style_props:
+            content = wrap_tag(TagType.STYLE, content, style_props)
+
+        if text_run.suggestedInsertionIds:
+            suggestion_id = text_run.suggestedInsertionIds[0]
+            content = wrap_tag(
+                TagType.SUGGESTION,
+                content,
+                {"id": suggestion_id, "type": "insertion"},
+            )
+        elif text_run.suggestedDeletionIds:
+            suggestion_id = text_run.suggestedDeletionIds[0]
+            content = wrap_tag(
+                TagType.SUGGESTION,
+                content,
+                {"id": suggestion_id, "type": "deletion"},
+            )
 
         return content
 
@@ -298,7 +393,13 @@ class MarkdownSerializer:
         if not props or not props.uri:
             return None
         title = props.title or props.uri
-        return f"[{title}]({props.uri})"
+        link_md = f"[{title}]({props.uri})"
+        meta: dict[str, Any] = {}
+        if props.mimeType:
+            meta["mimeType"] = props.mimeType
+        if meta:
+            return wrap_tag(TagType.RICH_LINK, link_md, meta)
+        return link_md
 
     def _visit_inline_object(self, obj: InlineObjectElement) -> str | None:
         """Render an InlineObjectElement as a Markdown image reference."""
@@ -331,6 +432,195 @@ class MarkdownSerializer:
         if ref.footnoteId:
             self._footnote_refs.append((ref.footnoteId, ref.footnoteNumber))
         return f"[^{ref.footnoteNumber}]"
+
+    def _visit_person(self, person: Person) -> str | None:
+        props = person.personProperties
+        if not props:
+            return None
+        name = props.name or props.email or ""
+        data: dict[str, Any] = {}
+        if props.email:
+            data["email"] = props.email
+        return wrap_tag(TagType.PERSON, name, data)
+
+    def _visit_date_element(self, date_elem: DateElement) -> str | None:
+        props = date_elem.dateElementProperties
+        if not props:
+            return None
+        display = props.displayText or ""
+        data: dict[str, Any] = {}
+        if props.dateFormat:
+            data["format"] = props.dateFormat
+        if props.locale:
+            data["locale"] = props.locale
+        if props.timeFormat:
+            data["timeFormat"] = props.timeFormat
+        if props.timeZoneId:
+            data["timeZoneId"] = props.timeZoneId
+        if props.timestamp:
+            data["timestamp"] = props.timestamp
+        return wrap_tag(TagType.DATE, display, data)
+
+    def _visit_auto_text(self, auto_text: AutoText) -> str | None:
+        data: dict[str, Any] = {}
+        if auto_text.type:
+            data["type"] = auto_text.type
+        return opening_tag(TagType.AUTO_TEXT, data or None)
+
+    def _visit_equation(self, _eq: Equation) -> str:
+        return opening_tag(TagType.EQUATION)
+
+    def _visit_page_break(self, _pb: PageBreak) -> str:
+        return opening_tag(TagType.PAGE_BREAK)
+
+    def _visit_column_break(self, _cb: ColumnBreak) -> str:
+        return opening_tag(TagType.COLUMN_BREAK)
+
+    def _visit_section_break(self, element: StructuralElement) -> str | None:
+        is_leading = (element.startIndex is None and (element.endIndex is None or element.endIndex <= 1)) or (
+            element.startIndex is not None and element.startIndex == 0
+        )
+        if is_leading:
+            return None
+        sb = element.sectionBreak
+        if not sb:
+            return None
+        data: dict[str, Any] = {}
+        if sb.sectionStyle and sb.sectionStyle.sectionType:
+            data["type"] = sb.sectionStyle.sectionType
+        return opening_tag(TagType.SECTION_BREAK, data or None)
+
+    def _visit_table_of_contents(self, _toc: TableOfContents) -> str:
+        return opening_tag(TagType.TABLE_OF_CONTENTS)
+
+    # ------------------------------------------------------------------
+    # Style extraction
+    # ------------------------------------------------------------------
+
+    def _extract_default_styles(self, document_tab: DocumentTab) -> None:
+        """Extract default font, size, and color from the NORMAL_TEXT named style."""
+        self._default_font = None
+        self._default_font_size = None
+        self._default_fg_hex = "#000000"
+        self._named_style_sizes = {}
+
+        if not document_tab.namedStyles or not document_tab.namedStyles.styles:
+            return
+        for ns in document_tab.namedStyles.styles:
+            if ns.textStyle and ns.textStyle.fontSize and ns.textStyle.fontSize.magnitude is not None:
+                if ns.namedStyleType:
+                    self._named_style_sizes[ns.namedStyleType] = ns.textStyle.fontSize.magnitude
+            if ns.namedStyleType == "NORMAL_TEXT" and ns.textStyle:
+                ts = ns.textStyle
+                if ts.weightedFontFamily and ts.weightedFontFamily.fontFamily:
+                    self._default_font = ts.weightedFontFamily.fontFamily
+                if ts.fontSize and ts.fontSize.magnitude is not None:
+                    self._default_font_size = ts.fontSize.magnitude
+                fg = _optional_color_to_hex(ts.foregroundColor)
+                if fg:
+                    self._default_fg_hex = fg
+
+    def _extract_non_default_style(self, style: TextStyle | None) -> dict[str, Any] | None:
+        """Return a dict of non-default style properties, or None if all defaults."""
+        if not style:
+            return None
+
+        props: dict[str, Any] = {}
+
+        fg = _optional_color_to_hex(style.foregroundColor)
+        if fg and fg != self._default_fg_hex:
+            props["color"] = fg
+
+        bg = _optional_color_to_hex(style.backgroundColor)
+        if bg:
+            props["background-color"] = bg
+
+        if style.fontSize and style.fontSize.magnitude is not None:
+            expected_size = self._default_font_size
+            if self._current_para_style and self._current_para_style in self._named_style_sizes:
+                expected_size = self._named_style_sizes[self._current_para_style]
+            if style.fontSize.magnitude != expected_size:
+                props["font-size"] = style.fontSize.magnitude
+
+        if style.weightedFontFamily and style.weightedFontFamily.fontFamily:
+            font = style.weightedFontFamily.fontFamily
+            if font != self._default_font and font not in _COMMON_GDOCS_FONTS:
+                props["font-family"] = font
+
+        if style.baselineOffset and style.baselineOffset not in ("BASELINE_OFFSET_UNSPECIFIED", "NONE"):
+            props["baseline-offset"] = style.baselineOffset
+
+        if style.smallCaps:
+            props["small-caps"] = True
+
+        return props or None
+
+    # ------------------------------------------------------------------
+    # Headers and Footers
+    # ------------------------------------------------------------------
+
+    def _serialize_headers(self, headers: dict[str, Any] | None) -> list[str]:
+        """Serialize document headers as comment-wrapped blocks."""
+        if not headers:
+            return []
+        result: list[str] = []
+        for header_id, raw in headers.items():
+            header = raw if isinstance(raw, Header) else Header.model_validate(raw)
+            if not header.content:
+                continue
+            blocks = group_elements(header.content)
+            parts: list[str] = []
+            for block in blocks:
+                r = self._visit_block(block)
+                if r is not None and r.strip():
+                    parts.append(r)
+            if parts:
+                inner = "\n\n".join(parts)
+                data: dict[str, Any] = {"id": header_id}
+                result.append(f"{opening_tag(TagType.HEADER, data)}\n{inner}\n{_closing_tag_str(TagType.HEADER)}")
+        return result
+
+    def _serialize_footers(self, footers: dict[str, Any] | None) -> list[str]:
+        """Serialize document footers as comment-wrapped blocks."""
+        if not footers:
+            return []
+        result: list[str] = []
+        for footer_id, raw in footers.items():
+            footer = raw if isinstance(raw, Footer) else Footer.model_validate(raw)
+            if not footer.content:
+                continue
+            blocks = group_elements(footer.content)
+            parts: list[str] = []
+            for block in blocks:
+                r = self._visit_block(block)
+                if r is not None and r.strip():
+                    parts.append(r)
+            if parts:
+                inner = "\n\n".join(parts)
+                data: dict[str, Any] = {"id": footer_id}
+                result.append(f"{opening_tag(TagType.FOOTER, data)}\n{inner}\n{_closing_tag_str(TagType.FOOTER)}")
+        return result
+
+
+def _closing_tag_str(tag_type: TagType | str) -> str:
+    """Generate a closing comment tag string."""
+    return f"<!-- /{tag_type} -->"
+
+
+def _optional_color_to_hex(color: OptionalColor | None) -> str | None:
+    """Convert an OptionalColor to a hex string like ``#FF0000``.
+
+    Returns ``None`` if the color is unset, transparent, or has no RGB values.
+    """
+    if not color or not color.color or not color.color.rgbColor:
+        return None
+    rgb = color.color.rgbColor
+    r = int((rgb.red or 0) * 255)
+    g = int((rgb.green or 0) * 255)
+    b = int((rgb.blue or 0) * 255)
+    if r == 0 and g == 0 and b == 0:
+        return None
+    return f"#{r:02X}{g:02X}{b:02X}"
 
 
 def _escape_pipe(text: str) -> str:

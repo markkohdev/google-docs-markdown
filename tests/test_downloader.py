@@ -88,7 +88,7 @@ class TestDownloaderDownload:
 
         assert len(result) == 1
         assert "First tab" in result
-        assert result["First tab"].startswith("# Markdown Conversion Example")
+        assert "Markdown Conversion Example" in result["First tab"]
 
     def test_multi_tab_flat_and_nested(self) -> None:
         client = _mock_client(_load_raw(MULTI_TAB_JSON))
@@ -184,7 +184,7 @@ class TestDownloaderDownloadToFiles:
         doc_root = tmp_path / "Markdown Conversion Example - Single-Tab"
         assert written["First tab"] == doc_root / "First tab.md"
         content = written["First tab"].read_text(encoding="utf-8")
-        assert content.startswith("# Markdown Conversion Example - Single Tab")
+        assert "Markdown Conversion Example - Single Tab" in content
         assert content.endswith("\n")
 
     def test_tab_filter_on_disk(self, tmp_path: Path) -> None:

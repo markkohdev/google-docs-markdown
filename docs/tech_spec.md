@@ -1,8 +1,8 @@
 # Google Docs Markdown - Technical Specification
 
-**Document Version:** 1.5.0  
+**Document Version:** 1.6.0  
 **Date:** 2026-01-08  
-**Last Updated:** 2026-03-26 (Phase 2.4–2.5 complete: code block detection via U+E907 bookends, image serialization via InlineObjectElement; CLI enhancements with file conflict handling and stale cleanup)  
+**Last Updated:** 2026-03-26 (Phase 2.6 complete: non-markdown element annotations, style comments, embedded metadata, suggestions, headers/footers)  
 **Authors:** Mark Koh  
 **Status:** Active
 
@@ -113,7 +113,9 @@ The tool is organized into several distinct components that work together to pro
 
 - **CLI** (`cli.py`): Parses command-line arguments via `typer`, orchestrates operations, provides user feedback. Commands: `download` (with `--force`, file conflict handling, stale cleanup), `upload` (stub), `diff` (stub), `list-tabs`, `setup`.
 - **Downloader** (`downloader.py`): Orchestrates fetching a `Document` via `GoogleDocsClient`, iterating tabs recursively, serializing each tab via `MarkdownSerializer`, and writing `.md` files to a directory structure. Supports selective tab download via `tab_names` filter, file conflict detection (`FileConflictError`), stale file cleanup (`find_stale_files`), and empty directory removal (`remove_empty_dirs`).
-- **MarkdownSerializer** (`markdown_serializer.py`): Converts a single `DocumentTab` Pydantic model to a Markdown string. Uses a block-grouper pre-processing pass (`block_grouper.py`) to group list items and code blocks before visitor-style traversal. Handles: headings, paragraphs, bold/italic/strikethrough/underline formatting, links, rich links, horizontal rules, footnotes, ordered/unordered/nested lists, tables (pipe format), code blocks (U+E907 boundary detection), and images (InlineObjectElement → `![alt](url)`). Remaining unsupported elements (Person, DateElement, AutoText, etc.) are silently skipped (Phase 2.6).
+- **MarkdownSerializer** (`markdown_serializer.py`): Converts a single `DocumentTab` Pydantic model to a Markdown string. Uses a block-grouper pre-processing pass (`block_grouper.py`) to group list items and code blocks before visitor-style traversal. Handles all Google Docs element types: headings, paragraphs, bold/italic/strikethrough/underline formatting, links, rich links (with metadata), horizontal rules, footnotes, ordered/unordered/nested lists, tables (pipe format), code blocks (U+E907 boundary detection), images, Person mentions, DateElements, AutoText, Equations, SectionBreaks, PageBreaks, ColumnBreaks, TableOfContents, style annotations (color, font, size), suggestion markers, chip placeholders, and headers/footers.
+- **CommentTags** (`comment_tags.py`): Serialization and parsing for wrapping HTML comment annotations (`<!-- type: {json} -->content<!-- /type -->`). Provides `TagType` enum, `opening_tag()`, `closing_tag()`, `wrap_tag()`, and `parse_tags()`.
+- **Metadata** (`metadata.py`): Handles the embedded metadata block at the bottom of markdown files (`<!-- google-docs-metadata ... -->`). Provides `serialize_metadata()`, `parse_metadata()`, and `strip_metadata()`.
 - **BlockGrouper** (`block_grouper.py`): Pre-processing pass that groups `StructuralElement` lists into typed blocks: `ListBlock` (consecutive bullet paragraphs), `CodeBlock` (paragraphs between U+E907 bookend markers). All other elements pass through unchanged.
 - **Uploader** (`uploader.py`, planned): Will convert Markdown back to Google Docs via surgical `batchUpdate` requests. See Section 5.9 for the atomic-edit strategy.
 - **GoogleDocsClient** (`client.py`): High-level typed client that returns Pydantic models. Composes `GoogleDocsTransport`. Most consumers (CLI, downloader, uploader) should use this.
@@ -208,7 +210,7 @@ The diff engine is critical for efficient updates and conflict resolution:
 
 - **Markdown Conversion**:
   - **Serialization (Pydantic → Markdown)**: `MarkdownSerializer` uses a two-stage pipeline: (1) `block_grouper.py` groups `StructuralElement` lists into typed blocks (`ListBlock`, `CodeBlock`, or pass-through `StructuralElement`), then (2) visitor-style dispatch on optional fields (`if element.paragraph:`, `if element.textRun:`) traverses the Pydantic model tree and builds Markdown strings directly. No markdown library needed. Note: the models use optional-field composition (not class hierarchies), so dispatch is via field presence checks, not `isinstance()`. Block-level dispatch uses `isinstance()` on the block-grouper dataclasses.
-  - **Currently serialized elements**: headings (H1–H6, Title, Subtitle), paragraphs, bold, italic, strikethrough, underline, links, rich links, horizontal rules, footnotes, ordered/unordered/nested lists, tables (pipe format), code blocks (U+E907 detection), images (`InlineObjectElement` → `![alt](contentUri)`)
+  - **Currently serialized elements**: headings (H1–H6, Title with `<!-- title -->`, Subtitle with `<!-- subtitle -->`), paragraphs, bold, italic, strikethrough, underline, links, rich links (with `<!-- rich-link -->` metadata), horizontal rules, footnotes, ordered/unordered/nested lists, tables (pipe format), code blocks (U+E907 detection), images (`InlineObjectElement` → `![alt](contentUri)`), Person (`<!-- person -->` wrapping), DateElement (`<!-- date -->` wrapping), AutoText, Equation, SectionBreak, PageBreak, ColumnBreak, TableOfContents, style annotations (`<!-- style -->` for non-default colors/fonts/sizes), suggestion markers (`<!-- suggestion -->`), chip placeholders (`<!-- chip-placeholder -->`), headers/footers
   - **Deserialization (Markdown → API requests)**: For the **update** case, the approach is to diff two Markdown strings (serialized current doc vs. local file) and map changes back to API indices for surgical `batchUpdate` requests. For the **create** case, `markdown-it-py` may be used to parse Markdown into tokens and generate `batchUpdate` requests. See Section 5.9 for details.
 
 - **Note**: Pydantic models provide both type checking and runtime validation. When using `GoogleDocsClient`, API responses are converted to Pydantic models automatically, enabling attribute access throughout the codebase. When using `GoogleDocsTransport` directly, raw dicts are returned for maximum fidelity (useful for test fixtures, debugging, etc.).
@@ -284,88 +286,104 @@ Google Docs supports headers, footers, and footnotes as separate document segmen
 
 Markdown has limited support for many advanced Google Docs features. The tool must serialize and deserialize these features in a way that preserves functionality while maintaining editability where appropriate.
 
-#### 5.8.1 Serialization Strategy
+#### 5.8.1 Serialization Strategy (Implemented — Phase 2.6)
 
-The tool uses two serialization approaches based on whether users might want to edit the feature directly in Markdown:
+**Status:** Implemented in `comment_tags.py` and `metadata.py`.
 
-**1. Inline Comments (User-Editable, Round-Trippable Features)**
+The tool uses a consistent **wrapping HTML comment pattern** for all non-markdown elements:
 
-For features that users might want to edit directly in Markdown, serialize as HTML comments within the Markdown file. Features with dedicated `batchUpdate` insert requests can be **round-tripped** (recreated on upload):
+```
+<!-- type: {json_data} -->visible content<!-- /type -->
+```
 
-- **Date Elements** (round-trippable via `insertDate`): Serialize as HTML comments with structured data that maps to `DateElementProperties`
-  - Example: `<!-- date: {"timestamp": "1736294400", "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED", "locale": "en"} -->`
-  - Users can edit the date value directly in the comment
-  - On upload, parse the comment and recreate the date widget via `insertDate` with full `dateElementProperties`
-- **Person Mentions** (round-trippable via `insertPerson`): Serialize as inline comments
-  - Example: `<!-- person: {"email": "john@example.com", "name": "John Doe"} -->`
-  - On upload, recreate the person widget via `insertPerson` with `personProperties`
-- **Specific Font Colors**: Serialize as HTML comments when color is non-standard or important
-  - Example: `<!-- font-color: {"hex": "#FF5733", "name": "custom-orange"} -->`
-  - Allows users to modify colors directly in Markdown
-- **Other User-Editable Metadata**: Any feature where direct editing in Markdown is valuable
+Self-closing variant for elements with no visible content:
 
-**2. JSON Metadata (Non-Editable or Complex Features)**
+```
+<!-- type: {json_data} -->
+```
 
-For features that are complex, rarely edited, or require structured data, serialize as JSON:
+**Design Principles:**
+- **Content editability:** Display text is visible in rendered markdown; metadata is in the comment tags
+- **Self-contained files:** No sidecar files; document-level metadata is embedded as an HTML comment at the bottom of the markdown
+- **Round-trip fidelity:** Enough metadata to reconstruct elements without destroying existing formatting
+- **Non-default-only style annotations:** Style comments only emitted for properties that differ from the document's named style defaults
 
-- **Complex Formatting**: Advanced formatting features that don't map to Markdown
-- **Document-Level Metadata**: Features that apply to the entire document
-- **Embedded Objects**: Complex embedded content (charts, drawings, etc.)
+**Element Annotation Formats (Implemented):**
 
-**JSON Storage Options**:
+| Element | Format | Round-trip |
+|---------|--------|------------|
+| Person | `<!-- person: {"email": "x@y.com"} -->Name<!-- /person -->` | Yes (`insertPerson`) |
+| Date | `<!-- date: {"format": "...", ...} -->displayText<!-- /date -->` | Yes (`insertDate`) |
+| Style | `<!-- style: {"color": "#FF0000"} -->text<!-- /style -->` | Yes (`updateTextStyle`) |
+| Suggestion (insert) | `<!-- suggestion: {"id": "...", "type": "insertion"} -->text<!-- /suggestion -->` | Preserve-in-place |
+| Suggestion (delete) | `<!-- suggestion: {"id": "...", "type": "deletion"} -->text<!-- /suggestion -->` | Preserve-in-place |
+| Rich Link | `<!-- rich-link: {"mimeType": "..."} -->[title](uri)<!-- /rich-link -->` | Fallback to hyperlink |
+| Section break | `<!-- section-break: {"type": "..."} -->` (mid-doc only) | Preserve-in-place |
+| Page break | `<!-- page-break -->` | Preserve-in-place |
+| Column break | `<!-- column-break -->` | Preserve-in-place |
+| TOC | `<!-- table-of-contents -->` | Auto-generated |
+| AutoText | `<!-- auto-text: {"type": "PAGE_NUMBER"} -->` | Preserve-in-place |
+| Equation | `<!-- equation -->` | Preserve-in-place |
+| Chip placeholder | `<!-- chip-placeholder -->` (U+E907 with no API data) | Preserve-in-place |
+| Title marker | `<!-- title -->` before `# text` | Yes (`updateParagraphStyle`) |
+| Subtitle marker | `<!-- subtitle -->` before `*text*` | Yes (`updateParagraphStyle`) |
+| Header | `<!-- header: {"id": "..."} -->content<!-- /header -->` | Via `segmentId` |
+| Footer | `<!-- footer: {"id": "..."} -->content<!-- /footer -->` | Via `segmentId` |
 
-- **Option A: Bottom of Markdown File**: Append JSON as a code block at the end of the Markdown file
-  - Format: `<!-- google-docs-metadata -->` followed by a JSON code block
-  - Pros: Single file, easy to track
-  - Cons: Can clutter the Markdown file
-- **Option B: Companion JSON File**: Store in a separate `.json` file alongside the Markdown file
-  - Format: `document.md` → `document.metadata.json`
-  - Include comments in JSON (using JSON5 or JSONC format if supported)
-  - Pros: Keeps Markdown clean, better for complex metadata
-  - Cons: Two files to manage
+**Style Comment Details:**
+- Style defaults extracted from NORMAL_TEXT named style (font, size, color)
+- Heading text uses the heading's named style font-size as the expected size (not NORMAL_TEXT)
+- Common Google Docs fonts (Arial, Roboto, etc.) suppressed from font-family annotations to reduce noise
+- Style wraps OUTSIDE markdown formatting: `<!-- style: {...} -->**bold**<!-- /style -->`
 
-**Recommendation**: Support both options, with companion JSON file as the default for complex documents. Allow users to configure preference via CLI flag or config file.
+**Embedded Metadata Block:**
+
+Document-level properties stored as an HTML comment at the bottom of the markdown file:
+
+```markdown
+<!-- google-docs-metadata
+{
+  "documentId": "...",
+  "tabId": "t.0",
+  "revisionId": "...",
+  "defaultStyles": {"fontFamily": "Proxima Nova", "fontSize": 11}
+}
+-->
+```
+
+Safety: `>` escaped as `\u003e` in JSON string values to prevent premature `-->` closure.
 
 #### 5.8.2 Deserialization Strategy
 
 When uploading Markdown back to Google Docs:
 
-- **Parse Comments**: Extract HTML comments and convert back to Google Docs API format
-  - For `<!-- person: {...} -->` comments: generate `insertPerson` batchUpdate requests with `personProperties`
-  - For `<!-- date: {...} -->` comments: generate `insertDate` batchUpdate requests with `dateElementProperties`
-  - For other comments: convert to appropriate API format or preserve as-is
-- **Parse JSON**: Read JSON metadata (from file or bottom of Markdown) and apply to document
-- **Preserve Order**: Maintain the order of features as they appear in the original document
-- **Validation**: Validate that serialized data can be properly deserialized before upload
-- **One-Way Elements**: Some elements can be read but not recreated via the API (e.g., `RichLink` — no `insertRichLink` exists). On upload, these fall back to the closest available alternative (e.g., a regular hyperlink via `InsertText` + `UpdateTextStyle` with `link.url`).
+- **Parse Comment Tags**: The `comment_tags.parse_tags()` function extracts all comment tags from markdown text, returning structured `ParsedTag` objects with type, data, content, and position spans
+- **Parse Metadata Block**: The `metadata.parse_metadata()` function extracts the embedded metadata JSON
+- **Strip Metadata**: The `metadata.strip_metadata()` function removes the metadata block for content-only diffing
+- **Widget Recreation**: For `<!-- person -->` tags → `insertPerson` requests; for `<!-- date -->` tags → `insertDate` requests
+- **One-Way Elements**: `RichLink` falls back to regular hyperlink; `AutoText`/`Equation` preserved in-place only
+- **Source Map Strategy**: At upload time, the serializer produces both canonical markdown and a source map (mapping markdown positions to API indices) from the current document. The diff operates on canonical vs. local markdown, and the source map translates diff positions to surgical `batchUpdate` operations.
 
-#### 5.8.3 Examples (Illustrative, actual implementations will depend on the API and the specific features being serialized/deserialized)
+#### 5.8.3 Examples
 
 **Person Mention in Markdown** (round-trippable via `insertPerson`):
 ```markdown
-Assigned to <!-- person: {"email": "john@example.com", "name": "John Doe"} --> for review.
+Assigned to <!-- person: {"email": "john@example.com"} -->John Doe<!-- /person --> for review.
 ```
 
 **Date Element in Markdown** (round-trippable via `insertDate`):
 ```markdown
-The meeting is scheduled for <!-- date: {"timestamp": "1736899200", "dateFormat": "DATE_FORMAT_MONTH_DAY_YEAR_ABBREVIATED", "locale": "en"} -->.
+Meeting on <!-- date: {"format": "DATE_FORMAT_ISO8601", "locale": "en", "timestamp": "2026-01-08T12:00:00Z"} -->2026-01-08<!-- /date -->.
 ```
 
-**Rich Link in Markdown** (download only — no `insertRichLink` API; falls back to regular hyperlink on upload):
+**Styled Text** (round-trippable via `updateTextStyle`):
 ```markdown
-[Project Roadmap](https://docs.google.com/spreadsheets/d/abc123)
+<!-- style: {"color": "#FF0000", "background-color": "#FFFF00"} -->highlighted red text<!-- /style -->
 ```
 
-**Complex Metadata at Bottom of Markdown**:
+**Rich Link** (falls back to regular hyperlink on upload):
 ```markdown
-<!-- google-docs-metadata -->
-```json
-{
-  "fontColors": {
-    "custom-orange": "#FF5733"
-  }
-}
-```
+<!-- rich-link: {"mimeType": "application/vnd.google-apps.spreadsheet"} -->[Project Roadmap](https://docs.google.com/spreadsheets/d/abc123)<!-- /rich-link -->
 ```
 
 ### 5.9 U+E907 Widget Markers and Non-Text Element Handling
@@ -422,7 +440,7 @@ This eliminates the need to reconstruct widgets from scratch -- we only edit the
 
 #### 5.9.4 Serialization Behavior
 
-- **Download** (implemented): `U+E907` characters are stripped from Markdown output in two places: (1) `_visit_code_block()` strips markers when rendering `CodeBlock` content, (2) `_visit_text_run()` strips any remaining `U+E907` from inline text (smart chip placeholders).
+- **Download** (implemented): `U+E907` characters are handled in two places: (1) `_visit_code_block()` strips markers when rendering `CodeBlock` content, (2) `_visit_text_run()` replaces remaining `U+E907` occurrences with `<!-- chip-placeholder -->` to mark the position of smart chips without API data (status chips, file chips, place chips).
 - **Upload** (planned): The diff engine must be aware of `U+E907` positions so it can avoid targeting them with edit operations. Preserving U+E907 index positions in the internal representation is deferred to Phase 3 (upload implementation).
 
 ### 5.10 Upload Strategy -- Atomic Edits, Not Reconstruction

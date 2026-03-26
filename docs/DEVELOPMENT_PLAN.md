@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-26 (Phase 2.1–2.5 completed — inline elements, lists with block grouper, tables, code blocks, images; CLI enhancements with file conflict handling and stale cleanup)  
-**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.5 — complete**; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
+**Last Updated:** 2026-03-26 (Phase 2.1–2.6 completed — inline elements, lists, tables, code blocks, images, non-markdown elements, metadata, suggestions, headers/footers; CLI enhancements with file conflict handling and stale cleanup)  
+**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.6 — complete**; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
 
 ## Overview
 
@@ -193,44 +193,51 @@ Google Docs code blocks are NOT a formal API element. They are detected via a co
 
 This sub-phase handles Google Docs features that have no direct Markdown equivalent. It absorbs the metadata strategy work originally planned for Phase 5.
 
-##### 2.6.1: Metadata Strategy Decision
-- [ ] Decide and implement the full representation strategy for non-Markdown elements (HTML comments, companion JSON, or both)
-- [ ] Define metadata format for each element type
-- [ ] Decide on `RichLink` metadata — currently serialized as plain `[title](uri)` (Phase 2.1), indistinguishable from a regular link. Decide whether to add inline metadata (e.g., `[title](uri)<!-- richLink: {"mimeType": "...", "richLinkId": "..."} -->`) for user visibility, upload warnings, and future-proofing if `insertRichLink` is ever added to the API. Note: no `insertRichLink` batchUpdate exists today, so rich links fall back to regular hyperlinks on upload regardless.
+##### 2.6.1: Metadata Strategy Decision ✅
+- [x] Decided on wrapping HTML comment pattern: `<!-- type: {json} -->content<!-- /type -->` for inline element-level annotations
+- [x] Defined metadata format for each element type (see `comment_tags.py` `TagType` enum)
+- [x] `RichLink` wrapped in `<!-- rich-link: {"mimeType": "..."} -->[title](uri)<!-- /rich-link -->` when `mimeType` is present
+- [x] Embedded metadata block at bottom of markdown file (`<!-- google-docs-metadata ... -->`) for document-level properties — no sidecar files
+- [x] Created `comment_tags.py` module (serialization, parsing, tag registry) and `metadata.py` module (embedded block serialize/parse/strip)
 
-##### 2.6.2: Non-Markdown Element Handling
+##### 2.6.2: Non-Markdown Element Handling ✅
 
-**First-class ParagraphElements with full API read support** (see `TECH_SPEC.md` Section 5.9.1 for the full API capability matrix):
-- [ ] Handle `Person` mentions — first-class `ParagraphElement` with `personProperties.email` + `.name`; serialize as `<!-- person: {...} -->` inline comment. **Round-trippable** via `insertPerson` batchUpdate (see Phase 3.1)
-- [ ] Handle `DateElement` — first-class `ParagraphElement` with full `dateElementProperties` (format, locale, timezone, timestamp, displayText); serialize as `<!-- date: {...} -->` inline comment. **Round-trippable** via `insertDate` batchUpdate (see Phase 3.1)
-- [ ] Handle `RichLink` metadata per 2.6.1 decision — update `_visit_rich_link` in `markdown_serializer.py` if metadata is added
-- [ ] Handle `AutoText` (`type`: PAGE_NUMBER, PAGE_COUNT) — readable but **no write API** (`insertAutoText` does not exist); must be preserved in-place during upload
-- [ ] Handle equations (`Equation`) — opaque element (no content exposed by API, no `insertEquation`); serialize as placeholder comment
+**First-class ParagraphElements with full API read support:**
+- [x] Handle `Person` mentions — `<!-- person: {"email": "..."} -->Name<!-- /person -->`. **Round-trippable** via `insertPerson` batchUpdate
+- [x] Handle `DateElement` — `<!-- date: {"format": "...", "locale": "...", ...} -->displayText<!-- /date -->`. **Round-trippable** via `insertDate` batchUpdate
+- [x] Handle `RichLink` metadata — wrapped in `<!-- rich-link: {"mimeType": "..."} -->` when mimeType present; falls back to plain `[title](uri)` when no mimeType
+- [x] Handle `AutoText` — `<!-- auto-text: {"type": "PAGE_NUMBER"} -->`
+- [x] Handle `Equation` — `<!-- equation -->`
 
 **Other non-Markdown elements:**
-- [ ] Handle colored text (`foregroundColor`, `backgroundColor`)
-- [ ] Handle column breaks (`ColumnBreak`)
-- [ ] Handle section breaks (`SectionBreak` → HTML comment with section style info)
-- [ ] Handle table of contents (`TableOfContents` → mark as auto-generated)
-- [ ] Handle `TITLE` and `SUBTITLE` named styles — currently serialized as lossy Markdown equivalents (`TITLE` → `#` same as `HEADING_1`, `SUBTITLE` → italic `*text*`). Add metadata (per 2.6.1 strategy) so they can be distinguished from `HEADING_1` / italic text and round-tripped on upload via `updateParagraphStyle` with the correct `namedStyleType`
+- [x] Handle colored text (`foregroundColor`, `backgroundColor`) — `<!-- style: {"color": "#FF0000", "background-color": "#0000FF"} -->text<!-- /style -->` (only non-default properties emitted; default determined by NORMAL_TEXT named style)
+- [x] Handle non-default font-size and font-family via same `<!-- style -->` wrapping (common Google Docs fonts like Arial excluded from font-family checks to reduce noise)
+- [x] Handle column breaks — `<!-- column-break -->`
+- [x] Handle page breaks — `<!-- page-break -->`
+- [x] Handle section breaks — `<!-- section-break: {"type": "..."} -->` (leading section break at `body.content[0]` always skipped; only mid-document breaks serialized)
+- [x] Handle table of contents — `<!-- table-of-contents -->` (body content omitted; auto-generated by Docs)
+- [x] Handle `TITLE` and `SUBTITLE` — `<!-- title -->` / `<!-- subtitle -->` markers precede the paragraph
+- [x] Handle U+E907 chip placeholders — `<!-- chip-placeholder -->` replaces `\ue907` in TextRun content for chips without API data (status, file, place chips)
 
-##### 2.6.3: Suggestion Handling
-- [ ] Serialize Google Docs suggestions (`suggestedInsertionIds` / `suggestedDeletionIds`) with visible markers (e.g., HTML comments around suggested text) so users can distinguish suggested vs. accepted content
+##### 2.6.3: Suggestion Handling ✅
+- [x] Suggested insertions wrapped in `<!-- suggestion: {"id": "...", "type": "insertion"} -->text<!-- /suggestion -->`
+- [x] Suggested deletions wrapped in `<!-- suggestion: {"id": "...", "type": "deletion"} -->text<!-- /suggestion -->`
 
-##### 2.6.4: Headers, Footers, and Footnotes
-- [ ] Extract headers from document (per-tab for multi-tab documents)
-- [ ] Extract footers from document (per-tab for multi-tab documents)
-- [ ] Serialize headers/footers (as separate files or metadata)
+##### 2.6.4: Headers, Footers, and Footnotes ✅
+- [x] Headers serialized as `<!-- header: {"id": "..."} -->content<!-- /header -->` blocks
+- [x] Footers serialized as `<!-- footer: {"id": "..."} -->content<!-- /footer -->` blocks
+- [x] Footnotes (already implemented in Phase 2.1)
 
-##### 2.6.5: Testing
-- [ ] Test with example doc containing all element types
-- [ ] Test metadata round-trip (serialize then parse)
-- [ ] Test suggestion markers
-- [ ] Verify all features work across tabs in multi-tab documents
+##### 2.6.5: Testing ✅
+- [x] 74 new Phase 2.6 tests: `test_comment_tags.py` (16 tests), `test_metadata.py` (10 tests), `test_phase26_serializer.py` (48 tests)
+- [x] Comment tag serialize + parse round-trip tests
+- [x] Embedded metadata block round-trip tests
+- [x] Fixture-based tests verifying person, date, chips, title/subtitle, TOC, rich link, suggestions against Multi-Tab fixture
+- [x] Style default detection tests, custom font tests, heading font-size inheritance tests
 
-**Deliverable:** Can download complex Google Docs with tables, images, lists, code blocks, links, footnotes, headers/footers, section breaks, TOC, suggestions, smart chips, and all paragraph elements, with full support for multi-tab documents
+**Deliverable:** Can download complex Google Docs with tables, images, lists, code blocks, links, footnotes, headers/footers, section breaks, TOC, suggestions, smart chips, and all paragraph elements, with full support for multi-tab documents. Non-markdown elements preserved via consistent HTML comment annotation pattern. Each file is self-contained with embedded metadata.
 
-**Phase 2 progress note:** Phases 2.1–2.5 are complete. The serializer handles inline formatting, links, strikethrough, underline, rich links, horizontal rules, footnotes, ordered/unordered/nested lists, tables, code blocks (U+E907 detection), and images (contentUri references). Image download to local `imgs/` directory deferred to Phase 7 (image storage integration). Phase 2.6 (non-Markdown elements, metadata, suggestions) is next.
+**Phase 2 progress note:** Phases 2.1–2.6 are complete. Total test count: 355 unit tests (164 existing + 74 new Phase 2.6 + 117 others) + 12 integration tests.
 
 ---
 
@@ -555,19 +562,20 @@ This document should be used for testing throughout development.
 - ✅ Phase 1.4: Basic Downloader — `MarkdownSerializer` (visitor-style traversal of `DocumentTab` → `Body` → `Paragraph` → `TextRun`, handles headings/bold/italic/whitespace normalization) and `Downloader` (multi-tab orchestration, recursive nested tabs, directory/file I/O, filename sanitization). Location/Range `tabId`/`segmentId` deferred to Phase 3.
 - ✅ Phase 1.5: CLI Download Command — `download` wired to `Downloader.download_to_files()`, supports `--output`/`-o`, `--tabs`/`-t`, `--force`/`-f`, file conflict handling, stale file cleanup, error handling, summary output
 - ✅ Phase 1.6: Python API — `Downloader.download()`, `download_to_files(overwrite=)`, `get_document_title()`, `get_tabs()` (returns `TabSummary` tree), `get_nested_tabs()`, `extract_document_id()`, plus `find_stale_files()` and `remove_empty_dirs()` utility functions
-- ✅ Phase 1.7: Testing — 291 unit tests (serializer 102, block grouper 15, downloader 47, CLI 21, transport 15, client 6, models 7, setup 45, gcloud 21, plus others) + 12 integration tests with live API (`tests/test_integration.py`, `@pytest.mark.integration`)
+- ✅ Phase 1.7: Testing — 355+ unit tests (serializer 102, block grouper 15, downloader 47, CLI 21, transport 15, client 6, models 7, setup 45, gcloud 21, comment_tags 16, metadata 10, phase26_serializer 48, plus others) + 12 integration tests with live API (`tests/test_integration.py`, `@pytest.mark.integration`)
 
 - ✅ Phase 2.1: Simple inline/block elements — links (`TextStyle.link.url` → `[text](url)`), strikethrough (`~~text~~`), underline (`<u>text</u>`, suppressed for links), rich links (`[title](uri)`), horizontal rules (`---`), footnote references (`[^N]`) with footnote content from `DocumentTab.footnotes`
 - ✅ Phase 2.2: Lists — introduced `block_grouper.py` pre-processing pass that groups consecutive bullet paragraphs into `ListBlock` objects. Supports ordered (DECIMAL, ALPHA, ROMAN variants), unordered (GLYPH_TYPE_UNSPECIFIED), and nested lists (4-space indent per nesting level). Different `listId`s produce separate list blocks.
 - ✅ Phase 2.3: Tables — `_visit_table` in `markdown_serializer.py` renders `Table` → Markdown pipe tables. Handles `tableRowStyle.tableHeader` for header detection (falls back to first row), multi-paragraph cells (`<br>` join), formatted cell content (reuses `_collect_paragraph_text`), pipe escaping.
 - ✅ Phase 2.4: Code blocks — `CodeBlock` dataclass in `block_grouper.py` groups paragraphs between U+E907 bookend markers. `_visit_code_block` in `markdown_serializer.py` renders as bare fenced code blocks (no language identifier — API doesn't expose it). U+E907 stripped from all `TextRun.content` (handles both code block markers and smart chip placeholders). Monospace font helper (`_paragraph_has_monospace_font`) supports Roboto Mono, Courier New, Consolas, Source Code Pro.
 - ✅ Phase 2.5: Images — `_visit_inline_object` in `markdown_serializer.py` renders `InlineObjectElement` → `![alt](contentUri)`. Looks up `DocumentTab.inlineObjects[objectId]` for embedded object properties. Uses `description` or `title` for alt text. Currently references Google-hosted `contentUri` directly; local image download deferred to Phase 7 (image storage integration).
+- ✅ Phase 2.6: Non-Markdown Elements — Full annotation system via wrapping HTML comments (`<!-- type: {json} -->content<!-- /type -->`). Handles: Person, DateElement, AutoText, Equation, SectionBreak, ColumnBreak, PageBreak, TableOfContents, RichLink metadata, TITLE/SUBTITLE markers, style comments (color, font, size), suggestion markers, chip placeholders (U+E907), headers/footers. Embedded metadata block at bottom of markdown file for document-level properties. New modules: `comment_tags.py`, `metadata.py`. 74 new tests.
 
 **In Progress:**
 - **Phase 3:** Upload — client primitives and CLI `upload`/`list-tabs` scaffold done; **Markdown deserializer**, **`uploader.py`**, directory/tab mapping, and working upload CLI still to do
 
 **Up Next:**
-- **Phase 2.6:** Non-Markdown elements (Person, DateElement, AutoText, Equation, SectionBreak, ColumnBreak, TableOfContents), metadata strategy, suggestions, headers/footers
+- **Phase 3.1:** Uploader implementation — atomic-edit strategy using source map from serializer, widget recreation via `insertPerson`/`insertDate` from comment tags, RichLink-to-hyperlink fallback
 
 **Remaining Phase 3 Tasks:**
 - `uploader.py` with atomic-edit strategy (diff Markdown strings → map to API indices → surgical batchUpdate), widget recreation via `insertPerson`/`insertDate` for round-trippable elements, RichLink-to-hyperlink fallback, create-new-document flow (may use `markdown-it-py`), multi-tab directory support, Python upload API, round-trip and integration tests
