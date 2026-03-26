@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-26 (Phase 2.1–2.2 completed — inline elements, lists with block grouper)  
-**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.2 — complete**; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
+**Last Updated:** 2026-03-26 (Phase 2.1–2.3 completed — inline elements, lists with block grouper, tables)  
+**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.3 — complete**; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
 
 ## Overview
 
@@ -142,18 +142,18 @@ Lists require a significant change to the serializer: consecutive `Paragraph` el
 - [x] Test list grouping across consecutive paragraphs
 - [x] Fixture-based test verifying real document lists render with bullet markers
 
-#### Phase 2.3: Tables
+#### Phase 2.3: Tables ✅
 
 ##### 2.3.1: Table Support
-- [ ] Handle `Table` structural element → Markdown pipe table
-- [ ] Traverse `TableRow` → `TableCell` → `content[]` (recursive `StructuralElement` list)
-- [ ] Handle header rows (`tableRowStyle.tableHeader`)
-- [ ] Handle cell content (can contain paragraphs with formatting)
-- [ ] Generate separator row (`| --- | --- |`)
+- [x] Handle `Table` structural element → Markdown pipe table
+- [x] Traverse `TableRow` → `TableCell` → `content[]` (recursive `StructuralElement` list)
+- [x] Handle header rows (`tableRowStyle.tableHeader`)
+- [x] Handle cell content (can contain paragraphs with formatting)
+- [x] Generate separator row (`| --- | --- |`)
 
 ##### 2.3.2: Testing
-- [ ] Unit tests with fixture table data
-- [ ] Test tables with formatted cell content
+- [x] Unit tests with fixture table data
+- [x] Test tables with formatted cell content
 
 #### Phase 2.4: Code Blocks (U+E907 boundary markers + monospace font heuristic)
 
@@ -548,16 +548,17 @@ This document should be used for testing throughout development.
 - ✅ Phase 1.4: Basic Downloader — `MarkdownSerializer` (visitor-style traversal of `DocumentTab` → `Body` → `Paragraph` → `TextRun`, handles headings/bold/italic/whitespace normalization) and `Downloader` (multi-tab orchestration, recursive nested tabs, directory/file I/O, filename sanitization). Unsupported elements (tables, images, lists, etc.) are silently skipped — those are Phase 2. Location/Range `tabId`/`segmentId` deferred to Phase 3.
 - ✅ Phase 1.5: CLI Download Command — `download` wired to `Downloader.download_to_files()`, supports `--output`/`-o`, `--tabs`/`-t`, error handling, summary output
 - ✅ Phase 1.6: Python API — `Downloader.download()`, `download_to_files()`, `get_document_title()`, `get_tabs()` (returns `TabSummary` tree), `get_nested_tabs()`, `extract_document_id()`
-- ✅ Phase 1.7: Testing — 227 unit tests (serializer 76, block grouper 10, downloader 32, CLI 13, transport 10, client 6, models 7, setup 27, gcloud 19) + 12 integration tests with live API (`tests/test_integration.py`, `@pytest.mark.integration`)
+- ✅ Phase 1.7: Testing — 241 unit tests (serializer 90, block grouper 10, downloader 32, CLI 13, transport 10, client 6, models 7, setup 27, gcloud 19, plus 27 more across other modules) + 12 integration tests with live API (`tests/test_integration.py`, `@pytest.mark.integration`)
 
 - ✅ Phase 2.1: Simple inline/block elements — links (`TextStyle.link.url` → `[text](url)`), strikethrough (`~~text~~`), underline (`<u>text</u>`, suppressed for links), rich links (`[title](uri)`), horizontal rules (`---`), footnote references (`[^N]`) with footnote content from `DocumentTab.footnotes`
 - ✅ Phase 2.2: Lists — introduced `block_grouper.py` pre-processing pass that groups consecutive bullet paragraphs into `ListBlock` objects. Supports ordered (DECIMAL, ALPHA, ROMAN variants), unordered (GLYPH_TYPE_UNSPECIFIED), and nested lists (4-space indent per nesting level). Different `listId`s produce separate list blocks.
+- ✅ Phase 2.3: Tables — `_visit_table` in `markdown_serializer.py` renders `Table` → Markdown pipe tables. Handles `tableRowStyle.tableHeader` for header detection (falls back to first row), multi-paragraph cells (`<br>` join), formatted cell content (reuses `_collect_paragraph_text`), pipe escaping. 10 unit tests + 2 fixture tests.
 
 **In Progress:**
 - **Phase 3:** Upload — client primitives and CLI `upload`/`list-tabs` scaffold done; **Markdown deserializer**, **`uploader.py`**, directory/tab mapping, and working upload CLI still to do
 
 **Up Next:**
-- **Phase 2.3-2.6:** Tables, code blocks (U+E907 detection), images, non-Markdown elements + metadata strategy
+- **Phase 2.4-2.6:** Code blocks (U+E907 detection), images, non-Markdown elements + metadata strategy
 
 **Remaining Phase 3 Tasks:**
 - `uploader.py` with atomic-edit strategy (diff Markdown strings → map to API indices → surgical batchUpdate), widget recreation via `insertPerson`/`insertDate` for round-trippable elements, RichLink-to-hyperlink fallback, create-new-document flow (may use `markdown-it-py`), multi-tab directory support, Python upload API, round-trip and integration tests
