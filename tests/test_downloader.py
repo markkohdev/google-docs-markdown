@@ -135,16 +135,14 @@ class TestDownloaderDownloadToFiles:
         client = _mock_client(_load_raw(SINGLE_TAB_JSON))
         dl = Downloader(client=client)
 
-        # Use tmp_path as the working directory
-        output = tmp_path / "Markdown Conversion Example - Single-Tab"
-        written = dl.download_to_files("fake-id", output_dir=output)
+        written = dl.download_to_files("fake-id", output_dir=tmp_path)
 
         assert len(written) == 1
         assert "First tab" in written
         file_path = written["First tab"]
         assert file_path.exists()
         assert file_path.name == "First tab.md"
-        assert file_path.parent == output
+        assert file_path.parent == tmp_path / "Markdown Conversion Example - Single-Tab"
 
     def test_auto_names_from_title(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.chdir(tmp_path)
@@ -163,7 +161,7 @@ class TestDownloaderDownloadToFiles:
         dl = Downloader(client=client)
 
         written = dl.download_to_files("fake-id", output_dir=tmp_path / "out")
-        root = tmp_path / "out"
+        root = tmp_path / "out" / "Markdown Conversion Example - Multi-Tab"
 
         assert (root / "First tab.md").exists()
         assert (root / "Tab with child tab.md").exists()
@@ -176,6 +174,8 @@ class TestDownloaderDownloadToFiles:
         dl = Downloader(client=client)
 
         written = dl.download_to_files("fake-id", output_dir=tmp_path)
+        doc_root = tmp_path / "Markdown Conversion Example - Single-Tab"
+        assert written["First tab"] == doc_root / "First tab.md"
         content = written["First tab"].read_text(encoding="utf-8")
         assert content.startswith("# Markdown Conversion Example - Single Tab")
         assert content.endswith("\n")
@@ -185,8 +185,9 @@ class TestDownloaderDownloadToFiles:
         dl = Downloader(client=client)
 
         written = dl.download_to_files("fake-id", output_dir=tmp_path, tab_names=["First tab"])
+        doc_root = tmp_path / "Markdown Conversion Example - Multi-Tab"
         assert len(written) == 1
-        assert (tmp_path / "First tab.md").exists()
+        assert (doc_root / "First tab.md").exists()
 
     def test_sanitizes_unsafe_title(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.chdir(tmp_path)

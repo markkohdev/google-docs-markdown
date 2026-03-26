@@ -75,20 +75,22 @@ class Downloader:
 
         Args:
             document_id: Google Doc document ID or URL.
-            output_dir: Root directory for output. If None, a directory named
-                after the document title is created in the current directory.
+            output_dir: Parent directory for output. A subdirectory named after
+                the document title is always created inside it. If None, the
+                current directory is used as the parent.
             tab_names: Optional list of tab titles to include.
 
         Returns:
             Dict mapping tab path to the written file Path.
         """
         doc = self._client.get_document(document_id)
+        title = doc.title or "Untitled Document"
+        doc_dir = sanitize_filename(title)
 
         if output_dir is None:
-            title = doc.title or "Untitled Document"
-            output_dir = Path(sanitize_filename(title))
+            output_dir = Path(doc_dir)
         else:
-            output_dir = Path(output_dir)
+            output_dir = Path(output_dir) / doc_dir
 
         tab_markdowns: dict[str, str] = {}
         self._collect_tabs(doc.tabs or [], tab_markdowns, prefix="", tab_filter=tab_names)

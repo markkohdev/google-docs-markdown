@@ -29,7 +29,10 @@ def download(
         typer.Option(
             "-o",
             "--output",
-            help="Output directory path (defaults to a directory named after the document title)",
+            help=(
+                "Parent directory for output (a subdirectory named after the"
+                " document title is created inside it; defaults to current directory)"
+            ),
         ),
     ] = None,
     tabs: Annotated[
