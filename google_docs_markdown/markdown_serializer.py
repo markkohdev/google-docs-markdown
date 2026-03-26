@@ -33,6 +33,7 @@ from google_docs_markdown.models.common import Footnote
 from google_docs_markdown.models.document import DocumentTab
 from google_docs_markdown.models.elements import (
     AutoText,
+    ColumnBreak,
     DateElement,
     Equation,
     FootnoteReference,
@@ -42,9 +43,11 @@ from google_docs_markdown.models.elements import (
     ParagraphElement,
     Person,
     RichLink,
+    SectionBreak,
     StructuralElement,
     Table,
     TableCell,
+    TableOfContents,
     TextRun,
 )
 
@@ -167,6 +170,10 @@ class MarkdownSerializer:
             return self._visit_paragraph(element.paragraph)
         if element.table:
             return self._visit_table(element.table)
+        if element.tableOfContents:
+            return self._visit_table_of_contents(element.tableOfContents)
+        if element.sectionBreak:
+            return self._visit_section_break(element.sectionBreak)
         return None
 
     def _visit_table(self, table: Table) -> str | None:
@@ -204,6 +211,21 @@ class MarkdownSerializer:
                 lines.append(separator)
 
         return "\n".join(lines)
+
+    def _visit_table_of_contents(self, _toc: TableOfContents) -> str:
+        """Render a TableOfContents as a comment (auto-generated, not editable)."""
+        return "<!-- table-of-contents (auto-generated) -->"
+
+    def _visit_section_break(self, section_break: SectionBreak) -> str | None:
+        """Render a SectionBreak as an HTML comment with style info, or skip."""
+        style = section_break.sectionStyle
+        if style and style.sectionType:
+            return f"<!-- section-break: {style.sectionType} -->"
+        return None
+
+    def _visit_column_break(self, _column_break: ColumnBreak) -> str:
+        """Render a ColumnBreak as an HTML comment."""
+        return "<!-- column-break -->"
 
     def _serialize_cell_content(self, cell: TableCell) -> str:
         """Serialize a table cell's content into a single inline string."""
@@ -268,6 +290,8 @@ class MarkdownSerializer:
             return self._visit_auto_text(element.autoText)
         if element.equation:
             return self._visit_equation(element.equation)
+        if element.columnBreak:
+            return self._visit_column_break(element.columnBreak)
         return None
 
     def _visit_text_run(self, text_run: TextRun) -> str | None:

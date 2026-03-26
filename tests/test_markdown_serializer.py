@@ -1331,6 +1331,149 @@ class TestSerializerEquation:
 
 
 # ---------------------------------------------------------------------------
+# SectionBreak, ColumnBreak, TableOfContents tests
+# ---------------------------------------------------------------------------
+
+
+class TestSerializerSectionBreak:
+    def test_section_break_with_type(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import SectionBreak
+        from google_docs_markdown.models.styles import SectionStyle
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        sectionBreak=SectionBreak(
+                            sectionStyle=SectionStyle(sectionType="CONTINUOUS"),
+                        )
+                    ),
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="After break\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    ),
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- section-break: CONTINUOUS -->" in result
+        assert "After break" in result
+
+    def test_section_break_next_page(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import SectionBreak
+        from google_docs_markdown.models.styles import SectionStyle
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        sectionBreak=SectionBreak(
+                            sectionStyle=SectionStyle(sectionType="NEXT_PAGE"),
+                        )
+                    ),
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="Text\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    ),
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- section-break: NEXT_PAGE -->" in result
+
+    def test_section_break_no_style_skipped(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import SectionBreak
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(sectionBreak=SectionBreak()),
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="Text\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    ),
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "section-break" not in result
+
+
+class TestSerializerColumnBreak:
+    def test_column_break(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import ColumnBreak
+
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(textRun=TextRun(content="Before ")),
+                                ParagraphElement(columnBreak=ColumnBreak()),
+                                ParagraphElement(textRun=TextRun(content="After\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- column-break -->" in result
+
+
+class TestSerializerTableOfContents:
+    def test_table_of_contents(self, serializer: MarkdownSerializer) -> None:
+        from google_docs_markdown.models.elements import TableOfContents
+
+        toc = TableOfContents(
+            content=[
+                StructuralElement(
+                    paragraph=Paragraph(
+                        elements=[ParagraphElement(textRun=TextRun(content="Chapter 1\n"))],
+                        paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                    )
+                ),
+            ]
+        )
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(tableOfContents=toc),
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[ParagraphElement(textRun=TextRun(content="Content\n"))],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    ),
+                ]
+            )
+        )
+        result = serializer.serialize(doc)
+        assert "<!-- table-of-contents (auto-generated) -->" in result
+        assert "Content" in result
+
+    def test_fixture_single_tab_toc(self, serializer: MarkdownSerializer) -> None:
+        doc = _load_document(SINGLE_TAB_JSON)
+        tab = doc.tabs[0]  # type: ignore[index]
+        result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
+        assert "<!-- table-of-contents (auto-generated) -->" in result
+
+    def test_fixture_single_tab_section_break(self, serializer: MarkdownSerializer) -> None:
+        doc = _load_document(SINGLE_TAB_JSON)
+        tab = doc.tabs[0]  # type: ignore[index]
+        result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
+        assert "<!-- section-break: CONTINUOUS -->" in result
+
+
+# ---------------------------------------------------------------------------
 # Image tests
 # ---------------------------------------------------------------------------
 
@@ -1582,7 +1725,7 @@ class TestSerializerFixtures:
         assert tab.documentTab is not None
         result = serializer.serialize(tab.documentTab)
 
-        assert result.startswith("# Markdown Conversion Example - Single Tab\n")
+        assert "# Markdown Conversion Example - Single Tab\n" in result
         assert "\n\n*Document Subtitle*\n\n" in result
         assert "\n\n# Project Overview: Markdown Tool Testing (Heading 1)\n\n" in result
         assert "\n\n## Section 1: Headings and Structure (Heading 2)\n\n" in result
@@ -1633,7 +1776,7 @@ class TestSerializerFixtures:
         multi = _load_document(MULTI_TAB_JSON)
         result = serializer.serialize(multi.tabs[0].documentTab)  # type: ignore
 
-        assert result.startswith("# Markdown Conversion Example - Multi-Tab\n")
+        assert "# Markdown Conversion Example - Multi-Tab\n" in result
         assert "**should be bold**" in result
         assert "*should be italic*" in result
         assert "\n\n## Section 1: Headings and Structure (Heading 2)\n\n" in result
