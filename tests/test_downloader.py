@@ -13,7 +13,14 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from google_docs_markdown.downloader import Downloader, TabSummary, sanitize_filename
+from google_docs_markdown.downloader import (
+    Downloader,
+    FileConflictError,
+    TabSummary,
+    find_stale_files,
+    remove_empty_dirs,
+    sanitize_filename,
+)
 from google_docs_markdown.models import Document
 
 RESOURCES_DIR = Path(__file__).parent / "resources" / "document_jsons"
@@ -212,6 +219,125 @@ class TestDownloaderDownloadToFiles:
         file_path = list(written.values())[0]
         assert file_path.exists()
         assert file_path.parent.name == "Untitled Document"
+
+    def test_overwrite_false_raises_on_existing(self, tmp_path: Path) -> None:
+        client = _mock_client(_load_raw(SINGLE_TAB_JSON))
+        dl = Downloader(client=client)
+
+        dl.download_to_files("fake-id", output_dir=tmp_path)
+
+        with pytest.raises(FileConflictError) as exc_info:
+            dl.download_to_files("fake-id", output_dir=tmp_path, overwrite=False)
+
+        assert len(exc_info.value.existing_paths) == 1
+        assert exc_info.value.existing_paths[0].name == "First tab.md"
+
+    def test_overwrite_false_succeeds_when_no_conflict(self, tmp_path: Path) -> None:
+        client = _mock_client(_load_raw(SINGLE_TAB_JSON))
+        dl = Downloader(client=client)
+
+        written = dl.download_to_files("fake-id", output_dir=tmp_path, overwrite=False)
+        assert len(written) == 1
+        assert written["First tab"].exists()
+
+    def test_overwrite_true_replaces_existing(self, tmp_path: Path) -> None:
+        client = _mock_client(_load_raw(SINGLE_TAB_JSON))
+        dl = Downloader(client=client)
+
+        dl.download_to_files("fake-id", output_dir=tmp_path)
+        written = dl.download_to_files("fake-id", output_dir=tmp_path, overwrite=True)
+
+        assert len(written) == 1
+        assert written["First tab"].exists()
+
+    def test_overwrite_false_multi_tab_lists_all_conflicts(self, tmp_path: Path) -> None:
+        client = _mock_client(_load_raw(MULTI_TAB_JSON))
+        dl = Downloader(client=client)
+
+        dl.download_to_files("fake-id", output_dir=tmp_path)
+
+        with pytest.raises(FileConflictError) as exc_info:
+            dl.download_to_files("fake-id", output_dir=tmp_path, overwrite=False)
+
+        assert len(exc_info.value.existing_paths) == 4
+
+
+# ---------------------------------------------------------------------------
+# find_stale_files
+# ---------------------------------------------------------------------------
+
+
+class TestFindStaleFiles:
+    def test_no_stale_files(self, tmp_path: Path) -> None:
+        md = tmp_path / "Tab.md"
+        md.write_text("content")
+        assert find_stale_files(tmp_path, {md}) == []
+
+    def test_detects_stale_file(self, tmp_path: Path) -> None:
+        current = tmp_path / "Tab A.md"
+        stale = tmp_path / "Tab B.md"
+        current.write_text("content")
+        stale.write_text("old content")
+        result = find_stale_files(tmp_path, {current})
+        assert result == [stale]
+
+    def test_ignores_non_md_files(self, tmp_path: Path) -> None:
+        current = tmp_path / "Tab.md"
+        current.write_text("content")
+        (tmp_path / "notes.txt").write_text("not markdown")
+        assert find_stale_files(tmp_path, {current}) == []
+
+    def test_detects_nested_stale(self, tmp_path: Path) -> None:
+        current = tmp_path / "Tab A.md"
+        current.write_text("content")
+        nested_dir = tmp_path / "Old Tab"
+        nested_dir.mkdir()
+        stale = nested_dir / "Child.md"
+        stale.write_text("old child")
+        result = find_stale_files(tmp_path, {current})
+        assert result == [stale]
+
+    def test_empty_dir_returns_empty(self, tmp_path: Path) -> None:
+        assert find_stale_files(tmp_path, set()) == []
+
+    def test_nonexistent_dir_returns_empty(self, tmp_path: Path) -> None:
+        assert find_stale_files(tmp_path / "nope", set()) == []
+
+    def test_returns_sorted(self, tmp_path: Path) -> None:
+        a = tmp_path / "A.md"
+        c = tmp_path / "C.md"
+        b = tmp_path / "B.md"
+        for f in (c, a, b):
+            f.write_text("x")
+        result = find_stale_files(tmp_path, set())
+        assert result == [a, b, c]
+
+
+# ---------------------------------------------------------------------------
+# remove_empty_dirs
+# ---------------------------------------------------------------------------
+
+
+class TestRemoveEmptyDirs:
+    def test_removes_empty_subdirs(self, tmp_path: Path) -> None:
+        empty = tmp_path / "sub" / "deep"
+        empty.mkdir(parents=True)
+        remove_empty_dirs(tmp_path)
+        assert not (tmp_path / "sub").exists()
+
+    def test_preserves_dirs_with_files(self, tmp_path: Path) -> None:
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        (sub / "file.md").write_text("keep")
+        remove_empty_dirs(tmp_path)
+        assert sub.exists()
+
+    def test_preserves_root(self, tmp_path: Path) -> None:
+        remove_empty_dirs(tmp_path)
+        assert tmp_path.exists()
+
+    def test_nonexistent_dir_is_noop(self, tmp_path: Path) -> None:
+        remove_empty_dirs(tmp_path / "nope")
 
 
 # ---------------------------------------------------------------------------

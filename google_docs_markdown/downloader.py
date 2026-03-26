@@ -15,6 +15,15 @@ from google_docs_markdown.markdown_serializer import MarkdownSerializer
 from google_docs_markdown.models.document import Tab
 
 
+class FileConflictError(Exception):
+    """Raised when output files already exist and *overwrite* is ``False``."""
+
+    def __init__(self, existing_paths: list[Path]) -> None:
+        self.existing_paths = existing_paths
+        paths_str = ", ".join(str(p) for p in existing_paths)
+        super().__init__(f"{len(existing_paths)} file(s) already exist: {paths_str}")
+
+
 @dataclass(frozen=True)
 class TabSummary:
     """Lightweight summary of a document tab (no content)."""
@@ -70,6 +79,7 @@ class Downloader:
         output_dir: str | Path | None = None,
         *,
         tab_names: list[str] | None = None,
+        overwrite: bool = True,
     ) -> dict[str, Path]:
         """Download a document and write Markdown files to disk.
 
@@ -79,9 +89,15 @@ class Downloader:
                 the document title is always created inside it. If None, the
                 current directory is used as the parent.
             tab_names: Optional list of tab titles to include.
+            overwrite: If ``False``, raise :class:`FileConflictError` when any
+                target file already exists on disk.
 
         Returns:
             Dict mapping tab path to the written file Path.
+
+        Raises:
+            FileConflictError: If *overwrite* is ``False`` and one or more
+                target files already exist.
         """
         doc = self._client.get_document(document_id)
         title = doc.title or "Untitled Document"
@@ -95,9 +111,18 @@ class Downloader:
         tab_markdowns: dict[str, str] = {}
         self._collect_tabs(doc.tabs or [], tab_markdowns, prefix="", tab_filter=tab_names)
 
+        planned: dict[str, Path] = {}
+        for tab_path in tab_markdowns:
+            planned[tab_path] = output_dir / f"{tab_path}.md"
+
+        if not overwrite:
+            existing = [p for p in planned.values() if p.exists()]
+            if existing:
+                raise FileConflictError(existing)
+
         written: dict[str, Path] = {}
         for tab_path, markdown in tab_markdowns.items():
-            file_path = output_dir / f"{tab_path}.md"
+            file_path = planned[tab_path]
             file_path.parent.mkdir(parents=True, exist_ok=True)
             file_path.write_text(markdown, encoding="utf-8")
             written[tab_path] = file_path
@@ -179,6 +204,37 @@ class Downloader:
                     prefix=tab_path,
                     tab_filter=tab_filter,
                 )
+
+
+def find_stale_files(
+    output_dir: Path,
+    current_files: set[Path],
+) -> list[Path]:
+    """Find ``.md`` files under *output_dir* that are not in *current_files*.
+
+    Useful for detecting tab markdown files left over from a previous download
+    after tabs have been removed from the upstream document.
+
+    Args:
+        output_dir: Root directory to scan recursively.
+        current_files: Set of file paths that are still valid (just written).
+
+    Returns:
+        Sorted list of stale ``.md`` file paths.
+    """
+    if not output_dir.is_dir():
+        return []
+    resolved_current = {p.resolve() for p in current_files}
+    return sorted(p for p in output_dir.rglob("*.md") if p.resolve() not in resolved_current)
+
+
+def remove_empty_dirs(root: Path) -> None:
+    """Remove empty directories under *root* (bottom-up), excluding *root*."""
+    if not root.is_dir():
+        return
+    for dirpath in sorted(root.rglob("*"), reverse=True):
+        if dirpath.is_dir() and not any(dirpath.iterdir()):
+            dirpath.rmdir()
 
 
 _UNSAFE_CHARS = re.compile(r'[<>:"/\\|?*\x00-\x1f]')
