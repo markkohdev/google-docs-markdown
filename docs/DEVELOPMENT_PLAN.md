@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-25 (API reference review: Person/DateElement confirmed as first-class ParagraphElements with round-trip write support via `insertPerson`/`insertDate`; RichLink read-only limitation documented; Phase 6 tab CRUD API availability noted; U+E907 scope corrected in tech spec)  
-**Status:** Phase 1 — 1.1–1.5 complete (basic download pipeline working end-to-end); 1.6 partially done; **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
+**Last Updated:** 2026-03-25 (Phase 1.6 & 1.7 completed; `list-tabs` CLI wired; integration tests added)  
+**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 3 — in progress** (client + CLI skeleton; no `uploader` / deserializer yet)
 
 ## Overview
 
@@ -76,23 +76,24 @@ Unit tests and documentation should be written for each component and function a
 - [x] Add interactive prompts for missing arguments (document URL prompted by typer)
 - [x] Update `pyproject.toml` entry point (`google-docs-markdown` and `gdm` aliases)
 
-#### 1.6: Python API - Basic Interface (Partially Complete)
+#### 1.6: Python API - Basic Interface ✅
 - [x] Create `Downloader` class in `downloader.py` (named `Downloader`, not `GoogleDocMarkdown`)
 - [x] Implement `download(document_id)` → returns dict of tab_path → markdown (all docs treated as multi-tab)
 - [x] Implement `download_to_files(document_id, output_path)` → saves to directory, returns dict of tab_path → file Path
-- [ ] Implement `get_document_title(document_id)` → returns title (available via `GoogleDocsClient.get_document().title`)
-- [ ] Implement `get_tabs(document_id)` → returns list of tab names/IDs (available via `Document.tabs`)
-- [ ] Implement `get_nested_tabs(document_id, tab_id)` → returns nested tabs within a tab
+- [x] Implement `get_document_title(document_id)` → returns title (available via `GoogleDocsClient.get_document().title`)
+- [x] Implement `get_tabs(document_id)` → returns list of `TabSummary` objects with tab names/IDs/nesting (available via `Document.tabs`)
+- [x] Implement `get_nested_tabs(document_id, tab_id)` → returns nested `TabSummary` children within a tab
 - [x] `extract_document_id(url)` → available as `GoogleDocsClient.extract_document_id()` (static method)
 
-#### 1.7: Testing (Partially Complete)
-- [ ] Test with example Google Doc from `example_markdown/google_doc_urls.txt` (integration — requires live API)
-- [ ] Test with multi-tab Google Doc (integration — requires live API)
+#### 1.7: Testing ✅
+- [x] Test with example Google Doc from `example_markdown/google_doc_urls.txt` (integration — requires live API) ✅
+- [x] Test with multi-tab Google Doc (integration — requires live API; skips nested-tab assertions when live doc lacks nested tabs) ✅
 - [x] Create unit tests for transport and client (including tab detection) ✅
 - [x] Create unit tests for `MarkdownSerializer` (36 tests: headings, formatting, fixtures, determinism) ✅
-- [x] Create unit tests for `Downloader` (22 tests: single-tab, multi-tab, nested, filtering, disk I/O) ✅
+- [x] Create unit tests for `Downloader` (32 tests: single-tab, multi-tab, nested, filtering, disk I/O, `get_document_title`, `get_tabs`, `get_nested_tabs`) ✅
 - [x] Create unit tests for CLI `download` command (4 tests: wiring, flags, error handling) ✅
-- [ ] Create integration tests for end-to-end download (both scenarios)
+- [x] Create unit tests for CLI `list-tabs` command (3 tests: wiring, nested, error handling) ✅
+- [x] Create integration tests for end-to-end download (`tests/test_integration.py` — 12 tests, marked `@pytest.mark.integration`) ✅
 - [x] Verify deterministic output (same doc → same markdown) ✅
 - [x] Test directory creation and file naming for multi-tab documents ✅
 - [x] Test selective tab download with `--tabs` flag ✅
@@ -252,8 +253,9 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 - [ ] Map inline `<!-- person: {...} -->` comments to `insertPerson` requests and `<!-- date: {...} -->` comments to `insertDate` requests
 - [ ] Support creating documents from directory structure (directory name → document, files → tabs, subdirectories → nested tabs)
 
-#### 3.3: CLI - Upload Command
+#### 3.3: CLI - Upload & List-Tabs Commands
 - [x] Add `upload` command to CLI (options: `--create`, `--overwrite`, `--local-path`; **handler not implemented**)
+- [x] Implement `list-tabs` CLI command (calls `Downloader.get_tabs()`, prints nested tab tree with IDs) ✅
 - [ ] Implement `upload` command body (call uploader; remove `NotImplementedError`)
 - [ ] Support `--create` flag for new documents (wired to create flow)
 - [ ] Support `--overwrite` flag (force update even when no changes detected)
@@ -540,20 +542,20 @@ This document should be used for testing throughout development.
 - ✅ Phase 1.1: Project Setup
 - ✅ Phase 1.2: Google Docs API Transport & Client (transport for raw dicts, client for Pydantic models, with comprehensive unit tests for both)
 - ✅ Phase 1.3: Pydantic model generation and transport/client integration (`get_document`, `create_document`, `batch_update`)
-- ✅ Phase 1.4: Basic Downloader — `MarkdownSerializer` (visitor-style traversal of `DocumentTab` → `Body` → `Paragraph` → `TextRun`, handles headings/bold/italic/whitespace normalization) and `Downloader` (multi-tab orchestration, recursive nested tabs, directory/file I/O, filename sanitization). Unsupported elements (tables, images, lists, etc.) are silently skipped — those are Phase 2.
+- ✅ Phase 1.4: Basic Downloader — `MarkdownSerializer` (visitor-style traversal of `DocumentTab` → `Body` → `Paragraph` → `TextRun`, handles headings/bold/italic/whitespace normalization) and `Downloader` (multi-tab orchestration, recursive nested tabs, directory/file I/O, filename sanitization). Unsupported elements (tables, images, lists, etc.) are silently skipped — those are Phase 2. Location/Range `tabId`/`segmentId` deferred to Phase 3.
 - ✅ Phase 1.5: CLI Download Command — `download` wired to `Downloader.download_to_files()`, supports `--output`/`-o`, `--tabs`/`-t`, error handling, summary output
+- ✅ Phase 1.6: Python API — `Downloader.download()`, `download_to_files()`, `get_document_title()`, `get_tabs()` (returns `TabSummary` tree), `get_nested_tabs()`, `extract_document_id()`
+- ✅ Phase 1.7: Testing — 177 unit tests (serializer 36, downloader 32, CLI 13, transport 10, client 6, models 7, setup 27, gcloud 19) + 12 integration tests with live API (`tests/test_integration.py`, `@pytest.mark.integration`)
 
-**In Progress / Partially Done:**
-- **Phase 1.6:** Python API — `Downloader.download()` and `download_to_files()` implemented; convenience methods (`get_document_title`, `get_tabs`, etc.) not yet added
-- **Phase 1.7:** Unit tests for serializer (36), downloader (22), and CLI (4) are done; integration tests with live API remain
-- **Phase 3:** Upload — client primitives and CLI `upload` scaffold done; **Markdown deserializer**, **`uploader.py`**, directory/tab mapping, and working CLI still to do
+**In Progress:**
+- **Phase 3:** Upload — client primitives and CLI `upload`/`list-tabs` scaffold done; **Markdown deserializer**, **`uploader.py`**, directory/tab mapping, and working upload CLI still to do
 
 **Up Next:**
 - **Phase 2.1:** Simple inline/block elements — links, strikethrough, horizontal rules, rich links, footnotes
 - **Phase 2.2:** Lists (requires serializer refactoring for stateful cross-paragraph grouping + `DocumentTab.lists` context)
 - **Phase 2.3-2.6:** Tables, code blocks (U+E907 detection), images, non-Markdown elements + metadata strategy
-- **Phase 1.4 remaining:** Location/Range `tabId` and `segmentId` handling (deferred to Phase 3 when upload needs them)
 
 **Remaining Phase 3 Tasks:**
 - `uploader.py` with atomic-edit strategy (diff Markdown strings → map to API indices → surgical batchUpdate), widget recreation via `insertPerson`/`insertDate` for round-trippable elements, RichLink-to-hyperlink fallback, create-new-document flow (may use `markdown-it-py`), multi-tab directory support, Python upload API, round-trip and integration tests
+- Location/Range `tabId` and `segmentId` handling (deferred from Phase 1.4)
 

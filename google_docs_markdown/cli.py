@@ -54,8 +54,30 @@ def list_tabs(
     document_url: Annotated[str, typer.Option(prompt=True, help="Google Doc URL or document ID")],
 ) -> None:
     """List all tabs in a Google Doc."""
-    typer.echo("Listing all tabs in a Google Doc...")
-    raise NotImplementedError("This command is not implemented yet")
+    from google_docs_markdown.downloader import Downloader, TabSummary
+
+    dl = Downloader()
+
+    try:
+        tabs = dl.get_tabs(document_url)
+    except Exception as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    if not tabs:
+        typer.echo("No tabs found.")
+        return
+
+    def _print_tab(tab: TabSummary, indent: int = 0) -> None:
+        prefix = "  " * indent
+        typer.echo(f"{prefix}- {tab.title} (id: {tab.tab_id})")
+        for child in tab.child_tabs:
+            _print_tab(child, indent + 1)
+
+    title = dl.get_document_title(document_url)
+    typer.echo(f'Tabs in "{title}":')
+    for tab in tabs:
+        _print_tab(tab)
 
 
 @app.command()
