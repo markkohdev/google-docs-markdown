@@ -10,9 +10,12 @@ Phase 2.2 scope: lists (ordered, unordered, nested) via block grouper
 pre-processing pass.
 Phase 2.3 scope: tables (pipe tables with header detection, formatted cell
 content, multi-paragraph cells via <br>, pipe escaping).
-
-Unsupported element types (images, code blocks, etc.) are silently skipped
-and will be added in later phases.
+Phase 2.4 scope: code blocks (U+E907 boundary detection, monospace font,
+fenced code blocks).
+Phase 2.5 scope: images (InlineObjectElement → ![alt](url)).
+Phase 2.6 scope: non-Markdown elements (Person, DateElement, AutoText,
+Equation, SectionBreak, ColumnBreak, TableOfContents, suggestions,
+headers/footers).
 """
 
 from __future__ import annotations
@@ -22,6 +25,7 @@ from typing import Any
 
 from google_docs_markdown.block_grouper import (
     Block,
+    CodeBlock,
     ListBlock,
     group_elements,
 )
@@ -30,6 +34,7 @@ from google_docs_markdown.models.document import DocumentTab
 from google_docs_markdown.models.elements import (
     FootnoteReference,
     HorizontalRule,
+    InlineObjectElement,
     Paragraph,
     ParagraphElement,
     RichLink,
@@ -59,6 +64,7 @@ class MarkdownSerializer:
 
     def __init__(self) -> None:
         self._footnote_refs: list[tuple[str, str]] = []
+        self._inline_objects: dict[str, Any] | None = None
 
     def serialize(self, document_tab: DocumentTab) -> str:
         """Convert a DocumentTab to Markdown.
@@ -74,6 +80,7 @@ class MarkdownSerializer:
             return ""
 
         self._footnote_refs = []
+        self._inline_objects = document_tab.inlineObjects
 
         blocks = group_elements(document_tab.body.content, document_tab.lists)
 
@@ -93,7 +100,24 @@ class MarkdownSerializer:
         """Dispatch a Block to the appropriate visitor."""
         if isinstance(block, ListBlock):
             return self._visit_list_block(block)
+        if isinstance(block, CodeBlock):
+            return self._visit_code_block(block)
         return self._visit_structural_element(block)
+
+    def _visit_code_block(self, block: CodeBlock) -> str:
+        """Render a CodeBlock as a fenced Markdown code block."""
+        lines: list[str] = []
+        for para in block.paragraphs:
+            line_parts: list[str] = []
+            for elem in para.elements or []:
+                if elem.textRun and elem.textRun.content:
+                    line_parts.append(elem.textRun.content)
+            raw = "".join(line_parts)
+            raw = raw.replace("\ue907", "")
+            raw = raw.rstrip("\n")
+            if raw:
+                lines.append(raw)
+        return "```\n" + "\n".join(lines) + "\n```"
 
     def _visit_list_block(self, block: ListBlock) -> str:
         """Render a ListBlock as a Markdown list."""
@@ -230,12 +254,18 @@ class MarkdownSerializer:
             return self._visit_rich_link(element.richLink)
         if element.footnoteReference:
             return self._visit_footnote_reference(element.footnoteReference)
+        if element.inlineObjectElement:
+            return self._visit_inline_object(element.inlineObjectElement)
         return None
 
     def _visit_text_run(self, text_run: TextRun) -> str | None:
         """Return text content with Markdown formatting applied."""
         content = text_run.content
         if content is None:
+            return None
+
+        content = content.replace("\ue907", "")
+        if not content:
             return None
 
         style = text_run.textStyle
@@ -269,6 +299,31 @@ class MarkdownSerializer:
             return None
         title = props.title or props.uri
         return f"[{title}]({props.uri})"
+
+    def _visit_inline_object(self, obj: InlineObjectElement) -> str | None:
+        """Render an InlineObjectElement as a Markdown image reference."""
+        if not obj.inlineObjectId or not self._inline_objects:
+            return None
+
+        raw = self._inline_objects.get(obj.inlineObjectId)
+        if raw is None:
+            return None
+
+        from google_docs_markdown.models.common import InlineObject
+
+        inline_obj = raw if isinstance(raw, InlineObject) else InlineObject.model_validate(raw)
+
+        props = inline_obj.inlineObjectProperties
+        if not props or not props.embeddedObject:
+            return None
+
+        embedded = props.embeddedObject
+        image_props = embedded.imageProperties
+        if not image_props or not image_props.contentUri:
+            return None
+
+        alt = embedded.description or embedded.title or ""
+        return f"![{alt}]({image_props.contentUri})"
 
     def _visit_footnote_reference(self, ref: FootnoteReference) -> str | None:
         if not ref.footnoteNumber:
