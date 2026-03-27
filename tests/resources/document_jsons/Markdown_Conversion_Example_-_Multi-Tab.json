@@ -1,6 +1,6 @@
 {
   "title": "Markdown Conversion Example - Multi-Tab",
-  "revisionId": "AIxLkStdS9GfIVm2S_thB4HY6z5eSo0XKVdMyNlSWkkLJb7wk9AWof80Iga9wGQLLAHFsSK7I6OmLtAhcr_huw",
+  "revisionId": "AIxLkSuMMqXocgrmSf-I52bEfrcJV6CVef82s78o4FleEqlgTKlDsF_nWNWJpjdqqgt4gHmlY-rlyW89YItzpg",
   "suggestionsViewMode": "SUGGESTIONS_INLINE",
   "documentId": "1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M",
   "tabs": [
@@ -1519,37 +1519,14 @@
                     "endIndex": 696,
                     "textRun": {
                       "content": "Project Overview: Markdown Tool Testing (Heading 1)\n",
-                      "textStyle": {
-                        "foregroundColor": {
-                          "color": {
-                            "rgbColor": {
-                              "red": 0.6,
-                              "green": 0.6,
-                              "blue": 0.6
-                            }
-                          }
-                        },
-                        "fontSize": {
-                          "magnitude": 18,
-                          "unit": "PT"
-                        },
-                        "weightedFontFamily": {
-                          "fontFamily": "Proxima Nova",
-                          "weight": 600
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "headingId": "h.uepmse3xxx0s",
                   "namedStyleType": "HEADING_1",
-                  "lineSpacing": 115,
-                  "direction": "LEFT_TO_RIGHT",
-                  "spaceAbove": {
-                    "magnitude": 20,
-                    "unit": "PT"
-                  }
+                  "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
@@ -1589,18 +1566,12 @@
                     "endIndex": 905,
                     "textRun": {
                       "content": "This document serves as a comprehensive example to test the fidelity of a Google Docs to Markdown conversion tool. It incorporates various complex and common document elements to ensure accurate translation.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1689,12 +1660,7 @@
                     "endIndex": 1059,
                     "textRun": {
                       "content": "This section focuses on testing the nested structure of headings, which should map correctly to Markdown's ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   },
                   {
@@ -1724,18 +1690,12 @@
                     "endIndex": 1069,
                     "textRun": {
                       "content": " syntax.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1820,18 +1780,12 @@
                     "endIndex": 1232,
                     "textRun": {
                       "content": "This part of the document ensures that all heading levels, from 1 down to 6, are correctly parsed and converted.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1890,18 +1844,12 @@
                     "endIndex": 1394,
                     "textRun": {
                       "content": "The tool should be able to handle this level without issue, maintaining the hierarchical integrity of the document.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1956,18 +1904,12 @@
                     "endIndex": 1539,
                     "textRun": {
                       "content": "This level is rarely used but is included for thorough testing of the heading structure.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -2023,18 +1965,12 @@
                     "endIndex": 1677,
                     "textRun": {
                       "content": "This is a very low level heading supported by Google Docs and Markdown.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -2134,10 +2070,6 @@
                             }
                           }
                         },
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        },
                         "link": {
                           "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.lkp7hl41vf2d"
                         }
@@ -2155,7 +2087,6 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -2281,18 +2212,12 @@
                     "endIndex": 1961,
                     "textRun": {
                       "content": "The converter must be able to handle embedded image with the appropriate size, alignment, and cropping\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -2783,56 +2708,15 @@
                 "elements": [
                   {
                     "startIndex": 2316,
-                    "endIndex": 2433,
-                    "textRun": {
-                      "content": "Tables are a crucial element for data representation and should be converted into Markdown table format (using pipes ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2433,
-                    "endIndex": 2434,
-                    "textRun": {
-                      "content": "|",
-                      "textStyle": {
-                        "foregroundColor": {
-                          "color": {
-                            "rgbColor": {
-                              "red": 0.09411765,
-                              "green": 0.5019608,
-                              "blue": 0.21960784
-                            }
-                          }
-                        },
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2434,
                     "endIndex": 2474,
                     "textRun": {
-                      "content": "). Pinned headers should be maintained.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "content": "Tables are a crucial element for data representation and should be converted into Markdown table format (using pipes |). Pinned headers should be maintained.\n",
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -2859,28 +2743,11 @@
                               "elements": [
                                 {
                                   "startIndex": 2477,
-                                  "endIndex": 2485,
-                                  "textRun": {
-                                    "content": "Header 1",
-                                    "textStyle": {
-                                      "bold": true,
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
-                                  }
-                                },
-                                {
-                                  "startIndex": 2485,
                                   "endIndex": 2486,
                                   "textRun": {
-                                    "content": "\n",
+                                    "content": "Header 1\n",
                                     "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
+                                      "bold": true
                                     }
                                   }
                                 }
@@ -2888,10 +2755,8 @@
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
                                 "alignment": "CENTER",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -2899,7 +2764,15 @@
                         "tableCellStyle": {
                           "rowSpan": 1,
                           "columnSpan": 1,
-                          "backgroundColor": {},
+                          "backgroundColor": {
+                            "color": {
+                              "rgbColor": {
+                                "red": 0.8509804,
+                                "green": 0.8509804,
+                                "blue": 0.8509804
+                              }
+                            }
+                          },
                           "borderLeft": {
                             "color": {
                               "color": {
@@ -2978,28 +2851,11 @@
                               "elements": [
                                 {
                                   "startIndex": 2487,
-                                  "endIndex": 2495,
-                                  "textRun": {
-                                    "content": "Header 2",
-                                    "textStyle": {
-                                      "bold": true,
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
-                                  }
-                                },
-                                {
-                                  "startIndex": 2495,
                                   "endIndex": 2496,
                                   "textRun": {
-                                    "content": "\n",
+                                    "content": "Header 2\n",
                                     "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
+                                      "bold": true
                                     }
                                   }
                                 }
@@ -3007,10 +2863,8 @@
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
                                 "alignment": "CENTER",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3018,7 +2872,15 @@
                         "tableCellStyle": {
                           "rowSpan": 1,
                           "columnSpan": 1,
-                          "backgroundColor": {},
+                          "backgroundColor": {
+                            "color": {
+                              "rgbColor": {
+                                "red": 0.8509804,
+                                "green": 0.8509804,
+                                "blue": 0.8509804
+                              }
+                            }
+                          },
                           "borderLeft": {
                             "color": {
                               "color": {
@@ -3097,28 +2959,11 @@
                               "elements": [
                                 {
                                   "startIndex": 2497,
-                                  "endIndex": 2505,
-                                  "textRun": {
-                                    "content": "Header 3",
-                                    "textStyle": {
-                                      "bold": true,
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
-                                  }
-                                },
-                                {
-                                  "startIndex": 2505,
                                   "endIndex": 2506,
                                   "textRun": {
-                                    "content": "\n",
+                                    "content": "Header 3\n",
                                     "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
+                                      "bold": true
                                     }
                                   }
                                 }
@@ -3126,10 +2971,8 @@
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
                                 "alignment": "CENTER",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3137,7 +2980,15 @@
                         "tableCellStyle": {
                           "rowSpan": 1,
                           "columnSpan": 1,
-                          "backgroundColor": {},
+                          "backgroundColor": {
+                            "color": {
+                              "rgbColor": {
+                                "red": 0.8509804,
+                                "green": 0.8509804,
+                                "blue": 0.8509804
+                              }
+                            }
+                          },
                           "borderLeft": {
                             "color": {
                               "color": {
@@ -3210,8 +3061,7 @@
                       "minRowHeight": {
                         "magnitude": 25,
                         "unit": "PT"
-                      },
-                      "tableHeader": true
+                      }
                     }
                   },
                   {
@@ -3232,21 +3082,14 @@
                                   "endIndex": 2516,
                                   "textRun": {
                                     "content": "Data A1\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3336,21 +3179,14 @@
                                   "endIndex": 2525,
                                   "textRun": {
                                     "content": "Data B1\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3440,21 +3276,14 @@
                                   "endIndex": 2534,
                                   "textRun": {
                                     "content": "Data C1\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3556,21 +3385,14 @@
                                   "endIndex": 2544,
                                   "textRun": {
                                     "content": "Data A2\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3660,21 +3482,14 @@
                                   "endIndex": 2553,
                                   "textRun": {
                                     "content": "Data B2\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3764,21 +3579,14 @@
                                   "endIndex": 2562,
                                   "textRun": {
                                     "content": "Data C2\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3880,21 +3688,14 @@
                                   "endIndex": 2572,
                                   "textRun": {
                                     "content": "Data A3\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3984,21 +3785,14 @@
                                   "endIndex": 2581,
                                   "textRun": {
                                     "content": "Data B3\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -4088,21 +3882,14 @@
                                   "endIndex": 2590,
                                   "textRun": {
                                     "content": "Data C3\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -4285,18 +4072,12 @@
                     "endIndex": 2776,
                     "textRun": {
                       "content": "Item Pickers (or Smart Chips) are special interactive elements in Google Docs. The converter must decide how to represent this in plain Markdown text.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -4312,11 +4093,7 @@
                     "textRun": {
                       "content": "Project Lead:",
                       "textStyle": {
-                        "bold": true,
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
+                        "bold": true
                       }
                     }
                   },
@@ -4325,12 +4102,7 @@
                     "endIndex": 2790,
                     "textRun": {
                       "content": " ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   },
                   {
@@ -4338,12 +4110,7 @@
                     "endIndex": 2791,
                     "person": {
                       "personId": "kix.8hz9hqapohto",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      },
+                      "textStyle": {},
                       "personProperties": {
                         "name": "Mark Koh",
                         "email": "markkoh@spotify.com"
@@ -4355,28 +4122,13 @@
                     "endIndex": 2792,
                     "textRun": {
                       "content": "\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
-                  "spacingMode": "COLLAPSE_LISTS",
-                  "spaceAbove": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
-                  "spaceBelow": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
                   "indentFirstLine": {
                     "magnitude": 18,
                     "unit": "PT"
@@ -4384,17 +4136,11 @@
                   "indentStart": {
                     "magnitude": 36,
                     "unit": "PT"
-                  },
-                  "avoidWidowAndOrphan": false
+                  }
                 },
                 "bullet": {
                   "listId": "kix.1uce22d2kalz",
-                  "textStyle": {
-                    "weightedFontFamily": {
-                      "fontFamily": "Arial",
-                      "weight": 400
-                    }
-                  }
+                  "textStyle": {}
                 }
               }
             },
@@ -4405,31 +4151,26 @@
                 "elements": [
                   {
                     "startIndex": 2792,
+                    "endIndex": 2806,
+                    "textRun": {
+                      "content": "Other person: ",
+                      "textStyle": {
+                        "bold": true
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 2806,
                     "endIndex": 2808,
                     "textRun": {
-                      "content": "Other person: \n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "content": "\n",
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
-                  "spacingMode": "COLLAPSE_LISTS",
-                  "spaceAbove": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
-                  "spaceBelow": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
                   "indentFirstLine": {
                     "magnitude": 18,
                     "unit": "PT"
@@ -4437,17 +4178,11 @@
                   "indentStart": {
                     "magnitude": 36,
                     "unit": "PT"
-                  },
-                  "avoidWidowAndOrphan": false
+                  }
                 },
                 "bullet": {
                   "listId": "kix.1uce22d2kalz",
-                  "textStyle": {
-                    "weightedFontFamily": {
-                      "fontFamily": "Arial",
-                      "weight": 400
-                    }
-                  }
+                  "textStyle": {}
                 }
               }
             },
@@ -4462,11 +4197,7 @@
                     "textRun": {
                       "content": "Status Chip:",
                       "textStyle": {
-                        "bold": true,
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
+                        "bold": true
                       }
                     }
                   },
@@ -4475,28 +4206,13 @@
                     "endIndex": 2823,
                     "textRun": {
                       "content": " \n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
-                  "spacingMode": "COLLAPSE_LISTS",
-                  "spaceAbove": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
-                  "spaceBelow": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
                   "indentFirstLine": {
                     "magnitude": 18,
                     "unit": "PT"
@@ -4504,17 +4220,11 @@
                   "indentStart": {
                     "magnitude": 36,
                     "unit": "PT"
-                  },
-                  "avoidWidowAndOrphan": false
+                  }
                 },
                 "bullet": {
                   "listId": "kix.1uce22d2kalz",
-                  "textStyle": {
-                    "weightedFontFamily": {
-                      "fontFamily": "Arial",
-                      "weight": 400
-                    }
-                  }
+                  "textStyle": {}
                 }
               }
             },
@@ -4529,11 +4239,7 @@
                     "textRun": {
                       "content": "File Chip:",
                       "textStyle": {
-                        "bold": true,
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
+                        "bold": true
                       }
                     }
                   },
@@ -4542,28 +4248,13 @@
                     "endIndex": 2836,
                     "textRun": {
                       "content": " \n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
-                  "spacingMode": "COLLAPSE_LISTS",
-                  "spaceAbove": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
-                  "spaceBelow": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
                   "indentFirstLine": {
                     "magnitude": 18,
                     "unit": "PT"
@@ -4571,17 +4262,11 @@
                   "indentStart": {
                     "magnitude": 36,
                     "unit": "PT"
-                  },
-                  "avoidWidowAndOrphan": false
+                  }
                 },
                 "bullet": {
                   "listId": "kix.1uce22d2kalz",
-                  "textStyle": {
-                    "weightedFontFamily": {
-                      "fontFamily": "Arial",
-                      "weight": 400
-                    }
-                  }
+                  "textStyle": {}
                 }
               }
             },
@@ -4596,11 +4281,7 @@
                     "textRun": {
                       "content": "Date Chip:",
                       "textStyle": {
-                        "bold": true,
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
+                        "bold": true
                       }
                     }
                   },
@@ -4609,12 +4290,7 @@
                     "endIndex": 2847,
                     "textRun": {
                       "content": " ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   },
                   {
@@ -4622,12 +4298,7 @@
                     "endIndex": 2848,
                     "dateElement": {
                       "dateId": "kix.tlnloqqa2nzn",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      },
+                      "textStyle": {},
                       "dateElementProperties": {
                         "timestamp": "2026-01-08T12:00:00Z",
                         "locale": "en",
@@ -4642,28 +4313,13 @@
                     "endIndex": 2851,
                     "textRun": {
                       "content": " \n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
-                  "spacingMode": "COLLAPSE_LISTS",
-                  "spaceAbove": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
-                  "spaceBelow": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
                   "indentFirstLine": {
                     "magnitude": 18,
                     "unit": "PT"
@@ -4671,17 +4327,11 @@
                   "indentStart": {
                     "magnitude": 36,
                     "unit": "PT"
-                  },
-                  "avoidWidowAndOrphan": false
+                  }
                 },
                 "bullet": {
                   "listId": "kix.1uce22d2kalz",
-                  "textStyle": {
-                    "weightedFontFamily": {
-                      "fontFamily": "Arial",
-                      "weight": 400
-                    }
-                  }
+                  "textStyle": {}
                 }
               }
             },
@@ -4738,56 +4388,15 @@
                 "elements": [
                   {
                     "startIndex": 2875,
-                    "endIndex": 3004,
-                    "textRun": {
-                      "content": "The tool must correctly identify and preserve pre-formatted text, typically using Markdown's fenced code blocks (three backticks ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 3004,
-                    "endIndex": 3007,
-                    "textRun": {
-                      "content": "```",
-                      "textStyle": {
-                        "foregroundColor": {
-                          "color": {
-                            "rgbColor": {
-                              "red": 0.09411765,
-                              "green": 0.5019608,
-                              "blue": 0.21960784
-                            }
-                          }
-                        },
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 3007,
                     "endIndex": 3010,
                     "textRun": {
-                      "content": ").\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "content": "The tool must correctly identify and preserve pre-formatted text, typically using Markdown's fenced code blocks (three backticks ```).\n",
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -5620,7 +5229,7 @@
               "paragraphStyle": {
                 "namedStyleType": "NORMAL_TEXT",
                 "alignment": "START",
-                "lineSpacing": 150,
+                "lineSpacing": 115,
                 "direction": "LEFT_TO_RIGHT",
                 "spacingMode": "NEVER_COLLAPSE",
                 "spaceAbove": {
@@ -5701,17 +5310,14 @@
               "namedStyleType": "HEADING_1",
               "textStyle": {
                 "fontSize": {
-                  "magnitude": 20,
+                  "magnitude": 18,
                   "unit": "PT"
-                },
-                "weightedFontFamily": {
-                  "fontFamily": "Hind",
-                  "weight": 400
                 }
               },
               "paragraphStyle": {
-                "headingId": "h.fjxl7t8f029k",
+                "headingId": "h.xerl7yit4s8",
                 "namedStyleType": "HEADING_1",
+                "lineSpacing": 115,
                 "direction": "LEFT_TO_RIGHT",
                 "keepLinesTogether": true,
                 "keepWithNext": true
@@ -5751,20 +5357,16 @@
                 }
               },
               "paragraphStyle": {
-                "headingId": "h.462s4275rmjn",
+                "headingId": "h.5u695e9yf02",
                 "namedStyleType": "HEADING_3",
+                "lineSpacing": 115,
                 "direction": "LEFT_TO_RIGHT",
-                "spaceAbove": {
-                  "magnitude": 16,
-                  "unit": "PT"
-                },
                 "spaceBelow": {
                   "magnitude": 4,
                   "unit": "PT"
                 },
                 "keepLinesTogether": true,
-                "keepWithNext": true,
-                "pageBreakBefore": false
+                "keepWithNext": true
               }
             },
             {
@@ -6233,7 +5835,7 @@
             "inlineObjectProperties": {
               "embeddedObject": {
                 "imageProperties": {
-                  "contentUri": "https://lh7-rt.googleusercontent.com/docsz/AD_4nXeSCBBzRY-LGn-qGNRu3RnROdiWTQFIeZJlaHTVxb0X9rfTqXxR0ixVYj_JdljNjmXcUjM2RJwEt-KLAJP1E0Ph1X-xo-VkYw2Y098gtP0h7L3ov-5wNlnmyMTnblTxm6S5SIsYRXU5I5RYIsrlOypnj8yT?key=kykgB3vc_XH5qBSBJk5OEQ",
+                  "contentUri": "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcBK-vaBV6AUW7mQaXtv9vNhXwULbx_VBP07fgzEnXCeTAgNOtv0Q4BjFY9_GlUZ_jRFuK_bqcb_pWYDr-mf7AN-qaOW_fNgoZyDdr9CTG2K2nqIxqM8m-kFixU14DsCQt2f0zk57t-bTY5cVNHCuRR6LPY?key=kykgB3vc_XH5qBSBJk5OEQ",
                   "cropProperties": {
                     "offsetRight": 0.7051282
                   }

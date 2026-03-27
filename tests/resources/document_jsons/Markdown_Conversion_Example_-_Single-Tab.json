@@ -1,6 +1,6 @@
 {
   "title": "Markdown Conversion Example - Single-Tab",
-  "revisionId": "AIxLkSuSjHaqk6VEspBCIexgh6MQzK27hfqBF-QUr3B9I0Yy86KreHdVI6eML-TDREici-urTcz-cL4atSMn424yscPCkYK3d13SW6-4d7c",
+  "revisionId": "AIxLkSvfADyhaMuWqFyKHH_hOJg_YsTOZaU6tc1uOrB6lf1ILN6_Gzmn9Mg49PsbWh5uVRhDrIc3XS2nckdTPDMvR-HVNcGfGGb6n_exr8Y",
   "suggestionsViewMode": "SUGGESTIONS_INLINE",
   "documentId": "1fLfF7Mx-Vt-ZZSYJ3ksfEIcH9gEV5Fnat4tPewazyug",
   "tabs": [
@@ -32,7 +32,7 @@
                     "startIndex": 1,
                     "endIndex": 42,
                     "textRun": {
-                      "content": "Markdown Conversion Example - Single Tab\n",
+                      "content": "Markdown Conversion Example - Single-Tab\n",
                       "textStyle": {
                         "fontSize": {
                           "magnitude": 26,
@@ -45,7 +45,6 @@
                 "paragraphStyle": {
                   "headingId": "h.7fitws4wjggb",
                   "namedStyleType": "TITLE",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -67,7 +66,6 @@
                 "paragraphStyle": {
                   "headingId": "h.padtyuov0g8c",
                   "namedStyleType": "SUBTITLE",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -89,7 +87,7 @@
                     "startIndex": 68,
                     "endIndex": 69,
                     "person": {
-                      "personId": "kix.qorazuxh262f",
+                      "personId": "kix.jk0z38k8m963",
                       "textStyle": {},
                       "personProperties": {
                         "name": "Mark Koh",
@@ -108,7 +106,6 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -130,7 +127,7 @@
                     "startIndex": 76,
                     "endIndex": 77,
                     "dateElement": {
-                      "dateId": "kix.qaps7j4k408s",
+                      "dateId": "kix.aeei70dq4gj0",
                       "textStyle": {},
                       "dateElementProperties": {
                         "timestamp": "2026-01-08T12:00:00Z",
@@ -152,7 +149,6 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -173,7 +169,6 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -204,7 +199,6 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -225,12 +219,7 @@
                           "textRun": {
                             "content": "Project Overview: Markdown Tool Testing (Heading 1)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -240,20 +229,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.uepmse3xxx0s",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.uepmse3xxx0s"
                               }
                             }
                           }
@@ -264,12 +241,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -279,15 +251,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -315,12 +282,7 @@
                           "textRun": {
                             "content": "Section 1: Headings and Structure (Heading 2)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -330,20 +292,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.jqd82dlsezdm",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.jqd82dlsezdm"
                               }
                             }
                           }
@@ -354,12 +304,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -369,15 +314,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -413,12 +353,7 @@
                           "textRun": {
                             "content": "Subsection 1.1: Lower Level Headings (Heading 3)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -428,20 +363,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.oooyvrk89ze3",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.oooyvrk89ze3"
                               }
                             }
                           }
@@ -452,12 +375,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -467,15 +385,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -511,12 +424,7 @@
                           "textRun": {
                             "content": "Sub-Subsection 1.1.1: Deeper Dive (Heading 4)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -526,20 +434,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.atpripoece4",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.atpripoece4"
                               }
                             }
                           }
@@ -550,12 +446,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -565,15 +456,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -609,12 +495,7 @@
                           "textRun": {
                             "content": "Sub-Sub-Subsection 1.1.1.1: Specific Detail (Heading 5)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -624,20 +505,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.5ps2nz93bkq",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.5ps2nz93bkq"
                               }
                             }
                           }
@@ -648,12 +517,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -663,15 +527,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -707,12 +566,7 @@
                           "textRun": {
                             "content": "Sub-Sub-Sub-Subsection 1.1.1.1.1: Very detailed Level (Heading 6)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -722,20 +576,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.cjf1qee53u2l",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.cjf1qee53u2l"
                               }
                             }
                           }
@@ -746,12 +588,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -761,15 +598,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -805,12 +637,7 @@
                           "textRun": {
                             "content": "Section 2: Visual and Collaborative Elements (Heading 2)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -820,20 +647,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.wg9h5ny9roqh",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.wg9h5ny9roqh"
                               }
                             }
                           }
@@ -844,12 +659,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -859,15 +669,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -903,12 +708,7 @@
                           "textRun": {
                             "content": "Images (Heading 3)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -918,20 +718,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.rrd3m9g81p1w",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.rrd3m9g81p1w"
                               }
                             }
                           }
@@ -942,12 +730,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -957,15 +740,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -1001,12 +779,7 @@
                           "textRun": {
                             "content": "Colored Text (Heading 3)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -1016,20 +789,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.sj4vijybbglf",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.sj4vijybbglf"
                               }
                             }
                           }
@@ -1040,12 +801,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -1055,15 +811,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -1099,12 +850,7 @@
                           "textRun": {
                             "content": "Section 3: Data and Interactive Elements (Heading 2)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -1114,20 +860,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.icaqa2kyyp4g",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.icaqa2kyyp4g"
                               }
                             }
                           }
@@ -1138,12 +872,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -1153,15 +882,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -1197,12 +921,7 @@
                           "textRun": {
                             "content": "Tables (Heading 3)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -1212,20 +931,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.dg77bsdonvql",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.dg77bsdonvql"
                               }
                             }
                           }
@@ -1236,12 +943,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -1251,15 +953,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -1295,12 +992,7 @@
                           "textRun": {
                             "content": "Item Pickers (Chips) (Heading 3)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -1310,20 +1002,12 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
                               },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.vy5xw85oyhup",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.vy5xw85oyhup"
                               }
                             }
                           }
@@ -1334,12 +1018,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -1349,15 +1028,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -1393,12 +1067,7 @@
                           "textRun": {
                             "content": "Code Blocks (Heading 3)",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -1408,20 +1077,8 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
-                              "weightedFontFamily": {
-                                "fontFamily": "Proxima Nova",
-                                "weight": 400
-                              },
-                              "baselineOffset": "NONE",
                               "link": {
-                                "heading": {
-                                  "id": "h.ifi3a4xgu7rc",
-                                  "tabId": "t.0"
-                                }
+                                "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.0#heading=h.ifi3a4xgu7rc"
                               }
                             }
                           }
@@ -1432,12 +1089,7 @@
                           "textRun": {
                             "content": "\n",
                             "textStyle": {
-                              "bold": false,
-                              "italic": false,
                               "underline": true,
-                              "strikethrough": false,
-                              "smallCaps": false,
-                              "backgroundColor": {},
                               "foregroundColor": {
                                 "color": {
                                   "rgbColor": {
@@ -1447,15 +1099,10 @@
                                   }
                                 }
                               },
-                              "fontSize": {
-                                "magnitude": 11,
-                                "unit": "PT"
-                              },
                               "weightedFontFamily": {
                                 "fontFamily": "Arial",
                                 "weight": 400
-                              },
-                              "baselineOffset": "NONE"
+                              }
                             }
                           }
                         }
@@ -1504,7 +1151,6 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1519,37 +1165,14 @@
                     "endIndex": 697,
                     "textRun": {
                       "content": "Project Overview: Markdown Tool Testing (Heading 1)\n",
-                      "textStyle": {
-                        "foregroundColor": {
-                          "color": {
-                            "rgbColor": {
-                              "red": 0.6,
-                              "green": 0.6,
-                              "blue": 0.6
-                            }
-                          }
-                        },
-                        "fontSize": {
-                          "magnitude": 18,
-                          "unit": "PT"
-                        },
-                        "weightedFontFamily": {
-                          "fontFamily": "Proxima Nova",
-                          "weight": 600
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "headingId": "h.uepmse3xxx0s",
                   "namedStyleType": "HEADING_1",
-                  "lineSpacing": 115,
-                  "direction": "LEFT_TO_RIGHT",
-                  "spaceAbove": {
-                    "magnitude": 20,
-                    "unit": "PT"
-                  }
+                  "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
@@ -1574,7 +1197,6 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1589,18 +1211,12 @@
                     "endIndex": 906,
                     "textRun": {
                       "content": "This document serves as a comprehensive example to test the fidelity of a Google Docs to Markdown conversion tool. It incorporates various complex and common document elements to ensure accurate translation.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1626,7 +1242,6 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1670,7 +1285,6 @@
                 "paragraphStyle": {
                   "headingId": "h.jqd82dlsezdm",
                   "namedStyleType": "HEADING_2",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
                   "spaceBelow": {
                     "magnitude": 6,
@@ -1689,12 +1303,7 @@
                     "endIndex": 1060,
                     "textRun": {
                       "content": "This section focuses on testing the nested structure of headings, which should map correctly to Markdown's ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   },
                   {
@@ -1724,18 +1333,12 @@
                     "endIndex": 1070,
                     "textRun": {
                       "content": " syntax.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1761,7 +1364,6 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1805,7 +1407,6 @@
                 "paragraphStyle": {
                   "headingId": "h.oooyvrk89ze3",
                   "namedStyleType": "HEADING_3",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1820,18 +1421,12 @@
                     "endIndex": 1233,
                     "textRun": {
                       "content": "This part of the document ensures that all heading levels, from 1 down to 6, are correctly parsed and converted.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1875,7 +1470,6 @@
                 "paragraphStyle": {
                   "headingId": "h.atpripoece4",
                   "namedStyleType": "HEADING_4",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1890,18 +1484,12 @@
                     "endIndex": 1395,
                     "textRun": {
                       "content": "The tool should be able to handle this level without issue, maintaining the hierarchical integrity of the document.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1941,7 +1529,6 @@
                 "paragraphStyle": {
                   "headingId": "h.5ps2nz93bkq",
                   "namedStyleType": "HEADING_5",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -1956,18 +1543,12 @@
                     "endIndex": 1540,
                     "textRun": {
                       "content": "This level is rarely used but is included for thorough testing of the heading structure.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -2008,7 +1589,6 @@
                 "paragraphStyle": {
                   "headingId": "h.cjf1qee53u2l",
                   "namedStyleType": "HEADING_6",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -2023,18 +1603,12 @@
                     "endIndex": 1678,
                     "textRun": {
                       "content": "This is a very low level heading supported by Google Docs and Markdown.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -2060,7 +1634,6 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
@@ -2087,19 +1660,142 @@
                 "paragraphStyle": {
                   "headingId": "h.wg9h5ny9roqh",
                   "namedStyleType": "HEADING_2",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
               "startIndex": 1736,
-              "endIndex": 1755,
+              "endIndex": 1754,
               "paragraph": {
                 "elements": [
                   {
                     "startIndex": 1736,
-                    "endIndex": 1755,
+                    "endIndex": 1754,
+                    "textRun": {
+                      "content": "Links (Heading 3)\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "headingId": "h.2pqc582q3bbs",
+                  "namedStyleType": "HEADING_3",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1754,
+              "endIndex": 1788,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1754,
+                    "endIndex": 1787,
+                    "textRun": {
+                      "content": "This is a link to the “Child Tab”",
+                      "textStyle": {
+                        "underline": true,
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.06666667,
+                              "green": 0.33333334,
+                              "blue": 0.8
+                            }
+                          }
+                        },
+                        "link": {
+                          "url": "https://docs.google.com/document/d/1JSbV5QEuG9kkG2YCBajqhWWgzBkXGJwu4moRSEUSg3M/edit?pli=1&tab=t.lkp7hl41vf2d"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 1787,
+                    "endIndex": 1788,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1788,
+              "endIndex": 1789,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1788,
+                    "endIndex": 1789,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1789,
+              "endIndex": 1839,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1789,
+                    "endIndex": 1837,
+                    "textRun": {
+                      "content": "This is a chip linking to the “Single-Tab” doc: ",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 1837,
+                    "endIndex": 1838,
+                    "richLink": {
+                      "richLinkId": "kix.e7qdf033x1tf",
+                      "textStyle": {},
+                      "richLinkProperties": {
+                        "title": "Markdown Conversion Example - Single-Tab",
+                        "uri": "https://docs.google.com/document/d/1fLfF7Mx-Vt-ZZSYJ3ksfEIcH9gEV5Fnat4tPewazyug/edit?tab=t.0#heading=h.7fitws4wjggb",
+                        "mimeType": "application/vnd.google-apps.document"
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 1838,
+                    "endIndex": 1839,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1839,
+              "endIndex": 1858,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1839,
+                    "endIndex": 1858,
                     "textRun": {
                       "content": "Images (Heading 3)\n",
                       "textStyle": {}
@@ -2109,19 +1805,18 @@
                 "paragraphStyle": {
                   "headingId": "h.rrd3m9g81p1w",
                   "namedStyleType": "HEADING_3",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 1755,
-              "endIndex": 1756,
+              "startIndex": 1858,
+              "endIndex": 1859,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1755,
-                    "endIndex": 1756,
+                    "startIndex": 1858,
+                    "endIndex": 1859,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2135,45 +1830,38 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
-                  "direction": "LEFT_TO_RIGHT"
-                }
-              }
-            },
-            {
-              "startIndex": 1756,
-              "endIndex": 1859,
-              "paragraph": {
-                "elements": [
-                  {
-                    "startIndex": 1756,
-                    "endIndex": 1859,
-                    "textRun": {
-                      "content": "The converter must be able to handle embedded image with the appropriate size, alignment, and cropping\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  }
-                ],
-                "paragraphStyle": {
-                  "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
               "startIndex": 1859,
-              "endIndex": 1860,
+              "endIndex": 1962,
               "paragraph": {
                 "elements": [
                   {
                     "startIndex": 1859,
-                    "endIndex": 1860,
+                    "endIndex": 1962,
+                    "textRun": {
+                      "content": "The converter must be able to handle embedded image with the appropriate size, alignment, and cropping\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 1962,
+              "endIndex": 1963,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 1962,
+                    "endIndex": 1963,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2187,21 +1875,20 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 1860,
-              "endIndex": 1862,
+              "startIndex": 1963,
+              "endIndex": 1965,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1860,
-                    "endIndex": 1861,
+                    "startIndex": 1963,
+                    "endIndex": 1964,
                     "inlineObjectElement": {
-                      "inlineObjectId": "kix.z7gloano634x",
+                      "inlineObjectId": "kix.annzq4plor7j",
                       "textStyle": {
                         "weightedFontFamily": {
                           "fontFamily": "Arial",
@@ -2211,8 +1898,8 @@
                     }
                   },
                   {
-                    "startIndex": 1861,
-                    "endIndex": 1862,
+                    "startIndex": 1964,
+                    "endIndex": 1965,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2227,19 +1914,18 @@
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
                   "alignment": "CENTER",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 1862,
-              "endIndex": 1887,
+              "startIndex": 1965,
+              "endIndex": 1990,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1862,
-                    "endIndex": 1887,
+                    "startIndex": 1965,
+                    "endIndex": 1990,
                     "textRun": {
                       "content": "Colored Text (Heading 3)\n",
                       "textStyle": {}
@@ -2249,7 +1935,6 @@
                 "paragraphStyle": {
                   "headingId": "h.sj4vijybbglf",
                   "namedStyleType": "HEADING_3",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
                   "spacingMode": "COLLAPSE_LISTS",
                   "avoidWidowAndOrphan": false
@@ -2257,21 +1942,21 @@
               }
             },
             {
-              "startIndex": 1887,
-              "endIndex": 1992,
+              "startIndex": 1990,
+              "endIndex": 2095,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1887,
-                    "endIndex": 1897,
+                    "startIndex": 1990,
+                    "endIndex": 2000,
                     "textRun": {
                       "content": "This text ",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 1897,
-                    "endIndex": 1911,
+                    "startIndex": 2000,
+                    "endIndex": 2014,
                     "textRun": {
                       "content": "should be bold",
                       "textStyle": {
@@ -2280,16 +1965,16 @@
                     }
                   },
                   {
-                    "startIndex": 1911,
-                    "endIndex": 1923,
+                    "startIndex": 2014,
+                    "endIndex": 2026,
                     "textRun": {
                       "content": ". This text ",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 1923,
-                    "endIndex": 1939,
+                    "startIndex": 2026,
+                    "endIndex": 2042,
                     "textRun": {
                       "content": "should be italic",
                       "textStyle": {
@@ -2298,16 +1983,16 @@
                     }
                   },
                   {
-                    "startIndex": 1939,
-                    "endIndex": 1941,
+                    "startIndex": 2042,
+                    "endIndex": 2044,
                     "textRun": {
                       "content": ". ",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 1941,
-                    "endIndex": 1992,
+                    "startIndex": 2044,
+                    "endIndex": 2095,
                     "textRun": {
                       "content": "This text has a blue highlight and red font color.\n",
                       "textStyle": {
@@ -2335,19 +2020,191 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 1992,
-              "endIndex": 1993,
+              "startIndex": 2095,
+              "endIndex": 2096,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1992,
-                    "endIndex": 1993,
+                    "startIndex": 2095,
+                    "endIndex": 2096,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {
+                        "backgroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.7882353,
+                              "green": 0.85490197,
+                              "blue": 0.972549
+                            }
+                          }
+                        },
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.8784314,
+                              "green": 0.4,
+                              "blue": 0.4
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2096,
+              "endIndex": 2196,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2096,
+                    "endIndex": 2134,
+                    "textRun": {
+                      "content": "This text should use inline backticks ",
+                      "textStyle": {}
+                    }
+                  },
+                  {
+                    "startIndex": 2134,
+                    "endIndex": 2168,
+                    "textRun": {
+                      "content": "to capture monospace code snippets",
+                      "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.09411765,
+                              "green": 0.5019608,
+                              "blue": 0.21960784
+                            }
+                          }
+                        },
+                        "weightedFontFamily": {
+                          "fontFamily": "Roboto Mono",
+                          "weight": 400
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 2168,
+                    "endIndex": 2196,
+                    "textRun": {
+                      "content": " like in standard markdown.\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2196,
+              "endIndex": 2197,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2196,
+                    "endIndex": 2197,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2197,
+              "endIndex": 2244,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2197,
+                    "endIndex": 2222,
+                    "textRun": {
+                      "content": "This is bigger text with ",
+                      "textStyle": {
+                        "fontSize": {
+                          "magnitude": 12,
+                          "unit": "PT"
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 2222,
+                    "endIndex": 2236,
+                    "textRun": {
+                      "content": "a code snippet",
+                      "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.09411765,
+                              "green": 0.5019608,
+                              "blue": 0.21960784
+                            }
+                          }
+                        },
+                        "fontSize": {
+                          "magnitude": 12,
+                          "unit": "PT"
+                        },
+                        "weightedFontFamily": {
+                          "fontFamily": "Roboto Mono",
+                          "weight": 400
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 2236,
+                    "endIndex": 2244,
+                    "textRun": {
+                      "content": " inline\n",
+                      "textStyle": {
+                        "fontSize": {
+                          "magnitude": 12,
+                          "unit": "PT"
+                        }
+                      }
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 2244,
+              "endIndex": 2245,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 2244,
+                    "endIndex": 2245,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2361,19 +2218,18 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 1993,
-              "endIndex": 2046,
+              "startIndex": 2245,
+              "endIndex": 2298,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 1993,
-                    "endIndex": 2045,
+                    "startIndex": 2245,
+                    "endIndex": 2297,
                     "textRun": {
                       "content": "Section 3: Data and Interactive Elements (Heading 2)",
                       "textStyle": {
@@ -2385,8 +2241,8 @@
                     }
                   },
                   {
-                    "startIndex": 2045,
-                    "endIndex": 2046,
+                    "startIndex": 2297,
+                    "endIndex": 2298,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2405,7 +2261,6 @@
                 "paragraphStyle": {
                   "headingId": "h.icaqa2kyyp4g",
                   "namedStyleType": "HEADING_2",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
                   "spaceBelow": {
                     "magnitude": 6,
@@ -2415,21 +2270,21 @@
               }
             },
             {
-              "startIndex": 2046,
-              "endIndex": 2065,
+              "startIndex": 2298,
+              "endIndex": 2317,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2046,
-                    "endIndex": 2064,
+                    "startIndex": 2298,
+                    "endIndex": 2316,
                     "textRun": {
                       "content": "Tables (Heading 3)",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 2064,
-                    "endIndex": 2065,
+                    "startIndex": 2316,
+                    "endIndex": 2317,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -2453,116 +2308,57 @@
                 "paragraphStyle": {
                   "headingId": "h.dg77bsdonvql",
                   "namedStyleType": "HEADING_3",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 2065,
-              "endIndex": 2223,
+              "startIndex": 2317,
+              "endIndex": 2475,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2065,
-                    "endIndex": 2182,
+                    "startIndex": 2317,
+                    "endIndex": 2475,
                     "textRun": {
-                      "content": "Tables are a crucial element for data representation and should be converted into Markdown table format (using pipes ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2182,
-                    "endIndex": 2183,
-                    "textRun": {
-                      "content": "|",
-                      "textStyle": {
-                        "foregroundColor": {
-                          "color": {
-                            "rgbColor": {
-                              "red": 0.09411765,
-                              "green": 0.5019608,
-                              "blue": 0.21960784
-                            }
-                          }
-                        },
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2183,
-                    "endIndex": 2223,
-                    "textRun": {
-                      "content": "). Pinned headers should be maintained.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "content": "Tables are a crucial element for data representation and should be converted into Markdown table format (using pipes |). Pinned headers should be maintained.\n",
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 2223,
-              "endIndex": 2340,
+              "startIndex": 2475,
+              "endIndex": 2592,
               "table": {
                 "rows": 4,
                 "columns": 3,
                 "tableRows": [
                   {
-                    "startIndex": 2224,
-                    "endIndex": 2255,
+                    "startIndex": 2476,
+                    "endIndex": 2507,
                     "tableCells": [
                       {
-                        "startIndex": 2225,
-                        "endIndex": 2235,
+                        "startIndex": 2477,
+                        "endIndex": 2487,
                         "content": [
                           {
-                            "startIndex": 2226,
-                            "endIndex": 2235,
+                            "startIndex": 2478,
+                            "endIndex": 2487,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2226,
-                                  "endIndex": 2234,
+                                  "startIndex": 2478,
+                                  "endIndex": 2487,
                                   "textRun": {
-                                    "content": "Header 1",
+                                    "content": "Header 1\n",
                                     "textStyle": {
-                                      "bold": true,
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
-                                  }
-                                },
-                                {
-                                  "startIndex": 2234,
-                                  "endIndex": 2235,
-                                  "textRun": {
-                                    "content": "\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
+                                      "bold": true
                                     }
                                   }
                                 }
@@ -2570,10 +2366,8 @@
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
                                 "alignment": "CENTER",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -2581,7 +2375,15 @@
                         "tableCellStyle": {
                           "rowSpan": 1,
                           "columnSpan": 1,
-                          "backgroundColor": {},
+                          "backgroundColor": {
+                            "color": {
+                              "rgbColor": {
+                                "red": 0.8509804,
+                                "green": 0.8509804,
+                                "blue": 0.8509804
+                              }
+                            }
+                          },
                           "borderLeft": {
                             "color": {
                               "color": {
@@ -2650,38 +2452,21 @@
                         }
                       },
                       {
-                        "startIndex": 2235,
-                        "endIndex": 2245,
+                        "startIndex": 2487,
+                        "endIndex": 2497,
                         "content": [
                           {
-                            "startIndex": 2236,
-                            "endIndex": 2245,
+                            "startIndex": 2488,
+                            "endIndex": 2497,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2236,
-                                  "endIndex": 2244,
+                                  "startIndex": 2488,
+                                  "endIndex": 2497,
                                   "textRun": {
-                                    "content": "Header 2",
+                                    "content": "Header 2\n",
                                     "textStyle": {
-                                      "bold": true,
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
-                                  }
-                                },
-                                {
-                                  "startIndex": 2244,
-                                  "endIndex": 2245,
-                                  "textRun": {
-                                    "content": "\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
+                                      "bold": true
                                     }
                                   }
                                 }
@@ -2689,10 +2474,8 @@
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
                                 "alignment": "CENTER",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -2700,7 +2483,15 @@
                         "tableCellStyle": {
                           "rowSpan": 1,
                           "columnSpan": 1,
-                          "backgroundColor": {},
+                          "backgroundColor": {
+                            "color": {
+                              "rgbColor": {
+                                "red": 0.8509804,
+                                "green": 0.8509804,
+                                "blue": 0.8509804
+                              }
+                            }
+                          },
                           "borderLeft": {
                             "color": {
                               "color": {
@@ -2769,38 +2560,21 @@
                         }
                       },
                       {
-                        "startIndex": 2245,
-                        "endIndex": 2255,
+                        "startIndex": 2497,
+                        "endIndex": 2507,
                         "content": [
                           {
-                            "startIndex": 2246,
-                            "endIndex": 2255,
+                            "startIndex": 2498,
+                            "endIndex": 2507,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2246,
-                                  "endIndex": 2254,
+                                  "startIndex": 2498,
+                                  "endIndex": 2507,
                                   "textRun": {
-                                    "content": "Header 3",
+                                    "content": "Header 3\n",
                                     "textStyle": {
-                                      "bold": true,
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
-                                  }
-                                },
-                                {
-                                  "startIndex": 2254,
-                                  "endIndex": 2255,
-                                  "textRun": {
-                                    "content": "\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
+                                      "bold": true
                                     }
                                   }
                                 }
@@ -2808,10 +2582,8 @@
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
                                 "alignment": "CENTER",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -2819,7 +2591,15 @@
                         "tableCellStyle": {
                           "rowSpan": 1,
                           "columnSpan": 1,
-                          "backgroundColor": {},
+                          "backgroundColor": {
+                            "color": {
+                              "rgbColor": {
+                                "red": 0.8509804,
+                                "green": 0.8509804,
+                                "blue": 0.8509804
+                              }
+                            }
+                          },
                           "borderLeft": {
                             "color": {
                               "color": {
@@ -2892,43 +2672,35 @@
                       "minRowHeight": {
                         "magnitude": 25,
                         "unit": "PT"
-                      },
-                      "tableHeader": true
+                      }
                     }
                   },
                   {
-                    "startIndex": 2255,
-                    "endIndex": 2283,
+                    "startIndex": 2507,
+                    "endIndex": 2535,
                     "tableCells": [
                       {
-                        "startIndex": 2256,
-                        "endIndex": 2265,
+                        "startIndex": 2508,
+                        "endIndex": 2517,
                         "content": [
                           {
-                            "startIndex": 2257,
-                            "endIndex": 2265,
+                            "startIndex": 2509,
+                            "endIndex": 2517,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2257,
-                                  "endIndex": 2265,
+                                  "startIndex": 2509,
+                                  "endIndex": 2517,
                                   "textRun": {
                                     "content": "Data A1\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3005,34 +2777,27 @@
                         }
                       },
                       {
-                        "startIndex": 2265,
-                        "endIndex": 2274,
+                        "startIndex": 2517,
+                        "endIndex": 2526,
                         "content": [
                           {
-                            "startIndex": 2266,
-                            "endIndex": 2274,
+                            "startIndex": 2518,
+                            "endIndex": 2526,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2266,
-                                  "endIndex": 2274,
+                                  "startIndex": 2518,
+                                  "endIndex": 2526,
                                   "textRun": {
                                     "content": "Data B1\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3109,34 +2874,27 @@
                         }
                       },
                       {
-                        "startIndex": 2274,
-                        "endIndex": 2283,
+                        "startIndex": 2526,
+                        "endIndex": 2535,
                         "content": [
                           {
-                            "startIndex": 2275,
-                            "endIndex": 2283,
+                            "startIndex": 2527,
+                            "endIndex": 2535,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2275,
-                                  "endIndex": 2283,
+                                  "startIndex": 2527,
+                                  "endIndex": 2535,
                                   "textRun": {
                                     "content": "Data C1\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3221,38 +2979,31 @@
                     }
                   },
                   {
-                    "startIndex": 2283,
-                    "endIndex": 2311,
+                    "startIndex": 2535,
+                    "endIndex": 2563,
                     "tableCells": [
                       {
-                        "startIndex": 2284,
-                        "endIndex": 2293,
+                        "startIndex": 2536,
+                        "endIndex": 2545,
                         "content": [
                           {
-                            "startIndex": 2285,
-                            "endIndex": 2293,
+                            "startIndex": 2537,
+                            "endIndex": 2545,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2285,
-                                  "endIndex": 2293,
+                                  "startIndex": 2537,
+                                  "endIndex": 2545,
                                   "textRun": {
                                     "content": "Data A2\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3329,34 +3080,27 @@
                         }
                       },
                       {
-                        "startIndex": 2293,
-                        "endIndex": 2302,
+                        "startIndex": 2545,
+                        "endIndex": 2554,
                         "content": [
                           {
-                            "startIndex": 2294,
-                            "endIndex": 2302,
+                            "startIndex": 2546,
+                            "endIndex": 2554,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2294,
-                                  "endIndex": 2302,
+                                  "startIndex": 2546,
+                                  "endIndex": 2554,
                                   "textRun": {
                                     "content": "Data B2\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3433,34 +3177,27 @@
                         }
                       },
                       {
-                        "startIndex": 2302,
-                        "endIndex": 2311,
+                        "startIndex": 2554,
+                        "endIndex": 2563,
                         "content": [
                           {
-                            "startIndex": 2303,
-                            "endIndex": 2311,
+                            "startIndex": 2555,
+                            "endIndex": 2563,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2303,
-                                  "endIndex": 2311,
+                                  "startIndex": 2555,
+                                  "endIndex": 2563,
                                   "textRun": {
                                     "content": "Data C2\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3545,38 +3282,31 @@
                     }
                   },
                   {
-                    "startIndex": 2311,
-                    "endIndex": 2339,
+                    "startIndex": 2563,
+                    "endIndex": 2591,
                     "tableCells": [
                       {
-                        "startIndex": 2312,
-                        "endIndex": 2321,
+                        "startIndex": 2564,
+                        "endIndex": 2573,
                         "content": [
                           {
-                            "startIndex": 2313,
-                            "endIndex": 2321,
+                            "startIndex": 2565,
+                            "endIndex": 2573,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2313,
-                                  "endIndex": 2321,
+                                  "startIndex": 2565,
+                                  "endIndex": 2573,
                                   "textRun": {
                                     "content": "Data A3\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3653,34 +3383,27 @@
                         }
                       },
                       {
-                        "startIndex": 2321,
-                        "endIndex": 2330,
+                        "startIndex": 2573,
+                        "endIndex": 2582,
                         "content": [
                           {
-                            "startIndex": 2322,
-                            "endIndex": 2330,
+                            "startIndex": 2574,
+                            "endIndex": 2582,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2322,
-                                  "endIndex": 2330,
+                                  "startIndex": 2574,
+                                  "endIndex": 2582,
                                   "textRun": {
                                     "content": "Data B3\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3757,34 +3480,27 @@
                         }
                       },
                       {
-                        "startIndex": 2330,
-                        "endIndex": 2339,
+                        "startIndex": 2582,
+                        "endIndex": 2591,
                         "content": [
                           {
-                            "startIndex": 2331,
-                            "endIndex": 2339,
+                            "startIndex": 2583,
+                            "endIndex": 2591,
                             "paragraph": {
                               "elements": [
                                 {
-                                  "startIndex": 2331,
-                                  "endIndex": 2339,
+                                  "startIndex": 2583,
+                                  "endIndex": 2591,
                                   "textRun": {
                                     "content": "Data C3\n",
-                                    "textStyle": {
-                                      "weightedFontFamily": {
-                                        "fontFamily": "Arial",
-                                        "weight": 400
-                                      }
-                                    }
+                                    "textStyle": {}
                                   }
                                 }
                               ],
                               "paragraphStyle": {
                                 "namedStyleType": "NORMAL_TEXT",
-                                "lineSpacing": 115,
-                                "direction": "LEFT_TO_RIGHT",
-                                "spacingMode": "COLLAPSE_LISTS",
-                                "avoidWidowAndOrphan": false
+                                "lineSpacing": 100,
+                                "direction": "LEFT_TO_RIGHT"
                               }
                             }
                           }
@@ -3885,13 +3601,13 @@
               }
             },
             {
-              "startIndex": 2340,
-              "endIndex": 2341,
+              "startIndex": 2592,
+              "endIndex": 2593,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2340,
-                    "endIndex": 2341,
+                    "startIndex": 2592,
+                    "endIndex": 2593,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -3905,27 +3621,26 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 2341,
-              "endIndex": 2374,
+              "startIndex": 2593,
+              "endIndex": 2626,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2341,
-                    "endIndex": 2373,
+                    "startIndex": 2593,
+                    "endIndex": 2625,
                     "textRun": {
                       "content": "Item Pickers (Chips) (Heading 3)",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 2373,
-                    "endIndex": 2374,
+                    "startIndex": 2625,
+                    "endIndex": 2626,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -3949,7 +3664,6 @@
                 "paragraphStyle": {
                   "headingId": "h.vy5xw85oyhup",
                   "namedStyleType": "HEADING_3",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
                   "spaceBelow": {
                     "unit": "PT"
@@ -3958,74 +3672,54 @@
               }
             },
             {
-              "startIndex": 2374,
-              "endIndex": 2525,
+              "startIndex": 2626,
+              "endIndex": 2777,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2374,
-                    "endIndex": 2525,
+                    "startIndex": 2626,
+                    "endIndex": 2777,
                     "textRun": {
                       "content": "Item Pickers (or Smart Chips) are special interactive elements in Google Docs. The converter must decide how to represent this in plain Markdown text.\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 2525,
-              "endIndex": 2541,
+              "startIndex": 2777,
+              "endIndex": 2793,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2525,
-                    "endIndex": 2538,
+                    "startIndex": 2777,
+                    "endIndex": 2790,
                     "textRun": {
                       "content": "Project Lead:",
                       "textStyle": {
-                        "bold": true,
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
+                        "bold": true
                       }
                     }
                   },
                   {
-                    "startIndex": 2538,
-                    "endIndex": 2539,
+                    "startIndex": 2790,
+                    "endIndex": 2791,
                     "textRun": {
                       "content": " ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 2539,
-                    "endIndex": 2540,
+                    "startIndex": 2791,
+                    "endIndex": 2792,
                     "person": {
-                      "personId": "kix.8hz9hqapohto",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      },
+                      "personId": "kix.ebjj77apmpqd",
+                      "textStyle": {},
                       "personProperties": {
                         "name": "Mark Koh",
                         "email": "markkoh@spotify.com"
@@ -4033,32 +3727,17 @@
                     }
                   },
                   {
-                    "startIndex": 2540,
-                    "endIndex": 2541,
+                    "startIndex": 2792,
+                    "endIndex": 2793,
                     "textRun": {
                       "content": "\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
-                  "spacingMode": "COLLAPSE_LISTS",
-                  "spaceAbove": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
-                  "spaceBelow": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
                   "indentFirstLine": {
                     "magnitude": 18,
                     "unit": "PT"
@@ -4066,52 +3745,41 @@
                   "indentStart": {
                     "magnitude": 36,
                     "unit": "PT"
-                  },
-                  "avoidWidowAndOrphan": false
+                  }
                 },
                 "bullet": {
                   "listId": "kix.1uce22d2kalz",
-                  "textStyle": {
-                    "weightedFontFamily": {
-                      "fontFamily": "Arial",
-                      "weight": 400
-                    }
-                  }
+                  "textStyle": {}
                 }
               }
             },
             {
-              "startIndex": 2541,
-              "endIndex": 2557,
+              "startIndex": 2793,
+              "endIndex": 2809,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2541,
-                    "endIndex": 2557,
+                    "startIndex": 2793,
+                    "endIndex": 2807,
                     "textRun": {
-                      "content": "Other person: \n",
+                      "content": "Other person: ",
                       "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
+                        "bold": true
                       }
+                    }
+                  },
+                  {
+                    "startIndex": 2807,
+                    "endIndex": 2809,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
-                  "spacingMode": "COLLAPSE_LISTS",
-                  "spaceAbove": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
-                  "spaceBelow": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
                   "indentFirstLine": {
                     "magnitude": 18,
                     "unit": "PT"
@@ -4119,66 +3787,41 @@
                   "indentStart": {
                     "magnitude": 36,
                     "unit": "PT"
-                  },
-                  "avoidWidowAndOrphan": false
+                  }
                 },
                 "bullet": {
                   "listId": "kix.1uce22d2kalz",
-                  "textStyle": {
-                    "weightedFontFamily": {
-                      "fontFamily": "Arial",
-                      "weight": 400
-                    }
-                  }
+                  "textStyle": {}
                 }
               }
             },
             {
-              "startIndex": 2557,
-              "endIndex": 2572,
+              "startIndex": 2809,
+              "endIndex": 2824,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2557,
-                    "endIndex": 2569,
+                    "startIndex": 2809,
+                    "endIndex": 2821,
                     "textRun": {
                       "content": "Status Chip:",
                       "textStyle": {
-                        "bold": true,
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
+                        "bold": true
                       }
                     }
                   },
                   {
-                    "startIndex": 2569,
-                    "endIndex": 2572,
+                    "startIndex": 2821,
+                    "endIndex": 2824,
                     "textRun": {
                       "content": " \n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
-                  "spacingMode": "COLLAPSE_LISTS",
-                  "spaceAbove": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
-                  "spaceBelow": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
                   "indentFirstLine": {
                     "magnitude": 18,
                     "unit": "PT"
@@ -4186,66 +3829,41 @@
                   "indentStart": {
                     "magnitude": 36,
                     "unit": "PT"
-                  },
-                  "avoidWidowAndOrphan": false
+                  }
                 },
                 "bullet": {
                   "listId": "kix.1uce22d2kalz",
-                  "textStyle": {
-                    "weightedFontFamily": {
-                      "fontFamily": "Arial",
-                      "weight": 400
-                    }
-                  }
+                  "textStyle": {}
                 }
               }
             },
             {
-              "startIndex": 2572,
-              "endIndex": 2585,
+              "startIndex": 2824,
+              "endIndex": 2837,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2572,
-                    "endIndex": 2582,
+                    "startIndex": 2824,
+                    "endIndex": 2834,
                     "textRun": {
                       "content": "File Chip:",
                       "textStyle": {
-                        "bold": true,
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
+                        "bold": true
                       }
                     }
                   },
                   {
-                    "startIndex": 2582,
-                    "endIndex": 2585,
+                    "startIndex": 2834,
+                    "endIndex": 2837,
                     "textRun": {
                       "content": " \n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
-                  "spacingMode": "COLLAPSE_LISTS",
-                  "spaceAbove": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
-                  "spaceBelow": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
                   "indentFirstLine": {
                     "magnitude": 18,
                     "unit": "PT"
@@ -4253,63 +3871,43 @@
                   "indentStart": {
                     "magnitude": 36,
                     "unit": "PT"
-                  },
-                  "avoidWidowAndOrphan": false
+                  }
                 },
                 "bullet": {
                   "listId": "kix.1uce22d2kalz",
-                  "textStyle": {
-                    "weightedFontFamily": {
-                      "fontFamily": "Arial",
-                      "weight": 400
-                    }
-                  }
+                  "textStyle": {}
                 }
               }
             },
             {
-              "startIndex": 2585,
-              "endIndex": 2600,
+              "startIndex": 2837,
+              "endIndex": 2852,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2585,
-                    "endIndex": 2595,
+                    "startIndex": 2837,
+                    "endIndex": 2847,
                     "textRun": {
                       "content": "Date Chip:",
                       "textStyle": {
-                        "bold": true,
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
+                        "bold": true
                       }
                     }
                   },
                   {
-                    "startIndex": 2595,
-                    "endIndex": 2596,
+                    "startIndex": 2847,
+                    "endIndex": 2848,
                     "textRun": {
                       "content": " ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 2596,
-                    "endIndex": 2597,
+                    "startIndex": 2848,
+                    "endIndex": 2849,
                     "dateElement": {
-                      "dateId": "kix.tlnloqqa2nzn",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      },
+                      "dateId": "kix.dxdk038skdby",
+                      "textStyle": {},
                       "dateElementProperties": {
                         "timestamp": "2026-01-08T12:00:00Z",
                         "locale": "en",
@@ -4320,32 +3918,17 @@
                     }
                   },
                   {
-                    "startIndex": 2597,
-                    "endIndex": 2600,
+                    "startIndex": 2849,
+                    "endIndex": 2852,
                     "textRun": {
                       "content": " \n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
-                  "spacingMode": "COLLAPSE_LISTS",
-                  "spaceAbove": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
-                  "spaceBelow": {
-                    "magnitude": 12,
-                    "unit": "PT"
-                  },
                   "indentFirstLine": {
                     "magnitude": 18,
                     "unit": "PT"
@@ -4353,36 +3936,30 @@
                   "indentStart": {
                     "magnitude": 36,
                     "unit": "PT"
-                  },
-                  "avoidWidowAndOrphan": false
+                  }
                 },
                 "bullet": {
                   "listId": "kix.1uce22d2kalz",
-                  "textStyle": {
-                    "weightedFontFamily": {
-                      "fontFamily": "Arial",
-                      "weight": 400
-                    }
-                  }
+                  "textStyle": {}
                 }
               }
             },
             {
-              "startIndex": 2600,
-              "endIndex": 2624,
+              "startIndex": 2852,
+              "endIndex": 2876,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2600,
-                    "endIndex": 2623,
+                    "startIndex": 2852,
+                    "endIndex": 2875,
                     "textRun": {
                       "content": "Code Blocks (Heading 3)",
                       "textStyle": {}
                     }
                   },
                   {
-                    "startIndex": 2623,
-                    "endIndex": 2624,
+                    "startIndex": 2875,
+                    "endIndex": 2876,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {
@@ -4406,7 +3983,6 @@
                 "paragraphStyle": {
                   "headingId": "h.ifi3a4xgu7rc",
                   "namedStyleType": "HEADING_3",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT",
                   "spacingMode": "COLLAPSE_LISTS",
                   "avoidWidowAndOrphan": false
@@ -4414,77 +3990,45 @@
               }
             },
             {
-              "startIndex": 2624,
-              "endIndex": 2759,
+              "startIndex": 2876,
+              "endIndex": 3011,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2624,
-                    "endIndex": 2753,
+                    "startIndex": 2876,
+                    "endIndex": 3011,
                     "textRun": {
-                      "content": "The tool must correctly identify and preserve pre-formatted text, typically using Markdown's fenced code blocks (three backticks ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2753,
-                    "endIndex": 2756,
-                    "textRun": {
-                      "content": "```",
-                      "textStyle": {
-                        "foregroundColor": {
-                          "color": {
-                            "rgbColor": {
-                              "red": 0.09411765,
-                              "green": 0.5019608,
-                              "blue": 0.21960784
-                            }
-                          }
-                        },
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2756,
-                    "endIndex": 2759,
-                    "textRun": {
-                      "content": ").\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Arial",
-                          "weight": 400
-                        }
-                      }
+                      "content": "The tool must correctly identify and preserve pre-formatted text, typically using Markdown's fenced code blocks (three backticks ```).\n",
+                      "textStyle": {}
                     }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 2759,
-              "endIndex": 2808,
+              "startIndex": 3011,
+              "endIndex": 3060,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2759,
-                    "endIndex": 2760,
+                    "startIndex": 3011,
+                    "endIndex": 3012,
                     "textRun": {
                       "content": "",
                       "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.21568628,
+                              "green": 0.2784314,
+                              "blue": 0.30980393
+                            }
+                          }
+                        },
                         "weightedFontFamily": {
                           "fontFamily": "Arial",
                           "weight": 400
@@ -4493,10 +4037,10 @@
                     }
                   },
                   {
-                    "startIndex": 2760,
-                    "endIndex": 2763,
+                    "startIndex": 3012,
+                    "endIndex": 3016,
                     "textRun": {
-                      "content": "def",
+                      "content": "def ",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -4515,23 +4059,44 @@
                     }
                   },
                   {
-                    "startIndex": 2763,
-                    "endIndex": 2764,
+                    "startIndex": 3016,
+                    "endIndex": 3060,
                     "textRun": {
-                      "content": " ",
+                      "content": "calculate_markdown_conversion(doc_content):\n",
                       "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.21568628,
+                              "green": 0.2784314,
+                              "blue": 0.30980393
+                            }
+                          }
+                        },
                         "weightedFontFamily": {
                           "fontFamily": "Roboto Mono",
                           "weight": 400
                         }
                       }
                     }
-                  },
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3060,
+              "endIndex": 3105,
+              "paragraph": {
+                "elements": [
                   {
-                    "startIndex": 2764,
-                    "endIndex": 2807,
+                    "startIndex": 3060,
+                    "endIndex": 3064,
                     "textRun": {
-                      "content": "calculate_markdown_conversion(doc_content):",
+                      "content": "    ",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -4550,11 +4115,20 @@
                     }
                   },
                   {
-                    "startIndex": 2807,
-                    "endIndex": 2808,
+                    "startIndex": 3064,
+                    "endIndex": 3105,
                     "textRun": {
-                      "content": "\n",
+                      "content": "\"\"\"Placeholder for a Python function.\"\"\"\n",
                       "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.72156864,
+                              "green": 0.023529412,
+                              "blue": 0.44705883
+                            }
+                          }
+                        },
                         "weightedFontFamily": {
                           "fontFamily": "Roboto Mono",
                           "weight": 400
@@ -4565,34 +4139,20 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 2808,
-              "endIndex": 2853,
+              "startIndex": 3105,
+              "endIndex": 3148,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2808,
-                    "endIndex": 2812,
+                    "startIndex": 3105,
+                    "endIndex": 3109,
                     "textRun": {
                       "content": "    ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2812,
-                    "endIndex": 2852,
-                    "textRun": {
-                      "content": "\"\"\"Placeholder for a Python function.\"\"\"",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -4611,49 +4171,10 @@
                     }
                   },
                   {
-                    "startIndex": 2852,
-                    "endIndex": 2853,
+                    "startIndex": 3109,
+                    "endIndex": 3112,
                     "textRun": {
-                      "content": "\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  }
-                ],
-                "paragraphStyle": {
-                  "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
-                  "direction": "LEFT_TO_RIGHT"
-                }
-              }
-            },
-            {
-              "startIndex": 2853,
-              "endIndex": 2896,
-              "paragraph": {
-                "elements": [
-                  {
-                    "startIndex": 2853,
-                    "endIndex": 2857,
-                    "textRun": {
-                      "content": "    ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2857,
-                    "endIndex": 2859,
-                    "textRun": {
-                      "content": "if",
+                      "content": "if ",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -4672,23 +4193,10 @@
                     }
                   },
                   {
-                    "startIndex": 2859,
-                    "endIndex": 2860,
+                    "startIndex": 3112,
+                    "endIndex": 3132,
                     "textRun": {
-                      "content": " ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2860,
-                    "endIndex": 2879,
-                    "textRun": {
-                      "content": "\"table_of_contents\"",
+                      "content": "\"table_of_contents\" ",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -4707,23 +4215,10 @@
                     }
                   },
                   {
-                    "startIndex": 2879,
-                    "endIndex": 2880,
+                    "startIndex": 3132,
+                    "endIndex": 3135,
                     "textRun": {
-                      "content": " ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2880,
-                    "endIndex": 2882,
-                    "textRun": {
-                      "content": "in",
+                      "content": "in ",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -4742,23 +4237,44 @@
                     }
                   },
                   {
-                    "startIndex": 2882,
-                    "endIndex": 2883,
+                    "startIndex": 3135,
+                    "endIndex": 3148,
                     "textRun": {
-                      "content": " ",
+                      "content": "doc_content:\n",
                       "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.21568628,
+                              "green": 0.2784314,
+                              "blue": 0.30980393
+                            }
+                          }
+                        },
                         "weightedFontFamily": {
                           "fontFamily": "Roboto Mono",
                           "weight": 400
                         }
                       }
                     }
-                  },
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3148,
+              "endIndex": 3179,
+              "paragraph": {
+                "elements": [
                   {
-                    "startIndex": 2883,
-                    "endIndex": 2895,
+                    "startIndex": 3148,
+                    "endIndex": 3156,
                     "textRun": {
-                      "content": "doc_content:",
+                      "content": "        ",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -4777,49 +4293,10 @@
                     }
                   },
                   {
-                    "startIndex": 2895,
-                    "endIndex": 2896,
+                    "startIndex": 3156,
+                    "endIndex": 3163,
                     "textRun": {
-                      "content": "\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  }
-                ],
-                "paragraphStyle": {
-                  "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
-                  "direction": "LEFT_TO_RIGHT"
-                }
-              }
-            },
-            {
-              "startIndex": 2896,
-              "endIndex": 2927,
-              "paragraph": {
-                "elements": [
-                  {
-                    "startIndex": 2896,
-                    "endIndex": 2904,
-                    "textRun": {
-                      "content": "        ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2904,
-                    "endIndex": 2910,
-                    "textRun": {
-                      "content": "return",
+                      "content": "return ",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -4838,23 +4315,44 @@
                     }
                   },
                   {
-                    "startIndex": 2910,
-                    "endIndex": 2911,
+                    "startIndex": 3163,
+                    "endIndex": 3179,
                     "textRun": {
-                      "content": " ",
+                      "content": "\"TOC converted\"\n",
                       "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.09411765,
+                              "green": 0.5019608,
+                              "blue": 0.21960784
+                            }
+                          }
+                        },
                         "weightedFontFamily": {
                           "fontFamily": "Roboto Mono",
                           "weight": 400
                         }
                       }
                     }
-                  },
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3179,
+              "endIndex": 3189,
+              "paragraph": {
+                "elements": [
                   {
-                    "startIndex": 2911,
-                    "endIndex": 2926,
+                    "startIndex": 3179,
+                    "endIndex": 3183,
                     "textRun": {
-                      "content": "\"TOC converted\"",
+                      "content": "    ",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -4873,47 +4371,8 @@
                     }
                   },
                   {
-                    "startIndex": 2926,
-                    "endIndex": 2927,
-                    "textRun": {
-                      "content": "\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  }
-                ],
-                "paragraphStyle": {
-                  "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
-                  "direction": "LEFT_TO_RIGHT"
-                }
-              }
-            },
-            {
-              "startIndex": 2927,
-              "endIndex": 2937,
-              "paragraph": {
-                "elements": [
-                  {
-                    "startIndex": 2927,
-                    "endIndex": 2931,
-                    "textRun": {
-                      "content": "    ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2931,
-                    "endIndex": 2935,
+                    "startIndex": 3183,
+                    "endIndex": 3187,
                     "textRun": {
                       "content": "else",
                       "textStyle": {
@@ -4934,10 +4393,44 @@
                     }
                   },
                   {
-                    "startIndex": 2935,
-                    "endIndex": 2936,
+                    "startIndex": 3187,
+                    "endIndex": 3189,
                     "textRun": {
-                      "content": ":",
+                      "content": ":\n",
+                      "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.21568628,
+                              "green": 0.2784314,
+                              "blue": 0.30980393
+                            }
+                          }
+                        },
+                        "weightedFontFamily": {
+                          "fontFamily": "Roboto Mono",
+                          "weight": 400
+                        }
+                      }
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3189,
+              "endIndex": 3224,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 3189,
+                    "endIndex": 3197,
+                    "textRun": {
+                      "content": "        ",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -4956,49 +4449,10 @@
                     }
                   },
                   {
-                    "startIndex": 2936,
-                    "endIndex": 2937,
+                    "startIndex": 3197,
+                    "endIndex": 3204,
                     "textRun": {
-                      "content": "\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  }
-                ],
-                "paragraphStyle": {
-                  "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
-                  "direction": "LEFT_TO_RIGHT"
-                }
-              }
-            },
-            {
-              "startIndex": 2937,
-              "endIndex": 2972,
-              "paragraph": {
-                "elements": [
-                  {
-                    "startIndex": 2937,
-                    "endIndex": 2945,
-                    "textRun": {
-                      "content": "        ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2945,
-                    "endIndex": 2951,
-                    "textRun": {
-                      "content": "return",
+                      "content": "return ",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -5017,23 +4471,10 @@
                     }
                   },
                   {
-                    "startIndex": 2951,
-                    "endIndex": 2952,
+                    "startIndex": 3204,
+                    "endIndex": 3224,
                     "textRun": {
-                      "content": " ",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
-                  },
-                  {
-                    "startIndex": 2952,
-                    "endIndex": 2971,
-                    "textRun": {
-                      "content": "\"Content converted\"",
+                      "content": "\"Content converted\"\n",
                       "textStyle": {
                         "foregroundColor": {
                           "color": {
@@ -5050,38 +4491,46 @@
                         }
                       }
                     }
-                  },
-                  {
-                    "startIndex": 2971,
-                    "endIndex": 2972,
-                    "textRun": {
-                      "content": "\n",
-                      "textStyle": {
-                        "weightedFontFamily": {
-                          "fontFamily": "Roboto Mono",
-                          "weight": 400
-                        }
-                      }
-                    }
                   }
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 2972,
-              "endIndex": 2974,
+              "startIndex": 3224,
+              "endIndex": 3226,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2972,
-                    "endIndex": 2974,
+                    "startIndex": 3224,
+                    "endIndex": 3225,
                     "textRun": {
-                      "content": "\n",
+                      "content": "",
+                      "textStyle": {
+                        "foregroundColor": {
+                          "color": {
+                            "rgbColor": {
+                              "red": 0.21568628,
+                              "green": 0.2784314,
+                              "blue": 0.30980393
+                            }
+                          }
+                        },
+                        "weightedFontFamily": {
+                          "fontFamily": "Arial",
+                          "weight": 400
+                        }
+                      }
+                    }
+                  },
+                  {
+                    "startIndex": 3225,
+                    "endIndex": 3226,
+                    "textRun": {
+                      "content": "\n",
                       "textStyle": {
                         "weightedFontFamily": {
                           "fontFamily": "Arial",
@@ -5093,19 +4542,18 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 2974,
-              "endIndex": 2975,
+              "startIndex": 3226,
+              "endIndex": 3227,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2974,
-                    "endIndex": 2975,
+                    "startIndex": 3226,
+                    "endIndex": 3227,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {}
@@ -5114,24 +4562,20 @@
                 ],
                 "paragraphStyle": {
                   "namedStyleType": "NORMAL_TEXT",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 2975,
-              "endIndex": 3012,
+              "startIndex": 3227,
+              "endIndex": 3264,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 2975,
-                    "endIndex": 3012,
+                    "startIndex": 3227,
+                    "endIndex": 3264,
                     "textRun": {
                       "content": "This is an inline suggestion heading\n",
-                      "suggestedInsertionIds": [
-                        "suggest.8ubgzadllrvh"
-                      ],
                       "textStyle": {}
                     }
                   }
@@ -5139,30 +4583,58 @@
                 "paragraphStyle": {
                   "headingId": "h.u1qjctnofws1",
                   "namedStyleType": "HEADING_3",
-                  "lineSpacing": 115,
                   "direction": "LEFT_TO_RIGHT"
                 }
               }
             },
             {
-              "startIndex": 3012,
-              "endIndex": 3041,
+              "startIndex": 3264,
+              "endIndex": 3293,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 3012,
-                    "endIndex": 3040,
+                    "startIndex": 3264,
+                    "endIndex": 3293,
                     "textRun": {
-                      "content": "This is an inline suggestion",
-                      "suggestedInsertionIds": [
-                        "suggest.8ubgzadllrvh"
-                      ],
+                      "content": "This is an inline suggestion\n",
                       "textStyle": {}
                     }
-                  },
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3293,
+              "endIndex": 3294,
+              "paragraph": {
+                "elements": [
                   {
-                    "startIndex": 3040,
-                    "endIndex": 3041,
+                    "startIndex": 3293,
+                    "endIndex": 3294,
+                    "textRun": {
+                      "content": "\n",
+                      "textStyle": {}
+                    }
+                  }
+                ],
+                "paragraphStyle": {
+                  "namedStyleType": "NORMAL_TEXT",
+                  "direction": "LEFT_TO_RIGHT"
+                }
+              }
+            },
+            {
+              "startIndex": 3294,
+              "endIndex": 3295,
+              "paragraph": {
+                "elements": [
+                  {
+                    "startIndex": 3294,
+                    "endIndex": 3295,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {}
@@ -5208,13 +4680,13 @@
               }
             },
             {
-              "startIndex": 3041,
-              "endIndex": 3042,
+              "startIndex": 3295,
+              "endIndex": 3296,
               "paragraph": {
                 "elements": [
                   {
-                    "startIndex": 3041,
-                    "endIndex": 3042,
+                    "startIndex": 3295,
+                    "endIndex": 3296,
                     "textRun": {
                       "content": "\n",
                       "textStyle": {}
@@ -5302,7 +4774,7 @@
               "paragraphStyle": {
                 "namedStyleType": "NORMAL_TEXT",
                 "alignment": "START",
-                "lineSpacing": 150,
+                "lineSpacing": 115,
                 "direction": "LEFT_TO_RIGHT",
                 "spacingMode": "NEVER_COLLAPSE",
                 "spaceAbove": {
@@ -5383,17 +4855,14 @@
               "namedStyleType": "HEADING_1",
               "textStyle": {
                 "fontSize": {
-                  "magnitude": 20,
+                  "magnitude": 18,
                   "unit": "PT"
-                },
-                "weightedFontFamily": {
-                  "fontFamily": "Hind",
-                  "weight": 400
                 }
               },
               "paragraphStyle": {
-                "headingId": "h.fjxl7t8f029k",
+                "headingId": "h.xerl7yit4s8",
                 "namedStyleType": "HEADING_1",
+                "lineSpacing": 115,
                 "direction": "LEFT_TO_RIGHT",
                 "keepLinesTogether": true,
                 "keepWithNext": true
@@ -5433,20 +4902,16 @@
                 }
               },
               "paragraphStyle": {
-                "headingId": "h.462s4275rmjn",
+                "headingId": "h.5u695e9yf02",
                 "namedStyleType": "HEADING_3",
+                "lineSpacing": 115,
                 "direction": "LEFT_TO_RIGHT",
-                "spaceAbove": {
-                  "magnitude": 16,
-                  "unit": "PT"
-                },
                 "spaceBelow": {
                   "magnitude": 4,
                   "unit": "PT"
                 },
                 "keepLinesTogether": true,
-                "keepWithNext": true,
-                "pageBreakBefore": false
+                "keepWithNext": true
               }
             },
             {
@@ -5760,12 +5225,12 @@
           }
         },
         "inlineObjects": {
-          "kix.z7gloano634x": {
-            "objectId": "kix.z7gloano634x",
+          "kix.annzq4plor7j": {
+            "objectId": "kix.annzq4plor7j",
             "inlineObjectProperties": {
               "embeddedObject": {
                 "imageProperties": {
-                  "contentUri": "https://lh7-rt.googleusercontent.com/docsz/AD_4nXeMiLa-i-fgskSH4yddeNIeoC_eRLU_n_P6AFDqC18gm7I1JAR8jWiTH-AOkWpBluM4kdiK1FSXLeSi870g-Z4qDDbWCw0E8dX6H7RCqJKiznHXydPGgm422QiFtW6xWW9VNX5PYapgJIqjKqTxW10vt0pyAY8KzZHdQM1d3F5Z0L6Rlg?key=tt3mPS6V4AqB0FIWYEbDVQ",
+                  "contentUri": "https://lh7-rt.googleusercontent.com/docsz/AD_4nXcgz-PVDrFQlh0U5z31_HWO5bvONQi1peLYVpH-nynxS64c7c3tnfqvYyMlj46lpd0FpWyYXf-o8onYKuu5spwMiYoSkPa7jqlB7zHhLyeZXNP9xLKzSwqhPHmsBcz64XJ0NoW8oweZbcvZcUZhMHVQllSMzpLB0xIu8CQY4ruim6TccA?key=tt3mPS6V4AqB0FIWYEbDVQ",
                   "cropProperties": {
                     "offsetRight": 0.7051282
                   }
