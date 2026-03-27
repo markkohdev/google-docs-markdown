@@ -2,6 +2,13 @@
 
 These compose/stack rather than standing alone.  The orchestrator applies
 matching handlers as a composition on ``TextRun`` content.
+
+Note: The ``serialize`` methods here are intentionally no-ops.  Inline
+formatting is currently applied by ``TextRunHandler`` directly (since it
+must compose multiple markers and handle whitespace splitting atomically).
+The ``MARKER`` / ``STYLE_FIELD`` constants and ``serialize_match`` methods
+are scaffolding for Phase 3.6 deserialization, where the deserializer will
+use them to map Markdown delimiters back to ``TextStyle`` fields.
 """
 
 from __future__ import annotations
@@ -10,7 +17,7 @@ from typing import Any
 
 from google_docs_markdown.element_registry import INLINE_CODE_COLOR, MONOSPACE_FONT
 from google_docs_markdown.handlers.base import InlineFormatHandler
-from google_docs_markdown.handlers.context import SerContext
+from google_docs_markdown.handlers.context import SerContext, optional_color_to_hex
 from google_docs_markdown.models.styles import TextStyle
 
 
@@ -85,7 +92,5 @@ class InlineCodeHandler(InlineFormatHandler):
         if not style:
             return False
         has_mono = bool(style.weightedFontFamily and style.weightedFontFamily.fontFamily == cls.FONT)
-        from google_docs_markdown.handlers.context import optional_color_to_hex
-
         fg = optional_color_to_hex(style.foregroundColor)
         return has_mono and fg == cls.COLOR

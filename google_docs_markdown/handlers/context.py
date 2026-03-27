@@ -116,6 +116,7 @@ class DocumentContext:
 
         default_font = ds.get("font")
         default_font_size = ds.get("fontSize")
+        default_fg_color = ds.get("fgColor", "#000000")
         default_link_color = ds.get("linkColor", DEFAULT_LINK_COLOR)
         date_defaults = ds.get("dateDefaults")
 
@@ -138,7 +139,7 @@ class DocumentContext:
         return cls(
             default_font=default_font,
             default_font_size=default_font_size,
-            default_fg_color="#000000",
+            default_fg_color=default_fg_color,
             default_link_color=default_link_color,
             named_style_sizes=named_style_sizes,
             named_style_colors=named_style_colors,

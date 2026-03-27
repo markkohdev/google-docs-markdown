@@ -140,6 +140,9 @@ class TextRunHandler(ElementHandler):
             style_props = None
         ctx.pending_style_props = style_props
 
+        # Suggestion wrapping must happen here (not in SuggestionHandler) because
+        # it wraps the already-formatted text run content — the suggestion tag
+        # must enclose inline formatting, links, and style results.
         if text_run.suggestedInsertionIds:
             suggestion_id = text_run.suggestedInsertionIds[0]
             content = wrap_tag(

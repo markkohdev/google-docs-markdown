@@ -299,6 +299,8 @@ class MarkdownSerializer:
             default_styles["font"] = doc.default_font
         if doc.default_font_size is not None:
             default_styles["fontSize"] = doc.default_font_size
+        if doc.default_fg_color != "#000000":
+            default_styles["fgColor"] = doc.default_fg_color
 
         heading_styles: dict[str, dict[str, Any]] = {}
         for style_name in (
