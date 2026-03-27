@@ -16,6 +16,7 @@ Update flow (Phase 3.9):
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -84,8 +85,9 @@ class Uploader:
 
         The directory name is used as the document title (unless
         *document_title* overrides it).  Each ``.md`` file becomes a tab
-        (tab title = file stem).  Subdirectories produce nested tabs via
-        ``addDocumentTab`` with ``parentTabId``.
+        (tab title = file stem).  When a same-named directory exists alongside
+        the ``.md`` file (e.g. ``Tab.md`` + ``Tab/``), the directory's
+        contents become child tabs nested under that tab.
 
         Files and subdirectories are sorted alphabetically to ensure
         deterministic tab ordering.
@@ -106,10 +108,8 @@ class Uploader:
         if not directory.is_dir():
             raise FileNotFoundError(f"Directory not found: {directory}")
 
-        md_files = sorted(directory.glob("*.md"))
-        subdirs = sorted(d for d in directory.iterdir() if d.is_dir())
-
-        if not md_files and not subdirs:
+        entries = _collect_tab_entries(directory)
+        if not entries:
             raise ValueError(f"No .md files or subdirectories found in: {directory}")
 
         title = document_title or directory.name
@@ -118,15 +118,16 @@ class Uploader:
 
         first_tab_id = _get_first_tab_id(doc)
 
-        if md_files:
-            self._populate_default_tab(document_id, first_tab_id, md_files[0])
-            for md_file in md_files[1:]:
-                self._add_tab_from_file(document_id, md_file)
-        elif subdirs:
-            self._rename_tab(document_id, first_tab_id, subdirs[0].name)
+        first, rest = entries[0], entries[1:]
+        if first.md_file:
+            self._populate_default_tab(document_id, first_tab_id, first.md_file)
+        else:
+            self._rename_tab(document_id, first_tab_id, first.name)
+        if first.subdir:
+            self._create_children(document_id, first.subdir, parent_tab_id=first_tab_id)
 
-        for subdir in subdirs:
-            self._add_tabs_from_subdir(document_id, subdir, parent_tab_id=None)
+        for entry in rest:
+            self._create_tab_entry(document_id, entry, parent_tab_id=None)
 
         return document_id
 
@@ -286,20 +287,18 @@ class Uploader:
         """Rename a tab."""
         self._client.batch_update(document_id, [_rename_tab_request(tab_id, title)])
 
-    def _add_tab_from_file(
+    def _create_tab_entry(
         self,
         document_id: str,
-        md_file: Path,
+        entry: _TabEntry,
         *,
-        parent_tab_id: str | None = None,
+        parent_tab_id: str | None,
     ) -> str:
-        """Add a new tab from a Markdown file and return the new tab ID."""
-        tab_title = md_file.stem
-
+        """Create a tab from a :class:`_TabEntry` and return the new tab ID."""
         add_req = Request(
             addDocumentTab=AddDocumentTabRequest(
                 tabProperties=TabProperties(
-                    title=tab_title,
+                    title=entry.name,
                     parentTabId=parent_tab_id,
                 ),
             )
@@ -312,48 +311,66 @@ class Uploader:
             if resp.addDocumentTab and resp.addDocumentTab.tabProperties:
                 new_tab_id = resp.addDocumentTab.tabProperties.tabId or ""
 
-        markdown_text = md_file.read_text(encoding="utf-8")
-        requests = self._deserializer.deserialize(markdown_text, tab_id=new_tab_id)
-        if requests:
-            self._client.batch_update(document_id, requests)
+        if entry.md_file:
+            markdown_text = entry.md_file.read_text(encoding="utf-8")
+            requests = self._deserializer.deserialize(markdown_text, tab_id=new_tab_id)
+            if requests:
+                self._client.batch_update(document_id, requests)
+
+        if entry.subdir:
+            self._create_children(document_id, entry.subdir, parent_tab_id=new_tab_id)
 
         return new_tab_id
 
-    def _add_tabs_from_subdir(
+    def _create_children(
         self,
         document_id: str,
         subdir: Path,
-        parent_tab_id: str | None,
+        parent_tab_id: str,
     ) -> None:
-        """Recursively add tabs from a subdirectory."""
-        md_files = sorted(subdir.glob("*.md"))
-        child_subdirs = sorted(d for d in subdir.iterdir() if d.is_dir())
-
-        for md_file in md_files:
-            self._add_tab_from_file(document_id, md_file, parent_tab_id=parent_tab_id)
-
-        for child in child_subdirs:
-            add_req = Request(
-                addDocumentTab=AddDocumentTabRequest(
-                    tabProperties=TabProperties(
-                        title=child.name,
-                        parentTabId=parent_tab_id,
-                    ),
-                )
-            )
-            responses = self._client.batch_update(document_id, [add_req])
-            new_parent_id = ""
-            if responses:
-                resp = responses[0]
-                if resp.addDocumentTab and resp.addDocumentTab.tabProperties:
-                    new_parent_id = resp.addDocumentTab.tabProperties.tabId or ""
-
-            self._add_tabs_from_subdir(document_id, child, parent_tab_id=new_parent_id)
+        """Recursively create child tabs from a subdirectory."""
+        child_entries = _collect_tab_entries(subdir)
+        for entry in child_entries:
+            self._create_tab_entry(document_id, entry, parent_tab_id=parent_tab_id)
 
 
 # ------------------------------------------------------------------
 # Module-level helpers
 # ------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _TabEntry:
+    """A tab to be created: may have content (.md), children (subdir), or both."""
+
+    name: str
+    md_file: Path | None = None
+    subdir: Path | None = None
+
+
+def _collect_tab_entries(directory: Path) -> list[_TabEntry]:
+    """Group ``.md`` files and same-named subdirectories into tab entries.
+
+    When ``Tab.md`` and ``Tab/`` both exist, they map to a single tab
+    that has content from the ``.md`` file and children from the directory.
+    """
+    md_by_stem: dict[str, Path] = {}
+    for f in sorted(directory.glob("*.md")):
+        md_by_stem[f.stem] = f
+
+    dir_by_name: dict[str, Path] = {}
+    for d in sorted(d for d in directory.iterdir() if d.is_dir()):
+        dir_by_name[d.name] = d
+
+    all_names = sorted(set(md_by_stem) | set(dir_by_name))
+    return [
+        _TabEntry(
+            name=name,
+            md_file=md_by_stem.get(name),
+            subdir=dir_by_name.get(name),
+        )
+        for name in all_names
+    ]
 
 
 def _get_first_tab_id(doc: Document) -> str:

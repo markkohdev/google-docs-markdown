@@ -219,6 +219,58 @@ class TestCreateFromDirectory:
         assert doc_id == "new-doc-id"
         assert client.batch_update.call_count >= 2
 
+    def test_paired_file_and_directory_same_tab(self, tmp_path: Path) -> None:
+        """When X.md and X/ both exist, they should produce one tab with children, not two."""
+        md_dir = tmp_path / "Doc"
+        md_dir.mkdir()
+        (md_dir / "Tab A.md").write_text("# Tab A\n", encoding="utf-8")
+        (md_dir / "Parent.md").write_text("# Parent\n", encoding="utf-8")
+        sub = md_dir / "Parent"
+        sub.mkdir()
+        (sub / "Child.md").write_text("# Child\n", encoding="utf-8")
+
+        client = _mock_client()
+        call_count = 0
+
+        def mock_batch_update(doc_id: str, requests: list[Request]) -> list[Response]:
+            nonlocal call_count
+            call_count += 1
+            for r in requests:
+                if r.addDocumentTab is not None:
+                    title = ""
+                    if r.addDocumentTab.tabProperties:
+                        title = r.addDocumentTab.tabProperties.title or ""
+                    return [
+                        Response(
+                            addDocumentTab=AddDocumentTabResponse(
+                                tabProperties=TabProperties(
+                                    tabId=f"t.{call_count}",
+                                    title=title,
+                                )
+                            )
+                        )
+                    ]
+            return []
+
+        client.batch_update.side_effect = mock_batch_update
+        uploader = Uploader(client=client)
+
+        uploader.create_from_directory(md_dir)
+
+        add_tab_reqs: list[tuple[str, str | None]] = []
+        for call in client.batch_update.call_args_list:
+            for req in call[0][1]:
+                if req.addDocumentTab and req.addDocumentTab.tabProperties:
+                    props = req.addDocumentTab.tabProperties
+                    add_tab_reqs.append((props.title or "", props.parentTabId))
+
+        titles = [t for t, _ in add_tab_reqs]
+        assert "Parent" not in titles, "Parent should use default tab (rename), not addDocumentTab"
+        assert "Child" in titles, "Child should be created via addDocumentTab"
+
+        child_entry = next(e for e in add_tab_reqs if e[0] == "Child")
+        assert child_entry[1] == "t.0", "Child should be nested under the default tab (Parent)"
+
     def test_files_sorted_alphabetically(self, tmp_path: Path) -> None:
         md_dir = tmp_path / "Sorted"
         md_dir.mkdir()
