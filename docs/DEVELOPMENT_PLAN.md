@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-27 (Phase 3 restructured — absorbed old Phase 4 (diffing) into Phase 3, introduced per-element handler architecture with shared context, source map, diff engine; renumbered Phases 5–8 → 4–7)  
-**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.6 — complete**; **Phase 3 — in progress** (client + CLI skeleton done; handler infrastructure, deserializer, source map, diff engine, `uploader.py` still to do)
+**Last Updated:** 2026-03-27 (Phases 3.1–3.3 complete — per-element handler architecture, context layer, handler migration)  
+**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.6 — complete**; **Phase 3.1–3.3 — complete** (context layer, handler infrastructure, handler migration done); **Phase 3.4+ — in progress** (element registry, source map, deserializer, diff engine, `uploader.py` still to do)
 
 ## Overview
 
@@ -237,7 +237,7 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 
 **Deliverable:** Can download complex Google Docs with tables, images, lists, code blocks, links, footnotes, headers/footers, section breaks, TOC, suggestions, smart chips, and all paragraph elements, with full support for multi-tab documents. Non-markdown elements preserved via consistent HTML comment annotation pattern. Each file is self-contained with embedded metadata.
 
-**Phase 2 progress note:** Phases 2.1–2.6 are complete. Total test count: 355 unit tests (164 existing + 74 new Phase 2.6 + 117 others) + 12 integration tests.
+**Phase 2 progress note:** Phases 2.1–2.6 are complete. Total test count at end of Phase 2: 355 unit tests (164 existing + 74 new Phase 2.6 + 117 others) + 12 integration tests. After Phase 3.1–3.3: 423 tests (55 new context/registry tests).
 
 ---
 
@@ -250,36 +250,36 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 - **Atomic, surgical edits for updates:** Fetch current doc → serialize with source map → diff against local Markdown → map diff ranges to API indices → surgical `batchUpdate` requests. See `TECH_SPEC.md` Sections 5.9-5.10.
 - **Create-before-update ordering:** The create-new-document flow validates the deserializer end-to-end before the update flow layers diffing on top.
 
-**Progress (2026-03-26):** `GoogleDocsClient` exposes `create_document` and `batch_update` with Pydantic models (unit tested). CLI `upload` command exists as a stub. `list-tabs` CLI command implemented. No handler infrastructure, deserializer, diff engine, or `uploader.py` yet.
+**Progress (2026-03-27):** `GoogleDocsClient` exposes `create_document` and `batch_update` with Pydantic models (unit tested). CLI `upload` command exists as a stub. `list-tabs` CLI command implemented. **Phases 3.1–3.3 complete:** context layer (`DocumentContext`/`SerContext`/`DeserContext`), handler infrastructure (`ElementHandler` ABC, `HandlerRegistry`), and full handler migration (17 handler files, serializer refactored to ~230-line orchestrator). 423 tests pass. No deserializer, source map, diff engine, or `uploader.py` yet.
 
-#### 3.1: Context Layer
-- [ ] Create `google_docs_markdown/handlers/context.py`
-- [ ] Define `DocumentContext` frozen dataclass with all document-level defaults (default font, font size, foreground color, link color, named style sizes/colors/fonts, date defaults)
-- [ ] Implement `DocumentContext.from_document_tab(tab)` factory — extracts from `DocumentTab.namedStyles` (same logic as current `_extract_default_styles()`)
-- [ ] Implement `DocumentContext.from_metadata(metadata)` factory — extracts from parsed `<!-- google-docs-metadata ... -->` block's `defaultStyles`
-- [ ] Implement lookup methods: `expected_font_size(style_name)`, `expected_color(style_name)`, `expected_font(style_name)`
-- [ ] Define `SerContext` mutable dataclass (holds `DocumentContext`, `current_para_style`, `footnote_refs`, `date_defaults`, `source_map`, `inline_objects`, `lists_context`, `body_content`)
-- [ ] Define `DeserContext` mutable dataclass (holds `DocumentContext`, `index`, `tab_id`, `segment_id`, `requests` accumulator, `advance()` and `emit()` methods)
-- [ ] Unit tests: verify `from_document_tab()` and `from_metadata()` produce equivalent contexts for the same document; test lookup methods against named style hierarchies
+#### 3.1: Context Layer ✅
+- [x] Create `google_docs_markdown/handlers/context.py`
+- [x] Define `DocumentContext` frozen dataclass with all document-level defaults (default font, font size, foreground color, link color, named style sizes/colors/fonts, date defaults)
+- [x] Implement `DocumentContext.from_document_tab(tab)` factory — extracts from `DocumentTab.namedStyles` (same logic as current `_extract_default_styles()`)
+- [x] Implement `DocumentContext.from_metadata(metadata)` factory — extracts from parsed `<!-- google-docs-metadata ... -->` block's `defaultStyles`
+- [x] Implement lookup methods: `expected_font_size(style_name)`, `expected_color(style_name)`, `expected_font(style_name)`
+- [x] Define `SerContext` mutable dataclass (holds `DocumentContext`, `current_para_style`, `footnote_refs`, `date_defaults`, `source_map`, `inline_objects`, `lists_context`, `body_content`, plus `collect_paragraph_text` and `visit_block` callbacks)
+- [x] Define `DeserContext` mutable dataclass (holds `DocumentContext`, `index`, `tab_id`, `segment_id`, `requests` accumulator, `advance()` and `emit()` methods)
+- [x] Unit tests: 32 tests in `test_context.py` — verify `from_document_tab()` and `from_metadata()` produce equivalent contexts, test lookup methods against named style hierarchies, round-trip through metadata, `optional_color_to_hex`, SerContext/DeserContext state
 
-#### 3.2: Handler Infrastructure
-- [ ] Create `google_docs_markdown/handlers/` package
-- [ ] Define `ElementHandler` ABC in `handlers/base.py` with `serialize_match()`, `serialize()`, `deserialize_match()`, `deserialize()` abstract methods
-- [ ] Define `TagElementHandler` subclass with `TAG_TYPE` class attribute (shared between ser and deser directions)
-- [ ] Define `BlockElementHandler` subclass for structural blocks (heading, list, table, code)
-- [ ] Define `InlineFormatHandler` subclass with `MARKER` and `STYLE_FIELD` class attributes
-- [ ] Create `HandlerRegistry` class that indexes handlers by serialize-match key (Pydantic field type) and deserialize-match key (token type or tag type), provides `match_serialize(element)` and `match_deserialize(token)` lookups
-- [ ] Unit tests for registry dispatch (both directions)
+#### 3.2: Handler Infrastructure ✅
+- [x] Create `google_docs_markdown/handlers/` package
+- [x] Define `ElementHandler` ABC in `handlers/base.py` with `serialize_match()`, `serialize()`, `deserialize_match()`, `deserialize()` abstract methods
+- [x] Define `TagElementHandler` subclass with `TAG_TYPE` class attribute (shared between ser and deser directions)
+- [x] Define `BlockElementHandler` subclass for structural blocks (heading, list, table, code)
+- [x] Define `InlineFormatHandler` subclass with `MARKER` and `STYLE_FIELD` class attributes
+- [x] Create `HandlerRegistry` in `handlers/registry.py` with three-level dispatch (`match_paragraph_element`, `match_structural`, `match_block`) and `match_deserialize` lookup, plus `get_handler(type)` accessor and `default()` factory
+- [x] Unit tests: 23 tests in `test_handler_registry.py` — dispatch for all 11 paragraph element types, 4 structural elements, 2 block types, custom registry, `get_handler`, empty registry
 
-#### 3.3: Handler Migration (Serialization Side)
-Migrate existing `_visit_*` methods from `markdown_serializer.py` into per-element handler classes, one handler at a time. All existing 355+ unit tests must continue to pass after each migration.
+#### 3.3: Handler Migration (Serialization Side) ✅
+Migrated all `_visit_*` methods from `markdown_serializer.py` into per-element handler classes. All 423 unit tests pass (55 new + 368 existing).
 
-- [ ] **Comment-tag elements** (cleanest fit — small, self-contained): `PersonHandler` (`handlers/person.py`), `DateHandler` (`handlers/date.py`), `AutoTextHandler`, `EquationHandler`, `PageBreakHandler`/`ColumnBreakHandler`/`SectionBreakHandler` (`handlers/breaks.py`), `TableOfContentsHandler` (`handlers/toc.py`), `ChipPlaceholderHandler`
-- [ ] **Structural blocks**: `HeadingHandler` (`handlers/heading.py`), `TableHandler` (`handlers/table.py`), `CodeBlockHandler` (`handlers/code_block.py`), `ListHandler` (`handlers/list_handler.py`)
-- [ ] **Inline formatting**: `BoldHandler`/`ItalicHandler`/`StrikethroughHandler`/`UnderlineHandler`/`InlineCodeHandler` (`handlers/inline_format.py`), `LinkHandler` (`handlers/link.py`)
-- [ ] **Complex handlers**: `StyleHandler` (`handlers/style.py`), `SuggestionHandler` (`handlers/suggestion.py`), `RichLinkHandler` (`handlers/rich_link.py`), `ImageHandler` (`handlers/image.py`), `FootnoteHandler` (`handlers/footnote.py`), `HeaderFooterHandler` (`handlers/header_footer.py`)
-- [ ] Refactor `markdown_serializer.py` into ~200-line orchestrator that walks Pydantic tree and delegates to handler registry
-- [ ] Safety: migrate one handler at a time, running existing tests after each to catch regressions
+- [x] **Comment-tag elements**: `PersonHandler` (`handlers/person.py`), `DateHandler` (`handlers/date.py`), `AutoTextHandler`, `EquationHandler`, `PageBreakHandler`/`ColumnBreakHandler`/`SectionBreakHandler` (`handlers/breaks.py`), `TableOfContentsHandler` (`handlers/toc.py`)
+- [x] **Structural blocks**: `HeadingHandler` (`handlers/heading.py`), `TableHandler` (`handlers/table.py`), `CodeBlockHandler` (`handlers/code_block.py`), `ListHandler` (`handlers/list_handler.py`)
+- [x] **Inline formatting**: `BoldHandler`/`ItalicHandler`/`StrikethroughHandler`/`UnderlineHandler`/`InlineCodeHandler` (`handlers/inline_format.py`), `LinkHandler` (`handlers/link.py`)
+- [x] **Complex handlers**: `StyleHandler` (`handlers/style.py`), `SuggestionHandler` (`handlers/suggestion.py`), `RichLinkHandler` (`handlers/rich_link.py`), `ImageHandler` (`handlers/image.py`), `FootnoteRefHandler` (`handlers/footnote.py`), `HeaderHandler`/`FooterHandler` (`handlers/header_footer.py`), `TextRunHandler` (`handlers/text_run.py`)
+- [x] Refactored `markdown_serializer.py` from ~900 lines to ~230-line orchestrator that walks Pydantic tree and delegates to handler registry
+- [x] All existing 368 tests continue to pass after migration; backward-compatible private function re-exports maintained (`_apply_inline_formatting`, `_apply_link`, `_join_paragraphs`)
 
 #### 3.4: Element Registry and Shared Constants
 - [ ] Create `google_docs_markdown/element_registry.py`
@@ -618,16 +618,15 @@ This document should be used for testing throughout development.
 - ✅ Phase 2.5: Images — `_visit_inline_object` in `markdown_serializer.py` renders `InlineObjectElement` → `![alt](contentUri)`. Looks up `DocumentTab.inlineObjects[objectId]` for embedded object properties. Uses `description` or `title` for alt text. Currently references Google-hosted `contentUri` directly; local image download deferred to Phase 6 (image storage integration).
 - ✅ Phase 2.6: Non-Markdown Elements — Full annotation system via wrapping HTML comments (`<!-- type: {json} -->content<!-- /type -->`). Handles: Person, DateElement, AutoText, Equation, SectionBreak, ColumnBreak, PageBreak, TableOfContents, RichLink metadata, TITLE/SUBTITLE markers, style comments (color, font, size), suggestion markers, chip placeholders (U+E907), headers/footers. Embedded metadata block at bottom of markdown file for document-level properties. New modules: `comment_tags.py`, `metadata.py`. 74 new tests.
 
+- ✅ Phase 3.1: Context Layer — `DocumentContext` frozen dataclass with dual factories (`from_document_tab()`, `from_metadata()`), `SerContext` and `DeserContext` mutable contexts. `optional_color_to_hex` utility. 32 new tests.
+- ✅ Phase 3.2: Handler Infrastructure — `ElementHandler` ABC, `TagElementHandler`/`BlockElementHandler`/`InlineFormatHandler` subclasses, `HandlerRegistry` with three-level dispatch. 23 new tests.
+- ✅ Phase 3.3: Handler Migration — 17 handler files (`person.py`, `date.py`, `breaks.py`, `toc.py`, `heading.py`, `table.py`, `code_block.py`, `list_handler.py`, `inline_format.py`, `link.py`, `style.py`, `suggestion.py`, `rich_link.py`, `image.py`, `footnote.py`, `header_footer.py`, `text_run.py`). `markdown_serializer.py` refactored from ~900 lines to ~230-line orchestrator. All 423 tests pass.
+
 **In Progress:**
-- **Phase 3:** Upload, Change Detection & Diffing — client primitives (`create_document`, `batch_update`) and CLI `upload`/`list-tabs` scaffold done; handler infrastructure, context layer, source map, deserializer, diff engine, and `uploader.py` still to do
+- **Phase 3:** Upload, Change Detection & Diffing — Phases 3.1–3.3 complete. Remaining: element registry (3.4), source map (3.5), deserializer (3.6), create flow (3.7), diff engine (3.8), update flow (3.9), CLI/API wiring (3.10).
 
 **Up Next:**
-- **Phase 3.1:** Context Layer — `DocumentContext` (frozen, dual factories: `from_document_tab()` and `from_metadata()`), `SerContext`, `DeserContext`
-- **Phase 3.2:** Handler Infrastructure — `ElementHandler` ABC, `TagElementHandler`/`BlockElementHandler`/`InlineFormatHandler` subclasses, `HandlerRegistry`
-
-**Remaining Phase 3 Tasks:**
-- 3.3: Handler migration — move existing `_visit_*` methods from `markdown_serializer.py` into per-element handler classes (serialization side), refactor serializer into slim orchestrator
-- 3.4: Element registry — shared constants (heading levels, glyph types, monospace fonts, format markers)
+- **Phase 3.4:** Element Registry — shared constants (heading levels, glyph types, monospace fonts, format markers)
 - 3.5: Source map — `SourceMapBuilder` integrated with handler serialization, `SourceMap.lookup()` for md-position-to-API-index translation
 - 3.6: Markdown deserializer — implement `deserialize()` on each handler + new `markdown_deserializer.py` orchestrator with `markdown-it-py`
 - 3.7: Create flow — `uploader.py` with `create_from_markdown()` and `create_from_directory()` (validates deserializer without diffing)
