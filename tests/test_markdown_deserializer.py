@@ -224,6 +224,25 @@ class TestDeserializerCommentTags:
         assert date_req.insertDate is not None
         assert date_req.insertDate.dateElementProperties is not None
         assert date_req.insertDate.dateElementProperties.dateFormat == "DATE_FORMAT_ISO8601"
+        assert date_req.insertDate.dateElementProperties.timestamp == "2024-01-01T12:00:00Z"
+
+    def test_date_tag_no_data_reconstructs_timestamp(self) -> None:
+        md = "<!-- date -->2026-01-08<!-- /date -->\n"
+        requests = deserialize(md)
+        date_req = _find_request(requests, "insertDate")
+        assert date_req is not None
+        assert date_req.insertDate is not None
+        assert date_req.insertDate.dateElementProperties is not None
+        assert date_req.insertDate.dateElementProperties.timestamp == "2026-01-08T12:00:00Z"
+
+    def test_date_tag_explicit_timestamp_preserved(self) -> None:
+        md = '<!-- date: {"timestamp": "2025-06-15T09:30:00Z"} -->Jun 15<!-- /date -->\n'
+        requests = deserialize(md)
+        date_req = _find_request(requests, "insertDate")
+        assert date_req is not None
+        assert date_req.insertDate is not None
+        assert date_req.insertDate.dateElementProperties is not None
+        assert date_req.insertDate.dateElementProperties.timestamp == "2025-06-15T09:30:00Z"
 
     def test_page_break_tag(self) -> None:
         md = "Some text.\n\n<!-- page-break -->\n\nMore text.\n"

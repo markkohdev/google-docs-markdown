@@ -58,12 +58,16 @@ class DateHandler(TagElementHandler):
         merged = dict(date_defaults)
         merged.update(data)
 
+        timestamp = merged.get("timestamp")
+        if not timestamp:
+            timestamp = _timestamp_from_display(getattr(token, "content", "") or "")
+
         date_props = DateElementProperties(
             dateFormat=cast(Any, merged.get("format")),
             locale=merged.get("locale"),
             timeFormat=cast(Any, merged.get("timeFormat")),
             timeZoneId=merged.get("timeZoneId"),
-            timestamp=merged.get("timestamp"),
+            timestamp=timestamp,
         )
 
         return [
@@ -78,3 +82,19 @@ class DateHandler(TagElementHandler):
                 )
             )
         ]
+
+
+def _timestamp_from_display(display_text: str) -> str:
+    """Reconstruct an ISO 8601 timestamp from a date display string.
+
+    The serializer omits the timestamp when it starts with the display
+    text (e.g. ``2026-01-08`` from ``2026-01-08T12:00:00Z``).  This
+    function reverses that by appending ``T12:00:00Z`` to a bare
+    ``YYYY-MM-DD`` string, or falling back to the display text itself.
+    """
+    import re
+
+    text = display_text.strip()
+    if re.fullmatch(r"\d{4}-\d{2}-\d{2}", text):
+        return f"{text}T12:00:00Z"
+    return text
