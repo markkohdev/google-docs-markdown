@@ -42,8 +42,6 @@ from google_docs_markdown.models.common import (
 from google_docs_markdown.models.requests import (
     CreateParagraphBulletsRequest,
     InsertInlineImageRequest,
-    InsertPageBreakRequest,
-    InsertSectionBreakRequest,
     InsertTableRequest,
     InsertTextRequest,
     Request,
@@ -211,7 +209,7 @@ class MarkdownDeserializer:
 
             has_comment_tags = self._inline_has_comment_tags(inline_token)
             if has_comment_tags:
-                self._handle_inline_with_tags(inline_token, ctx)
+                self._emit_inline_with_tags(inline_token, ctx)
             else:
                 text = self._extract_inline_text(inline_token)
                 if text:
@@ -444,13 +442,6 @@ class MarkdownDeserializer:
             return False
         return any(child.type == "html_inline" and child.content.strip().startswith("<!--") for child in token.children)
 
-    def _handle_inline_with_tags(self, token: Token, ctx: DeserContext) -> None:
-        """Process inline content that contains comment tags (paragraph level).
-
-        Delegates to ``_emit_inline_with_tags`` and appends a trailing newline.
-        """
-        self._emit_inline_with_tags(token, ctx)
-
     def _emit_inline_with_tags(self, token: Token, ctx: DeserContext) -> None:
         """Emit inline content with comment-tag dispatch AND formatting.
 
@@ -610,43 +601,13 @@ class MarkdownDeserializer:
     # ------------------------------------------------------------------
 
     def _dispatch_tag(self, tag: ParsedTag, ctx: DeserContext) -> None:
-        """Dispatch a single parsed tag to its handler or handle directly."""
+        """Dispatch a single parsed tag to its handler."""
         handler = self._registry.match_deserialize(tag)
         if handler:
             requests = handler.deserialize(tag, ctx)
             for req in requests:
                 if isinstance(req, Request):
                     ctx.emit(req)
-            return
-
-        if tag.tag_type == "page-break":
-            ctx.emit(
-                Request(
-                    insertPageBreak=InsertPageBreakRequest(
-                        location=Location(
-                            index=ctx.index,
-                            segmentId=ctx.segment_id or None,
-                            tabId=ctx.tab_id or None,
-                        )
-                    )
-                )
-            )
-            ctx.advance(1)
-        elif tag.tag_type == "section-break":
-            section_type = (tag.data or {}).get("type", "NEXT_PAGE")
-            ctx.emit(
-                Request(
-                    insertSectionBreak=InsertSectionBreakRequest(
-                        location=Location(
-                            index=ctx.index,
-                            segmentId=ctx.segment_id or None,
-                            tabId=ctx.tab_id or None,
-                        ),
-                        sectionType=section_type,
-                    )
-                )
-            )
-            ctx.advance(1)
 
     # ------------------------------------------------------------------
     # Inline formatting

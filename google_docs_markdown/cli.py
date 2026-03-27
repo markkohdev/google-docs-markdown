@@ -271,16 +271,10 @@ def _handle_update(
                 document_url,
                 markdown_text,
                 tab_id=tab_id,
+                force=overwrite,
             )
             if changed:
                 typer.echo("Document updated successfully.")
-            elif overwrite:
-                changed = uploader.update_document(
-                    document_url,
-                    markdown_text,
-                    tab_id=tab_id,
-                )
-                typer.echo("Document force-updated (overwrite).")
             else:
                 typer.echo("No changes detected.")
     except Exception as exc:

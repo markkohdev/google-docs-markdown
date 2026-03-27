@@ -336,6 +336,7 @@ class TestUploadCommand:
             "doc-id-1234567890",
             "updated\n",
             tab_id=None,
+            force=False,
         )
 
     @patch("google_docs_markdown.uploader.Uploader")
@@ -372,6 +373,7 @@ class TestUploadCommand:
             "doc-id-1234567890",
             "changed\n",
             tab_id="t.42",
+            force=False,
         )
 
     @patch("google_docs_markdown.uploader.Uploader")

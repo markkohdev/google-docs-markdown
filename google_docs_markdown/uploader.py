@@ -18,11 +18,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 from google_docs_markdown.client import GoogleDocsClient
 from google_docs_markdown.markdown_deserializer import MarkdownDeserializer
-from google_docs_markdown.models.document import Document, TabProperties
+from google_docs_markdown.models.document import Document, Tab, TabProperties
 from google_docs_markdown.models.requests import (
     AddDocumentTabRequest,
     Request,
@@ -141,6 +140,7 @@ class Uploader:
         local_markdown: str,
         *,
         tab_id: str | None = None,
+        force: bool = False,
     ) -> bool:
         """Update an existing Google Doc with local Markdown changes.
 
@@ -151,6 +151,8 @@ class Uploader:
             document_id: The document ID or URL.
             local_markdown: The local Markdown content to push.
             tab_id: Optional tab ID to update (defaults to first tab).
+            force: If ``True``, always perform a full replacement even when
+                no diff is detected.
 
         Returns:
             ``True`` if changes were applied, ``False`` if no changes detected.
@@ -187,8 +189,18 @@ class Uploader:
             tab_id=resolved_tab_id,
         )
 
-        if not requests:
+        if not requests and not force:
             return False
+
+        if not requests and force:
+            requests = engine._full_replacement(
+                canonical_md,
+                local_markdown,
+                tab_id=resolved_tab_id,
+                segment_id="",
+            )
+            if not requests:
+                return False
 
         self._client.batch_update(doc.documentId or document_id, requests)
         return True
@@ -392,18 +404,13 @@ def _rename_tab_request(tab_id: str, title: str) -> Request:
     )
 
 
-def _find_target_tab(doc: Document, tab_id: str | None) -> Any:
-    """Find a tab by ID, defaulting to the first tab.
-
-    Returns a ``Tab`` model or ``None``.
-    """
+def _find_target_tab(doc: Document, tab_id: str | None) -> Tab | None:
+    """Find a tab by ID, defaulting to the first tab."""
     if not doc.tabs:
         return None
 
     if tab_id is None:
         return doc.tabs[0]
-
-    from google_docs_markdown.models.document import Tab
 
     def _search(tabs: list[Tab]) -> Tab | None:
         for tab in tabs:
@@ -418,10 +425,8 @@ def _find_target_tab(doc: Document, tab_id: str | None) -> Any:
     return _search(doc.tabs)
 
 
-def _build_tab_map(doc: Document) -> dict[str, Any]:
+def _build_tab_map(doc: Document) -> dict[str, Tab]:
     """Build a mapping from tab path (e.g. ``Parent/Child``) to ``Tab`` model."""
-    from google_docs_markdown.models.document import Tab
-
     result: dict[str, Tab] = {}
 
     def _walk(tabs: list[Tab], prefix: str) -> None:

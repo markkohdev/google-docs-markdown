@@ -166,6 +166,11 @@ class MarkdownSerializer:
 
         This post-pass maps top-level structural elements to their Markdown
         positions using the API ``startIndex``/``endIndex`` values.
+
+        Each structural element gets a span whose Markdown extent covers
+        ``api_end - api_start`` characters (the API element size) so the
+        source map can translate positions inside that element back to
+        API indices.
         """
         if not document_tab.body or not document_tab.body.content:
             return
@@ -186,8 +191,13 @@ class MarkdownSerializer:
             elif element.sectionBreak:
                 continue
 
+            api_len = api_end - api_start
+            if api_len <= 0:
+                continue
+
+            placeholder = " " * api_len
             builder.record(
-                "",
+                placeholder,
                 api_start=api_start,
                 api_end=api_end,
                 kind=kind,

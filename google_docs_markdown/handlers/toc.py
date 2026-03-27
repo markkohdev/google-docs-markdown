@@ -22,15 +22,16 @@ class TableOfContentsHandler(TagElementHandler):
         from google_docs_markdown.models.common import Location
         from google_docs_markdown.models.requests import InsertTextRequest, Request
 
-        return [
-            Request(
-                insertText=InsertTextRequest(
-                    text="[TOC]\n",
-                    location=Location(
-                        index=ctx.index,
-                        segmentId=ctx.segment_id or None,
-                        tabId=ctx.tab_id or None,
-                    ),
-                )
+        text = "[TOC]\n"
+        req = Request(
+            insertText=InsertTextRequest(
+                text=text,
+                location=Location(
+                    index=ctx.index,
+                    segmentId=ctx.segment_id or None,
+                    tabId=ctx.tab_id or None,
+                ),
             )
-        ]
+        )
+        ctx.advance(len(text))
+        return [req]
