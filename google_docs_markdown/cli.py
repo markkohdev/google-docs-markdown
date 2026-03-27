@@ -89,11 +89,13 @@ def download(
     typer.echo("Downloading...")
 
     try:
+        prefetched = dl._fetch_and_serialize(document_url, tab_names=tabs or None)
         written = dl.download_to_files(
             document_url,
             output_dir=output,
             tab_names=tabs or None,
             overwrite=force,
+            _prefetched=prefetched,
         )
     except FileConflictError as exc:
         typer.echo("The following files already exist:")
@@ -106,6 +108,7 @@ def download(
             output_dir=output,
             tab_names=tabs or None,
             overwrite=True,
+            _prefetched=prefetched,
         )
     except Exception as exc:
         typer.echo(f"Error: {exc}", err=True)

@@ -1,7 +1,7 @@
 # Google Docs API - Comprehensive Element Type Analysis
 
 **Date:** 2026-01-08  
-**Last Updated:** 2026-03-26 (Updated element type mapping to reflect Phase 2.1–2.5 implementation status; code block detection and image serialization now implemented)  
+**Last Updated:** 2026-03-26 (Updated element type mapping to reflect Phase 2.1–2.6 implementation status; all element types now handled with annotation system)  
 **Purpose:** Detailed analysis of Google Docs API element types, their relationships, and reusable sub-elements for the Google Docs Markdown tool
 
 ## Table of Contents
@@ -568,14 +568,19 @@ Models are organized in `google_docs_markdown/models/`:
 | Table | Markdown pipe table | ✅ Phase 2.3 |
 | Code block (U+E907) | Fenced code block | ✅ Phase 2.4 |
 | InlineObjectElement (image) | `![alt](contentUri)` | ✅ Phase 2.5 |
-| Person | `<!-- person: {...} -->` | Phase 2.6 |
-| DateElement | `<!-- date: {...} -->` | Phase 2.6 |
-| AutoText | (preserve as comment) | Phase 2.6 |
-| Equation | (placeholder comment) | Phase 2.6 |
-| PageBreak | (preserve as HTML comment) | Phase 2.6 |
-| SectionBreak | (HTML comment with style) | Phase 2.6 |
-| ColumnBreak | (HTML comment) | Phase 2.6 |
-| TableOfContents | (mark as auto-generated) | Phase 2.6 |
+| Person | `<!-- person: {"email": "..."} -->Name<!-- /person -->` | ✅ Phase 2.6 |
+| DateElement | `<!-- date: {"format": "..."} -->text<!-- /date -->` | ✅ Phase 2.6 |
+| AutoText | `<!-- auto-text: {"type": "PAGE_NUMBER"} -->` | ✅ Phase 2.6 |
+| Equation | `<!-- equation -->` | ✅ Phase 2.6 |
+| PageBreak | `<!-- page-break -->` | ✅ Phase 2.6 |
+| SectionBreak | `<!-- section-break: {"type": "..."} -->` (mid-doc only) | ✅ Phase 2.6 |
+| ColumnBreak | `<!-- column-break -->` | ✅ Phase 2.6 |
+| TableOfContents | `<!-- table-of-contents -->` | ✅ Phase 2.6 |
+| Style (color/font/size) | `<!-- style: {"color": "#FF0000"} -->text<!-- /style -->` | ✅ Phase 2.6 |
+| Suggestions | `<!-- suggestion: {"id": "...", "type": "insertion"} -->text<!-- /suggestion -->` | ✅ Phase 2.6 |
+| Chip placeholder (U+E907) | `<!-- chip-placeholder -->` | ✅ Phase 2.6 |
+| TITLE marker | `<!-- title -->` before `# text` | ✅ Phase 2.6 |
+| SUBTITLE marker | `<!-- subtitle -->` before `*text*` | ✅ Phase 2.6 |
 
 ### 3. Model Organization
 

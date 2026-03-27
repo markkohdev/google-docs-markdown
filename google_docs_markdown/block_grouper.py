@@ -19,7 +19,6 @@ from google_docs_markdown.models.elements import Paragraph, StructuralElement
 
 _ORDERED_GLYPH_TYPES = frozenset({"DECIMAL", "ZERO_DECIMAL", "UPPER_ALPHA", "ALPHA", "UPPER_ROMAN", "ROMAN"})
 _CODE_BLOCK_MARKER = "\ue907"
-_MONOSPACE_FONTS = frozenset({"Roboto Mono", "Courier New", "Consolas", "Source Code Pro"})
 
 
 @dataclass
@@ -132,16 +131,6 @@ def _is_code_block_end(para: Paragraph) -> bool:
             return True
         if content:
             return False
-    return False
-
-
-def _paragraph_has_monospace_font(para: Paragraph) -> bool:
-    """Return True if any text run in the paragraph uses a monospace font."""
-    for elem in para.elements or []:
-        tr = elem.textRun
-        if tr and tr.textStyle and tr.textStyle.weightedFontFamily:
-            if tr.textStyle.weightedFontFamily.fontFamily in _MONOSPACE_FONTS:
-                return True
     return False
 
 

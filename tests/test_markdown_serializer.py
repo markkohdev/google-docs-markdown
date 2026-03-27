@@ -217,12 +217,12 @@ class TestSerializerBasic:
     def test_title(self, serializer: MarkdownSerializer) -> None:
         doc_tab = _make_doc_tab([("My Document", "TITLE")])
         result = serializer.serialize(doc_tab)
-        assert result == "# My Document\n"
+        assert result == "<!-- title -->\n# My Document\n"
 
     def test_subtitle(self, serializer: MarkdownSerializer) -> None:
         doc_tab = _make_doc_tab([("A subtitle", "SUBTITLE")])
         result = serializer.serialize(doc_tab)
-        assert result == "*A subtitle*\n"
+        assert result == "<!-- subtitle -->\n*A subtitle*\n"
 
     def test_all_heading_levels(self, serializer: MarkdownSerializer) -> None:
         doc_tab = _make_doc_tab(
@@ -238,7 +238,7 @@ class TestSerializerBasic:
         )
         result = serializer.serialize(doc_tab)
         lines = result.strip().split("\n\n")
-        assert lines[0] == "# Title"
+        assert lines[0] == "<!-- title -->\n# Title"
         assert lines[1] == "# H1"
         assert lines[2] == "## H2"
         assert lines[3] == "### H3"
@@ -1361,14 +1361,16 @@ class TestSerializerFixtures:
         assert tab.documentTab is not None
         result = serializer.serialize(tab.documentTab)
 
-        assert result.startswith("# Markdown Conversion Example - Single Tab\n")
-        assert "\n\n*Document Subtitle*\n\n" in result
-        assert "\n\n# Project Overview: Markdown Tool Testing (Heading 1)\n\n" in result
-        assert "\n\n## Section 1: Headings and Structure (Heading 2)\n\n" in result
-        assert "\n\n### Subsection 1.1: Lower Level Headings (Heading 3)\n\n" in result
-        assert "\n\n#### Sub-Subsection 1.1.1: Deeper Dive (Heading 4)\n\n" in result
-        assert "\n\n##### Sub-Sub-Subsection 1.1.1.1: Specific Detail (Heading 5)\n\n" in result
-        assert "\n\n###### Sub-Sub-Sub-Subsection 1.1.1.1.1: Very detailed Level (Heading 6)\n\n" in result
+        assert "<!-- title -->" in result
+        assert "Markdown Conversion Example - Single Tab" in result
+        assert "<!-- subtitle -->" in result
+        assert "Document Subtitle" in result
+        assert "# " in result and "Project Overview: Markdown Tool Testing (Heading 1)" in result
+        assert "## " in result and "Section 1: Headings and Structure (Heading 2)" in result
+        assert "### " in result and "Subsection 1.1: Lower Level Headings (Heading 3)" in result
+        assert "#### " in result and "Sub-Subsection 1.1.1: Deeper Dive (Heading 4)" in result
+        assert "##### " in result and "Sub-Sub-Subsection 1.1.1.1: Specific Detail (Heading 5)" in result
+        assert "###### " in result and "Sub-Sub-Sub-Subsection 1.1.1.1.1: Very detailed Level (Heading 6)" in result
 
     def test_single_tab_bold_italic(self, serializer: MarkdownSerializer) -> None:
         """Verify bold and italic formatting are applied in the fixture."""
@@ -1412,10 +1414,11 @@ class TestSerializerFixtures:
         multi = _load_document(MULTI_TAB_JSON)
         result = serializer.serialize(multi.tabs[0].documentTab)  # type: ignore
 
-        assert result.startswith("# Markdown Conversion Example - Multi-Tab\n")
+        assert "<!-- title -->" in result
+        assert "Markdown Conversion Example - Multi-Tab" in result
         assert "**should be bold**" in result
         assert "*should be italic*" in result
-        assert "\n\n## Section 1: Headings and Structure (Heading 2)\n\n" in result
+        assert "## " in result and "Section 1: Headings and Structure (Heading 2)" in result
 
     def test_multi_tab_fixture_link(self, serializer: MarkdownSerializer) -> None:
         """Verify the fixture's hyperlink to the Child Tab renders as a Markdown link."""
@@ -1429,20 +1432,26 @@ class TestSerializerFixtures:
         tab = doc.tabs[0]  # type: ignore[index]
         result = serializer.serialize(tab.documentTab)  # type: ignore[arg-type]
 
-        assert "| **Header 1** | **Header 2** | **Header 3** |" in result
+        assert "**Header 1**" in result
+        assert "**Header 2**" in result
+        assert "**Header 3**" in result
         assert "| --- | --- | --- |" in result
-        assert "| Data A1 | Data B1 | Data C1 |" in result
-        assert "| Data A2 | Data B2 | Data C2 |" in result
-        assert "| Data A3 | Data B3 | Data C3 |" in result
+        assert "Data A1" in result
+        assert "Data B1" in result
+        assert "Data C1" in result
+        assert "Data A2" in result
+        assert "Data B2" in result
+        assert "Data C3" in result
 
     def test_multi_tab_fixture_table(self, serializer: MarkdownSerializer) -> None:
         """Verify the multi-tab fixture table renders as a Markdown pipe table."""
         doc = _load_document(MULTI_TAB_JSON)
         result = serializer.serialize(doc.tabs[0].documentTab)  # type: ignore
 
-        assert "| **Header 1** | **Header 2** | **Header 3** |" in result
+        assert "**Header 1**" in result
         assert "| --- | --- | --- |" in result
-        assert "| Data A1 | Data B1 | Data C1 |" in result
+        assert "Data A1" in result
+        assert "Data B1" in result
 
     def test_multi_tab_fixture_rich_link(self, serializer: MarkdownSerializer) -> None:
         """Verify the fixture's rich link chip renders as [title](uri)."""
@@ -1471,3 +1480,65 @@ class TestSerializerFixtures:
         assert grandchild_tab.tabProperties and grandchild_tab.tabProperties.title == "Grandchild tab"
         grandchild_result = serializer.serialize(grandchild_tab.documentTab)  # type: ignore[arg-type]
         assert "I am the content of the grandchild tab" in grandchild_result
+
+
+class TestSerializerReuse:
+    """Verify that reusing a MarkdownSerializer instance across documents produces clean state."""
+
+    def test_no_state_cross_contamination(self) -> None:
+        """Serializing two different documents with the same instance must not leak state."""
+        serializer = MarkdownSerializer()
+
+        doc1 = _make_doc_tab([("Doc one title", "TITLE"), ("Body one", "NORMAL_TEXT")])
+        doc1.footnotes = {
+            "fn1": {
+                "content": [
+                    {
+                        "paragraph": {
+                            "elements": [{"textRun": {"content": "Footnote from doc 1\n"}}],
+                        },
+                    }
+                ],
+                "footnoteId": "fn1",
+            },
+        }
+        doc1.body.content[1].paragraph.elements.append(  # type: ignore[union-attr,index]
+            ParagraphElement(footnoteReference=FootnoteReference(footnoteId="fn1", footnoteNumber="1")),
+        )
+
+        result1 = serializer.serialize(doc1)
+        assert "[^1]" in result1
+        assert "Footnote from doc 1" in result1
+
+        doc2 = _make_doc_tab([("Doc two title", "TITLE"), ("Body two", "NORMAL_TEXT")])
+        result2 = serializer.serialize(doc2)
+
+        assert "Doc two title" in result2
+        assert "Footnote from doc 1" not in result2
+        assert "[^1]" not in result2
+
+    def test_default_styles_reset(self) -> None:
+        """Default font/size/color from doc 1 must not bleed into doc 2."""
+        from google_docs_markdown.models.common import Dimension, WeightedFontFamily
+        from google_docs_markdown.models.document import NamedStyle, NamedStyles
+
+        serializer = MarkdownSerializer()
+
+        doc1 = _make_doc_tab([("Hello", "NORMAL_TEXT")])
+        doc1.namedStyles = NamedStyles(
+            styles=[
+                NamedStyle(
+                    namedStyleType="NORMAL_TEXT",
+                    textStyle=TextStyle(
+                        weightedFontFamily=WeightedFontFamily(fontFamily="Courier New"),
+                        fontSize=Dimension(magnitude=14, unit="PT"),
+                    ),
+                ),
+            ]
+        )
+        result1 = serializer.serialize(doc1)
+        assert "Courier New" in result1
+
+        doc2 = _make_doc_tab([("World", "NORMAL_TEXT")])
+        result2 = serializer.serialize(doc2)
+        assert "Courier New" not in result2

@@ -1,21 +1,19 @@
 """Markdown serializer for Google Docs Pydantic models.
 
 Converts DocumentTab Pydantic models into Markdown text using a visitor-style
-traversal of the document tree.
+traversal of the document tree.  Handles:
 
-Phase 1 scope: text, headings, paragraphs, bold, italic, line breaks.
-Phase 2.1 scope: links, strikethrough, underline, rich links, horizontal
-rules, footnote references and footnote content.
-Phase 2.2 scope: lists (ordered, unordered, nested) via block grouper
-pre-processing pass.
-Phase 2.3 scope: tables (pipe tables with header detection, formatted cell
-content, multi-paragraph cells via <br>, pipe escaping).
-Phase 2.4 scope: code blocks (U+E907 boundary detection, monospace font,
-fenced code blocks).
-Phase 2.5 scope: images (InlineObjectElement → ![alt](url)).
-Phase 2.6 scope: non-Markdown elements (Person, DateElement, AutoText,
-Equation, SectionBreak, ColumnBreak, TableOfContents, suggestions,
-headers/footers).
+- Text, headings, paragraphs, bold, italic, line breaks
+- Links, strikethrough, underline, rich links, horizontal rules, footnotes
+- Lists (ordered, unordered, nested) via block grouper pre-processing
+- Tables (pipe tables with header detection, formatted cells, pipe escaping)
+- Code blocks (U+E907 boundary detection, monospace font, fenced blocks)
+- Inline code (Roboto Mono + green → backtick wrapping)
+- Images (InlineObjectElement → ![alt](url))
+- Non-Markdown elements (Person, DateElement, AutoText, Equation,
+  SectionBreak, ColumnBreak, TableOfContents, suggestions,
+  style annotations, headers/footers)
+- Embedded metadata block (document styles, date defaults, link color)
 """
 
 from __future__ import annotations
@@ -29,22 +27,40 @@ from google_docs_markdown.block_grouper import (
     ListBlock,
     group_elements,
 )
-from google_docs_markdown.models.common import Footnote
+from google_docs_markdown.comment_tags import TagType, closing_tag, opening_tag, wrap_tag
+from google_docs_markdown.metadata import serialize_metadata
+from google_docs_markdown.models.common import (
+    Footer,
+    Footnote,
+    Header,
+    InlineObject,
+    OptionalColor,
+)
 from google_docs_markdown.models.document import DocumentTab
 from google_docs_markdown.models.elements import (
+    AutoText,
+    ColumnBreak,
+    DateElement,
+    Equation,
     FootnoteReference,
     HorizontalRule,
     InlineObjectElement,
+    PageBreak,
     Paragraph,
     ParagraphElement,
+    Person,
     RichLink,
     StructuralElement,
     Table,
     TableCell,
+    TableOfContents,
     TextRun,
 )
+from google_docs_markdown.models.styles import TextStyle
 
 _HEADING_PREFIX: dict[str, str] = {
+    # TITLE uses the same "#" as HEADING_1; they are distinguished by the
+    # <!-- title --> annotation emitted in _visit_paragraph.
     "TITLE": "#",
     "HEADING_1": "#",
     "HEADING_2": "##",
@@ -53,6 +69,14 @@ _HEADING_PREFIX: dict[str, str] = {
     "HEADING_5": "#####",
     "HEADING_6": "######",
 }
+
+_CHIP_PLACEHOLDER = "<!-- chip-placeholder -->"
+
+_HEADING_STYLES = frozenset(_HEADING_PREFIX.keys()) | {"SUBTITLE"}
+
+_INLINE_CODE_FONT = "Roboto Mono"
+_INLINE_CODE_COLOR = "#188037"
+_DEFAULT_LINK_COLOR = "#1155CC"
 
 
 class MarkdownSerializer:
@@ -65,12 +89,30 @@ class MarkdownSerializer:
     def __init__(self) -> None:
         self._footnote_refs: list[tuple[str, str]] = []
         self._inline_objects: dict[str, Any] | None = None
+        self._default_font: str | None = None
+        self._default_font_size: float | None = None
+        self._default_fg_hex: str | None = None
+        self._named_style_sizes: dict[str, float] = {}
+        self._named_style_colors: dict[str, str | None] = {}
+        self._named_style_fonts: dict[str, str | None] = {}
+        self._current_para_style: str | None = None
+        self._pending_style_props: dict[str, Any] | None = None
+        self._date_defaults: dict[str, str] | None = None
+        self._default_link_color: str = _DEFAULT_LINK_COLOR
 
-    def serialize(self, document_tab: DocumentTab) -> str:
+    def serialize(
+        self,
+        document_tab: DocumentTab,
+        *,
+        document_id: str | None = None,
+        tab_id: str | None = None,
+    ) -> str:
         """Convert a DocumentTab to Markdown.
 
         Args:
             document_tab: The DocumentTab Pydantic model to serialize.
+            document_id: Optional document ID to embed in the metadata block.
+            tab_id: Optional tab ID to embed in the metadata block.
 
         Returns:
             Markdown text ending with a single trailing newline.
@@ -81,6 +123,12 @@ class MarkdownSerializer:
 
         self._footnote_refs = []
         self._inline_objects = document_tab.inlineObjects
+        self._date_defaults = None
+        self._default_link_color = _DEFAULT_LINK_COLOR
+        self._document_id = document_id
+        self._tab_id = tab_id
+        self._body_content = document_tab.body.content
+        self._extract_default_styles(document_tab)
 
         blocks = group_elements(document_tab.body.content, document_tab.lists)
 
@@ -94,7 +142,15 @@ class MarkdownSerializer:
         if footnote_defs:
             paragraphs.extend(footnote_defs)
 
-        return _join_paragraphs(paragraphs)
+        header_blocks = self._serialize_headers(document_tab.headers)
+        footer_blocks = self._serialize_footers(document_tab.footers)
+
+        metadata_block = self._build_metadata_block(document_tab)
+
+        all_parts = paragraphs + header_blocks + footer_blocks
+        if metadata_block:
+            all_parts.append(metadata_block)
+        return _join_paragraphs(all_parts)
 
     def _visit_block(self, block: Block) -> str | None:
         """Dispatch a Block to the appropriate visitor."""
@@ -163,6 +219,10 @@ class MarkdownSerializer:
             return self._visit_paragraph(element.paragraph)
         if element.table:
             return self._visit_table(element.table)
+        if element.sectionBreak:
+            return self._visit_section_break(element)
+        if element.tableOfContents:
+            return self._visit_table_of_contents(element.tableOfContents)
         return None
 
     def _visit_table(self, table: Table) -> str | None:
@@ -222,24 +282,43 @@ class MarkdownSerializer:
         if paragraph.paragraphStyle:
             style_type = paragraph.paragraphStyle.namedStyleType
 
+        self._current_para_style = style_type
         text = self._collect_paragraph_text(paragraph.elements or [])
+        self._current_para_style = None
 
         heading_prefix = _HEADING_PREFIX.get(style_type or "")
         if heading_prefix and text:
-            return f"{heading_prefix} {text}"
+            rendered = f"{heading_prefix} {text}"
+            if style_type == "TITLE":
+                return f"{opening_tag(TagType.TITLE)}\n{rendered}"
+            return rendered
 
         if style_type == "SUBTITLE" and text:
-            return f"*{text}*"
+            return f"{opening_tag(TagType.SUBTITLE)}\n*{text}*"
 
         return text
 
     def _collect_paragraph_text(self, elements: list[ParagraphElement]) -> str:
-        """Concatenate and format inline text from paragraph elements."""
-        parts: list[str] = []
+        """Concatenate and format inline text from paragraph elements.
+
+        Style wrapping is deferred to this level so adjacent text runs
+        sharing the same non-default style can be merged into a single tag.
+        """
+        segments: list[tuple[str, dict[str, Any] | None]] = []
         for element in elements:
+            self._pending_style_props = None
             result = self._visit_paragraph_element(element)
             if result is not None:
-                parts.append(result)
+                segments.append((result, self._pending_style_props))
+
+        merged = _merge_style_segments(segments)
+
+        parts: list[str] = []
+        for content, style_props in merged:
+            if style_props:
+                parts.append(wrap_tag(TagType.STYLE, content.rstrip(), style_props))
+            else:
+                parts.append(content)
 
         text = "".join(parts)
         return text.rstrip()
@@ -256,6 +335,18 @@ class MarkdownSerializer:
             return self._visit_footnote_reference(element.footnoteReference)
         if element.inlineObjectElement:
             return self._visit_inline_object(element.inlineObjectElement)
+        if element.person:
+            return self._visit_person(element.person)
+        if element.dateElement:
+            return self._visit_date_element(element.dateElement)
+        if element.autoText:
+            return self._visit_auto_text(element.autoText)
+        if element.equation:
+            return self._visit_equation(element.equation)
+        if element.pageBreak:
+            return self._visit_page_break(element.pageBreak)
+        if element.columnBreak:
+            return self._visit_column_break(element.columnBreak)
         return None
 
     def _visit_text_run(self, text_run: TextRun) -> str | None:
@@ -264,9 +355,11 @@ class MarkdownSerializer:
         if content is None:
             return None
 
-        content = content.replace("\ue907", "")
+        content = content.replace("\ue907", _CHIP_PLACEHOLDER)
         if not content:
             return None
+
+        has_chip = _CHIP_PLACEHOLDER in content
 
         style = text_run.textStyle
         bold = style and style.bold
@@ -276,7 +369,7 @@ class MarkdownSerializer:
         underline = style and style.underline and not link
 
         has_formatting = bold or italic or strikethrough or underline
-        if has_formatting:
+        if has_formatting and not has_chip:
             content = _apply_inline_formatting(
                 content,
                 bold=bool(bold),
@@ -284,9 +377,52 @@ class MarkdownSerializer:
                 strikethrough=bool(strikethrough),
                 underline=bool(underline),
             )
+        elif has_formatting and has_chip:
+            parts = content.split(_CHIP_PLACEHOLDER)
+            formatted_parts = []
+            for part in parts:
+                if part:
+                    part = _apply_inline_formatting(
+                        part,
+                        bold=bool(bold),
+                        italic=bool(italic),
+                        strikethrough=bool(strikethrough),
+                        underline=bool(underline),
+                    )
+                formatted_parts.append(part)
+            content = _CHIP_PLACEHOLDER.join(formatted_parts)
 
         if link and link.url:
             content = _apply_link(content, link.url)
+
+        style_props = self._extract_non_default_style(style)
+
+        if _is_inline_code_style(style) and text_run.content and text_run.content.strip():
+            content = _apply_backtick_wrap(content)
+            if style_props:
+                for key in ("color", "font-family", "font-size"):
+                    style_props.pop(key, None)
+                if not style_props:
+                    style_props = None
+
+        if not (text_run.content and text_run.content.strip()):
+            style_props = None
+        self._pending_style_props = style_props
+
+        if text_run.suggestedInsertionIds:
+            suggestion_id = text_run.suggestedInsertionIds[0]
+            content = wrap_tag(
+                TagType.SUGGESTION,
+                content,
+                {"id": suggestion_id, "type": "insertion"},
+            )
+        elif text_run.suggestedDeletionIds:
+            suggestion_id = text_run.suggestedDeletionIds[0]
+            content = wrap_tag(
+                TagType.SUGGESTION,
+                content,
+                {"id": suggestion_id, "type": "deletion"},
+            )
 
         return content
 
@@ -298,7 +434,13 @@ class MarkdownSerializer:
         if not props or not props.uri:
             return None
         title = props.title or props.uri
-        return f"[{title}]({props.uri})"
+        link_md = f"[{title}]({props.uri})"
+        meta: dict[str, Any] = {}
+        if props.mimeType:
+            meta["mimeType"] = props.mimeType
+        if meta:
+            return wrap_tag(TagType.RICH_LINK, link_md, meta)
+        return link_md
 
     def _visit_inline_object(self, obj: InlineObjectElement) -> str | None:
         """Render an InlineObjectElement as a Markdown image reference."""
@@ -308,8 +450,6 @@ class MarkdownSerializer:
         raw = self._inline_objects.get(obj.inlineObjectId)
         if raw is None:
             return None
-
-        from google_docs_markdown.models.common import InlineObject
 
         inline_obj = raw if isinstance(raw, InlineObject) else InlineObject.model_validate(raw)
 
@@ -331,6 +471,368 @@ class MarkdownSerializer:
         if ref.footnoteId:
             self._footnote_refs.append((ref.footnoteId, ref.footnoteNumber))
         return f"[^{ref.footnoteNumber}]"
+
+    def _visit_person(self, person: Person) -> str | None:
+        props = person.personProperties
+        if not props:
+            return None
+        name = props.name or props.email or ""
+        data: dict[str, Any] = {}
+        if props.email:
+            data["email"] = props.email
+        return wrap_tag(TagType.PERSON, name, data)
+
+    def _visit_date_element(self, date_elem: DateElement) -> str | None:
+        props = date_elem.dateElementProperties
+        if not props:
+            return None
+        display = props.displayText or ""
+
+        format_props: dict[str, str] = {}
+        if props.dateFormat:
+            format_props["format"] = props.dateFormat
+        if props.locale:
+            format_props["locale"] = props.locale
+        if props.timeFormat:
+            format_props["timeFormat"] = props.timeFormat
+        if props.timeZoneId:
+            format_props["timeZoneId"] = props.timeZoneId
+
+        if self._date_defaults is None and format_props:
+            self._date_defaults = format_props
+
+        inline_data: dict[str, Any] = {}
+        if self._date_defaults:
+            for key, value in format_props.items():
+                if self._date_defaults.get(key) != value:
+                    inline_data[key] = value
+        else:
+            inline_data.update(format_props)
+
+        if props.timestamp and not (display and props.timestamp.startswith(display)):
+            inline_data["timestamp"] = props.timestamp
+
+        return wrap_tag(TagType.DATE, display, inline_data or None)
+
+    def _visit_auto_text(self, auto_text: AutoText) -> str | None:
+        data: dict[str, Any] = {}
+        if auto_text.type:
+            data["type"] = auto_text.type
+        return opening_tag(TagType.AUTO_TEXT, data or None)
+
+    def _visit_equation(self, _eq: Equation) -> str:
+        return opening_tag(TagType.EQUATION)
+
+    def _visit_page_break(self, _pb: PageBreak) -> str:
+        return opening_tag(TagType.PAGE_BREAK)
+
+    def _visit_column_break(self, _cb: ColumnBreak) -> str:
+        return opening_tag(TagType.COLUMN_BREAK)
+
+    def _visit_section_break(self, element: StructuralElement) -> str | None:
+        is_leading = element.startIndex is None or element.startIndex == 0
+
+        is_trailing = False
+        if self._body_content and element is self._body_content[-1]:
+            is_trailing = True
+
+        if is_leading or is_trailing:
+            return None
+        sb = element.sectionBreak
+        if not sb:
+            return None
+        data: dict[str, Any] = {}
+        if sb.sectionStyle and sb.sectionStyle.sectionType:
+            data["type"] = sb.sectionStyle.sectionType
+        return opening_tag(TagType.SECTION_BREAK, data or None)
+
+    def _visit_table_of_contents(self, _toc: TableOfContents) -> str:
+        return opening_tag(TagType.TABLE_OF_CONTENTS)
+
+    # ------------------------------------------------------------------
+    # Style extraction
+    # ------------------------------------------------------------------
+
+    def _extract_default_styles(self, document_tab: DocumentTab) -> None:
+        """Extract default font, size, and color from the NORMAL_TEXT named style."""
+        self._default_font = None
+        self._default_font_size = None
+        self._default_fg_hex = "#000000"
+        self._named_style_sizes = {}
+        self._named_style_colors = {}
+        self._named_style_fonts = {}
+
+        if not document_tab.namedStyles or not document_tab.namedStyles.styles:
+            return
+        for ns in document_tab.namedStyles.styles:
+            if not ns.namedStyleType or not ns.textStyle:
+                continue
+            ts = ns.textStyle
+            if ts.fontSize and ts.fontSize.magnitude is not None:
+                self._named_style_sizes[ns.namedStyleType] = ts.fontSize.magnitude
+            self._named_style_colors[ns.namedStyleType] = _optional_color_to_hex(ts.foregroundColor)
+            if ts.weightedFontFamily and ts.weightedFontFamily.fontFamily:
+                self._named_style_fonts[ns.namedStyleType] = ts.weightedFontFamily.fontFamily
+            if ns.namedStyleType == "NORMAL_TEXT":
+                if ts.weightedFontFamily and ts.weightedFontFamily.fontFamily:
+                    self._default_font = ts.weightedFontFamily.fontFamily
+                if ts.fontSize and ts.fontSize.magnitude is not None:
+                    self._default_font_size = ts.fontSize.magnitude
+                fg = _optional_color_to_hex(ts.foregroundColor)
+                if fg:
+                    self._default_fg_hex = fg
+
+    def _build_metadata_block(self, document_tab: DocumentTab) -> str | None:
+        """Build a metadata block containing document-level style information."""
+        default_styles: dict[str, Any] = {}
+        if self._default_font:
+            default_styles["font"] = self._default_font
+        if self._default_font_size is not None:
+            default_styles["fontSize"] = self._default_font_size
+
+        heading_styles: dict[str, dict[str, Any]] = {}
+        for style_name in (
+            "TITLE",
+            "SUBTITLE",
+            "HEADING_1",
+            "HEADING_2",
+            "HEADING_3",
+            "HEADING_4",
+            "HEADING_5",
+            "HEADING_6",
+        ):
+            entry: dict[str, Any] = {}
+            if style_name in self._named_style_sizes:
+                entry["fontSize"] = self._named_style_sizes[style_name]
+            color = self._named_style_colors.get(style_name)
+            if color:
+                entry["color"] = color
+            font = self._named_style_fonts.get(style_name)
+            if font and font != self._default_font:
+                entry["font"] = font
+            if entry:
+                heading_styles[style_name] = entry
+
+        if heading_styles:
+            default_styles["headingStyles"] = heading_styles
+
+        if self._default_link_color != _DEFAULT_LINK_COLOR:
+            default_styles["linkColor"] = self._default_link_color
+
+        if self._date_defaults:
+            default_styles["dateDefaults"] = self._date_defaults
+
+        if not default_styles and not self._document_id and not self._tab_id:
+            return None
+
+        return serialize_metadata(
+            document_id=self._document_id,
+            tab_id=self._tab_id,
+            default_styles=default_styles or None,
+        )
+
+    def _extract_non_default_style(self, style: TextStyle | None) -> dict[str, Any] | None:
+        """Return a dict of non-default style properties, or None if all defaults.
+
+        For heading paragraphs, font-size is always suppressed (it's stored in
+        the metadata block instead). Colors and fonts are compared against the
+        heading's own named style defaults, not just NORMAL_TEXT.
+        """
+        if not style:
+            return None
+
+        props: dict[str, Any] = {}
+        para = self._current_para_style
+        is_heading = para in _HEADING_STYLES
+
+        fg = _optional_color_to_hex(style.foregroundColor)
+        if fg and style.link and style.link.url:
+            if fg == self._default_link_color:
+                fg = None
+        if fg:
+            expected_color = self._default_fg_hex
+            if para and para in self._named_style_colors:
+                ns_color = self._named_style_colors[para]
+                if ns_color is not None:
+                    expected_color = ns_color
+            if fg != expected_color:
+                props["color"] = fg
+
+        bg = _optional_color_to_hex(style.backgroundColor)
+        if bg:
+            props["background-color"] = bg
+
+        if not is_heading and style.fontSize and style.fontSize.magnitude is not None:
+            expected_size = self._default_font_size
+            if para and para in self._named_style_sizes:
+                expected_size = self._named_style_sizes[para]
+            if style.fontSize.magnitude != expected_size:
+                props["font-size"] = style.fontSize.magnitude
+
+        if style.weightedFontFamily and style.weightedFontFamily.fontFamily:
+            font = style.weightedFontFamily.fontFamily
+            expected_font = self._default_font
+            if para and para in self._named_style_fonts:
+                ns_font = self._named_style_fonts[para]
+                if ns_font is not None:
+                    expected_font = ns_font
+            if font != expected_font:
+                props["font-family"] = font
+
+        if style.baselineOffset and style.baselineOffset not in ("BASELINE_OFFSET_UNSPECIFIED", "NONE"):
+            props["baseline-offset"] = style.baselineOffset
+
+        if style.smallCaps:
+            props["small-caps"] = True
+
+        return props or None
+
+    # ------------------------------------------------------------------
+    # Headers and Footers
+    # ------------------------------------------------------------------
+
+    def _serialize_headers(self, headers: dict[str, Any] | None) -> list[str]:
+        """Serialize document headers as comment-wrapped blocks."""
+        if not headers:
+            return []
+        result: list[str] = []
+        for header_id, raw in sorted(headers.items()):
+            header = raw if isinstance(raw, Header) else Header.model_validate(raw)
+            if not header.content:
+                continue
+            blocks = group_elements(header.content)
+            parts: list[str] = []
+            for block in blocks:
+                r = self._visit_block(block)
+                if r is not None and r.strip():
+                    parts.append(r)
+            if parts:
+                inner = "\n\n".join(parts)
+                data: dict[str, Any] = {"id": header_id}
+                result.append(f"{opening_tag(TagType.HEADER, data)}\n{inner}\n{closing_tag(TagType.HEADER)}")
+        return result
+
+    def _serialize_footers(self, footers: dict[str, Any] | None) -> list[str]:
+        """Serialize document footers as comment-wrapped blocks."""
+        if not footers:
+            return []
+        result: list[str] = []
+        for footer_id, raw in sorted(footers.items()):
+            footer = raw if isinstance(raw, Footer) else Footer.model_validate(raw)
+            if not footer.content:
+                continue
+            blocks = group_elements(footer.content)
+            parts: list[str] = []
+            for block in blocks:
+                r = self._visit_block(block)
+                if r is not None and r.strip():
+                    parts.append(r)
+            if parts:
+                inner = "\n\n".join(parts)
+                data: dict[str, Any] = {"id": footer_id}
+                result.append(f"{opening_tag(TagType.FOOTER, data)}\n{inner}\n{closing_tag(TagType.FOOTER)}")
+        return result
+
+
+def _optional_color_to_hex(color: OptionalColor | None) -> str | None:
+    """Convert an OptionalColor to a hex string like ``#FF0000``.
+
+    Returns ``None`` if the color is unset, transparent, or has no RGB values.
+    Black (``#000000``) is returned as a valid color — callers are responsible
+    for comparing against the document default to decide whether to suppress it.
+    """
+    if not color or not color.color or not color.color.rgbColor:
+        return None
+    rgb = color.color.rgbColor
+    r = int((rgb.red or 0) * 255)
+    g = int((rgb.green or 0) * 255)
+    b = int((rgb.blue or 0) * 255)
+    return f"#{r:02X}{g:02X}{b:02X}"
+
+
+def _merge_style_segments(
+    segments: list[tuple[str, dict[str, Any] | None]],
+) -> list[tuple[str, dict[str, Any] | None]]:
+    """Merge adjacent paragraph segments that share identical style props.
+
+    Unstyled segments sandwiched between two same-style segments are
+    absorbed into the surrounding styled group so that one wrapping tag
+    covers the entire span instead of fragmenting into per-run tags.
+    """
+    if len(segments) <= 1:
+        return segments
+
+    result: list[tuple[str, dict[str, Any] | None]] = []
+    i = 0
+    while i < len(segments):
+        content, props = segments[i]
+        if props is None:
+            result.append((content, props))
+            i += 1
+            continue
+
+        group_content = content
+        group_props = props
+        i += 1
+
+        while i < len(segments):
+            next_content, next_props = segments[i]
+            if next_props == group_props:
+                group_content += next_content
+                i += 1
+            elif (
+                next_props is None
+                and next_content.strip() == ""
+                and i + 1 < len(segments)
+                and segments[i + 1][1] == group_props
+            ):
+                group_content += next_content
+                i += 1
+            else:
+                break
+
+        result.append((group_content, group_props))
+
+    return result
+
+
+def _is_inline_code_style(style: TextStyle | None) -> bool:
+    """Check if a TextStyle represents Google Docs' inline code styling.
+
+    Google Docs uses Roboto Mono font with a specific green (#188037)
+    foreground color for inline code chips / monospace snippets.
+    """
+    if not style:
+        return False
+    has_mono = bool(style.weightedFontFamily and style.weightedFontFamily.fontFamily == _INLINE_CODE_FONT)
+    fg = _optional_color_to_hex(style.foregroundColor)
+    return has_mono and fg == _INLINE_CODE_COLOR
+
+
+def _split_whitespace(text: str) -> tuple[str, str, str]:
+    """Split *text* into ``(leading_ws, inner, trailing_ws)``.
+
+    Returns ``("", "", "")`` when *text* is empty or all whitespace.
+    """
+    stripped = text.lstrip()
+    leading = text[: len(text) - len(stripped)]
+    inner = stripped.rstrip()
+    trailing = stripped[len(inner) :]
+    return leading, inner, trailing
+
+
+def _apply_backtick_wrap(text: str) -> str:
+    """Wrap text in backtick delimiters for inline code, preserving whitespace."""
+    if not text:
+        return text
+
+    leading, inner, trailing = _split_whitespace(text)
+    if not inner:
+        return text
+
+    if "`" not in inner:
+        return f"{leading}`{inner}`{trailing}"
+    return f"{leading}`` {inner} ``{trailing}"
 
 
 def _escape_pipe(text: str) -> str:
@@ -355,11 +857,7 @@ def _apply_inline_formatting(
     if not text or (not bold and not italic and not strikethrough and not underline):
         return text
 
-    stripped = text.lstrip()
-    leading = text[: len(text) - len(stripped)]
-    inner = stripped.rstrip()
-    trailing = stripped[len(inner) :]
-
+    leading, inner, trailing = _split_whitespace(text)
     if not inner:
         return text
 
@@ -384,11 +882,7 @@ def _apply_link(text: str, url: str) -> str:
     if not text:
         return text
 
-    stripped = text.lstrip()
-    leading = text[: len(text) - len(stripped)]
-    inner = stripped.rstrip()
-    trailing = stripped[len(inner) :]
-
+    leading, inner, trailing = _split_whitespace(text)
     if not inner:
         return text
 
