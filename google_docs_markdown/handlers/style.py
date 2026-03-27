@@ -74,13 +74,13 @@ class StyleHandler(TagElementHandler):
             fields.append("backgroundColor")
 
         if "font-size" in data:
-            from google_docs_markdown.models.styles import Dimension
+            from google_docs_markdown.models.common import Dimension
 
             style_kwargs["fontSize"] = Dimension(magnitude=data["font-size"], unit="PT")
             fields.append("fontSize")
 
         if "font-family" in data:
-            from google_docs_markdown.models.styles import WeightedFontFamily
+            from google_docs_markdown.models.common import WeightedFontFamily
 
             style_kwargs["weightedFontFamily"] = WeightedFontFamily(fontFamily=data["font-family"])
             fields.append("weightedFontFamily")
