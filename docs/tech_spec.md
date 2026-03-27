@@ -1,8 +1,8 @@
 # Google Docs Markdown - Technical Specification
 
-**Document Version:** 1.6.0  
+**Document Version:** 1.7.0  
 **Date:** 2026-01-08  
-**Last Updated:** 2026-03-26 (Phase 2.6 complete: non-markdown element annotations, style comments, embedded metadata, suggestions, headers/footers)  
+**Last Updated:** 2026-03-27 (Phase 3 restructured: per-element handler architecture, context layer, source map, diff engine design; old Phase 4 absorbed into Phase 3)  
 **Authors:** Mark Koh  
 **Status:** Active
 
@@ -44,10 +44,10 @@ The primary goals of this project are:
 
 - **FR-4**: Image Management
   - Extract images from Google Docs during download — **implemented**: images are serialized as `![alt](contentUri)` referencing Google-hosted URLs
-  - Store images locally in an `imgs` directory within the document's output folder (e.g., `My Doc/imgs/`) — **planned** (Phase 7)
-  - Upload local images to a configurable public storage service (S3, GCS, etc.) — **planned** (Phase 7)
-  - Inline image URLs in Markdown files with public URLs — **planned** (Phase 7)
-  - Replace local image references with public URLs after upload — **planned** (Phase 7)
+  - Store images locally in an `imgs` directory within the document's output folder (e.g., `My Doc/imgs/`) — **planned** (Phase 6)
+  - Upload local images to a configurable public storage service (S3, GCS, etc.) — **planned** (Phase 6)
+  - Inline image URLs in Markdown files with public URLs — **planned** (Phase 6)
+  - Replace local image references with public URLs after upload — **planned** (Phase 6)
 
 - **FR-5**: Change Detection and Diffing
   - Compare local Markdown content with online Google Docs content
@@ -80,44 +80,63 @@ The primary goals of this project are:
 The tool is organized into several distinct components that work together to provide the core functionality:
 
 ```
-┌─────────────────────────────────────────────┐
-│   CLI (cli.py, typer)                       │  User-facing command-line interface
-└──────┬──────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│   CLI (cli.py, typer)                                               │
+└──────┬──────────────────────────────────────────────────────────────┘
        │
-┌──────▼──────────────────────────────────────┐
-│   Downloader / Uploader                     │  High-level orchestration
-│   ┌──────────────────────────────────────┐  │
-│   │  Downloader (downloader.py)          │  │  Fetches doc, serializes tabs, writes files
-│   │  MarkdownSerializer (markdown_       │  │  Pydantic DocumentTab → Markdown string
-│   │    serializer.py)                    │  │
-│   │  Uploader (uploader.py) [planned]    │  │  Markdown → batchUpdate requests
-│   └──────────────────────────────────────┘  │
-└──────┬──────────────────────────────────────┘
+┌──────▼──────────────────────────────────────────────────────────────┐
+│   Downloader / Uploader                        High-level orchestration
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │  Downloader (downloader.py)      Fetches doc, writes files  │  │
+│   │  Uploader (uploader.py)          Create + update flows      │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+└──────┬──────────────────────────────────────────────────────────────┘
        │
-┌──────▼──────────────────────────────────────┐
-│   API Client Layer                          │
-│   ┌──────────────────────────────────────┐  │
-│   │  GoogleDocsClient (client.py)        │  │  Typed client (Pydantic models)
-│   │  GoogleDocsTransport (transport.py)  │  │  Raw API transport (dicts)
-│   │  Data Models (models/)               │  │  Pydantic models for API objects
-│   └──────────────────────────────────────┘  │
-└──────┬──────────────────────────────────────┘
+┌──────▼──────────────────────────────────────────────────────────────┐
+│   Serialization / Deserialization Layer                              │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │  handlers/                  Per-element handler classes      │  │
+│   │    base.py                  ElementHandler ABC + subclasses  │  │
+│   │    context.py               DocumentContext, Ser/DeserContext│  │
+│   │    person.py, date.py, ...  One handler per element type    │  │
+│   │  MarkdownSerializer         Orchestrator (ser direction)    │  │
+│   │  MarkdownDeserializer       Orchestrator (deser direction)  │  │
+│   │  source_map.py              Markdown ↔ API index mapping    │  │
+│   │  diff_engine.py             Text diffing + request gen      │  │
+│   │  element_registry.py        Shared constants                │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+└──────┬──────────────────────────────────────────────────────────────┘
        │
-┌──────▼──────┐
-│ Google Docs │  External API
-│    API      │
-└─────────────┘
+┌──────▼──────────────────────────────────────────────────────────────┐
+│   API Client Layer                                                  │
+│   ┌──────────────────────────────────────────────────────────────┐  │
+│   │  GoogleDocsClient (client.py)        Typed (Pydantic models)│  │
+│   │  GoogleDocsTransport (transport.py)  Raw API (dicts)        │  │
+│   │  Data Models (models/)               Pydantic API models    │  │
+│   └──────────────────────────────────────────────────────────────┘  │
+└──────┬──────────────────────────────────────────────────────────────┘
+       │
+┌──────▼──────────┐
+│   Google Docs   │  External API
+│      API        │
+└─────────────────┘
 ```
 
 ### 4.2 Component Responsibilities
 
 - **CLI** (`cli.py`): Parses command-line arguments via `typer`, orchestrates operations, provides user feedback. Commands: `download` (with `--force`, file conflict handling, stale cleanup), `upload` (stub), `diff` (stub), `list-tabs`, `setup`.
 - **Downloader** (`downloader.py`): Orchestrates fetching a `Document` via `GoogleDocsClient`, iterating tabs recursively, serializing each tab via `MarkdownSerializer`, and writing `.md` files to a directory structure. Supports selective tab download via `tab_names` filter, file conflict detection (`FileConflictError`), stale file cleanup (`find_stale_files`), and empty directory removal (`remove_empty_dirs`).
-- **MarkdownSerializer** (`markdown_serializer.py`): Converts a single `DocumentTab` Pydantic model to a Markdown string. Uses a block-grouper pre-processing pass (`block_grouper.py`) to group list items and code blocks before visitor-style traversal. Handles all Google Docs element types: headings, paragraphs, bold/italic/strikethrough/underline formatting, links, rich links (with metadata), horizontal rules, footnotes, ordered/unordered/nested lists, tables (pipe format), code blocks (U+E907 boundary detection), images, Person mentions, DateElements, AutoText, Equations, SectionBreaks, PageBreaks, ColumnBreaks, TableOfContents, style annotations (color, font, size), suggestion markers, chip placeholders, and headers/footers.
-- **CommentTags** (`comment_tags.py`): Serialization and parsing for wrapping HTML comment annotations (`<!-- type: {json} -->content<!-- /type -->`). Provides `TagType` enum, `opening_tag()`, `closing_tag()`, `wrap_tag()`, and `parse_tags()`.
-- **Metadata** (`metadata.py`): Handles the embedded metadata block at the bottom of markdown files (`<!-- google-docs-metadata ... -->`). Provides `serialize_metadata()`, `parse_metadata()`, and `strip_metadata()`.
+- **Uploader** (`uploader.py`, planned): Orchestrates upload flows. Create flow: deserializes markdown into `Request` objects and creates new document. Update flow: composes serializer (with source map), diff engine, and handlers to produce surgical `batchUpdate` requests. See Section 5.10.
+- **Handlers** (`handlers/`, planned): Per-element handler classes that own both serialization and deserialization logic for each document element concept. `ElementHandler` ABC with `TagElementHandler`, `BlockElementHandler`, and `InlineFormatHandler` subclasses. Each handler implements `serialize()` (Pydantic model → Markdown text) and `deserialize()` (Markdown token/tag → `Request` objects). Handlers are registered in a `HandlerRegistry` that dispatches by Pydantic field (ser) or by token/tag type (deser). See Section 5.11.
+- **Context** (`handlers/context.py`, planned): Three-layer context architecture. `DocumentContext` (frozen dataclass with document defaults — populated from `DocumentTab` or from embedded metadata block via dual factories). `SerContext` and `DeserContext` (mutable, direction-specific traversal state). Handlers access document defaults via `ctx.doc.expected_color()`, `ctx.doc.expected_font()`, etc. See Section 5.11.
+- **MarkdownSerializer** (`markdown_serializer.py`): Orchestrator for the serialization direction. Currently a monolithic 900-line visitor; will be refactored to a slim ~200-line orchestrator that walks the Pydantic tree and delegates to the handler registry. Uses a block-grouper pre-processing pass (`block_grouper.py`) to group list items and code blocks. Optionally produces a `SourceMap` for the update flow.
+- **MarkdownDeserializer** (`markdown_deserializer.py`, planned): Orchestrator for the deserialization direction. Parses markdown via `markdown-it-py` AST, parses comment tags via `comment_tags.parse_tags()`, dispatches to handler registry, returns `list[Request]`.
+- **SourceMap** (`source_map.py`, planned): Maps markdown character positions to Google Docs API character indices. Built during serialization by handlers calling `ctx.source_map.record()`. Read during update flow by `SourceMap.lookup(md_pos)` to translate diff positions to API ranges. See Section 5.10.
+- **DiffEngine** (`diff_engine.py`, planned): Text-level diffing using `difflib.SequenceMatcher`. Compares canonical markdown (from serializer) against local markdown. Produces `DiffOp` objects. Composes with source map to translate positions and with handlers to generate `Request` objects. See Section 5.10.
+- **ElementRegistry** (`element_registry.py`, planned): Shared constants imported by both serialization and deserialization sides — heading level mappings, glyph type sets, monospace font sets, inline format marker definitions, comment tag type to request type mappings.
+- **CommentTags** (`comment_tags.py`): Serialization and parsing for wrapping HTML comment annotations (`<!-- type: {json} -->content<!-- /type -->`). Provides `TagType` enum, `opening_tag()`, `closing_tag()`, `wrap_tag()`, and `parse_tags()`. Used by `TagElementHandler` subclasses.
+- **Metadata** (`metadata.py`): Handles the embedded metadata block at the bottom of markdown files (`<!-- google-docs-metadata ... -->`). Provides `serialize_metadata()`, `parse_metadata()`, and `strip_metadata()`. Used by `DocumentContext.from_metadata()` factory.
 - **BlockGrouper** (`block_grouper.py`): Pre-processing pass that groups `StructuralElement` lists into typed blocks: `ListBlock` (consecutive bullet paragraphs), `CodeBlock` (paragraphs between U+E907 bookend markers). All other elements pass through unchanged.
-- **Uploader** (`uploader.py`, planned): Will convert Markdown back to Google Docs via surgical `batchUpdate` requests. See Section 5.9 for the atomic-edit strategy.
 - **GoogleDocsClient** (`client.py`): High-level typed client that returns Pydantic models. Composes `GoogleDocsTransport`. Most consumers (CLI, downloader, uploader) should use this.
 - **GoogleDocsTransport** (`transport.py`): Low-level transport that handles authentication, API requests/responses, error handling, and retry logic. Returns raw dicts as received from the API. Used directly for scripts that need unmodified API responses (e.g., downloading test fixtures).
 - **Data Models** (`models/`): Pydantic models representing Google Docs API response objects, enabling attribute-based access (`doc.title`) and runtime validation. Generated from `google-api-python-client-stubs` via `scripts/generate_models.py`. Organized into `document.py`, `elements.py`, `styles.py`, `common.py`, `requests.py`, `responses.py`.
@@ -143,23 +162,30 @@ The tool must produce deterministic outputs to ensure consistency and enable rel
 
 ### 5.2 Change Detection and Diffing
 
-The diff engine is critical for efficient updates and conflict resolution:
-
-- **Granularity Levels**: The diff should operate at multiple levels:
-  - **Character level**: For precise text changes
-  - **Word level**: For word insertions/deletions
-  - **Paragraph level**: For structural changes
-  - **Element level**: For formatting, images, tables, etc.
+The diff engine is critical for efficient updates and conflict resolution. It operates on **text**, not structure, and composes with the source map and handler registry.
 
 - **Diff Algorithm**: 
-  - Convert both Markdown and Google Docs content to a normalized intermediate representation
-  - Use appropriate diffing algorithms (e.g., Myers diff algorithm) to identify changes
-  - For Google Docs API objects, leverage Pydantic model comparison capabilities for efficient structural diffing
-  - Generate minimal set of update operations needed to transform online content to match local content
+  - Text-level diffing using `difflib.SequenceMatcher` (upgrade to Myers diff if needed)
+  - Compares canonical markdown (serialized from current document) against local markdown
+  - Metadata blocks are stripped before diffing (via `metadata.strip_metadata()`)
+  - Produces `DiffOp` objects with markdown position ranges (`kind`, `md_start`, `md_end`, `new_text`)
+
+- **Source Map Integration**:
+  - `DiffOp` positions are translated to API indices via `SourceMap.lookup(md_pos)`
+  - The source map distinguishes visible-text spans (1:1 with API indices) from syntax spans (formatting markers, comment tags — no API index counterpart)
+  - The source map also records which handler produced each span, enabling handler-aware request generation
+
+- **Request Generation**:
+  - **Deletions**: Source map translates `(md_start, md_end)` to API range → `DeleteContentRangeRequest`
+  - **Insertions**: Handler identified from source map span → `handler.deserialize()` generates `Request` objects at insertion point
+  - **Replacements**: Delete + insert
+  - **No change**: Zero ops → skip API call entirely
+
+- **Per-Tab Diffing**: Each tab is diffed independently. Unchanged tabs produce zero operations and are skipped.
 
 - **Conflict Handling**:
   - Before uploading, always download the current online version
-  - Compare local Markdown with online content
+  - Compare local Markdown with serialized online content
   - Generate only the changes needed (insertions, deletions, modifications)
   - After upload, prompt user to pull latest version (default: yes) to sync any concurrent online edits
 
@@ -209,9 +235,10 @@ The diff engine is critical for efficient updates and conflict resolution:
   - `Paragraph`, `Table`, `TextRun`, etc. - Element types used throughout the document structure
 
 - **Markdown Conversion**:
-  - **Serialization (Pydantic → Markdown)**: `MarkdownSerializer` uses a two-stage pipeline: (1) `block_grouper.py` groups `StructuralElement` lists into typed blocks (`ListBlock`, `CodeBlock`, or pass-through `StructuralElement`), then (2) visitor-style dispatch on optional fields (`if element.paragraph:`, `if element.textRun:`) traverses the Pydantic model tree and builds Markdown strings directly. No markdown library needed. Note: the models use optional-field composition (not class hierarchies), so dispatch is via field presence checks, not `isinstance()`. Block-level dispatch uses `isinstance()` on the block-grouper dataclasses.
+  - **Per-Element Handler Architecture (planned)**: Each document element concept gets its own handler class that owns both `serialize()` and `deserialize()` methods. The `MarkdownSerializer` and `MarkdownDeserializer` become slim orchestrators that walk the input (Pydantic tree or markdown AST) and delegate to a `HandlerRegistry`. See Section 5.11 for full architecture details.
+  - **Serialization (Pydantic → Markdown)**: Currently a monolithic `MarkdownSerializer` with visitor-style dispatch. Will be refactored into handler-based architecture. Uses a block-grouper pre-processing pass (`block_grouper.py`) to group `StructuralElement` lists into typed blocks (`ListBlock`, `CodeBlock`, or pass-through `StructuralElement`). Optionally produces a `SourceMap` mapping markdown positions to API indices (for the update flow).
   - **Currently serialized elements**: headings (H1–H6, Title with `<!-- title -->`, Subtitle with `<!-- subtitle -->`), paragraphs, bold, italic, strikethrough, underline, links, rich links (with `<!-- rich-link -->` metadata), horizontal rules, footnotes, ordered/unordered/nested lists, tables (pipe format), code blocks (U+E907 detection), images (`InlineObjectElement` → `![alt](contentUri)`), Person (`<!-- person -->` wrapping), DateElement (`<!-- date -->` wrapping), AutoText, Equation, SectionBreak, PageBreak, ColumnBreak, TableOfContents, style annotations (`<!-- style -->` for non-default colors/fonts/sizes), suggestion markers (`<!-- suggestion -->`), chip placeholders (`<!-- chip-placeholder -->`), headers/footers
-  - **Deserialization (Markdown → API requests)**: For the **update** case, the approach is to diff two Markdown strings (serialized current doc vs. local file) and map changes back to API indices for surgical `batchUpdate` requests. For the **create** case, `markdown-it-py` may be used to parse Markdown into tokens and generate `batchUpdate` requests. See Section 5.9 for details.
+  - **Deserialization (Markdown → API requests)**: Each handler implements `deserialize()` to convert its markdown representation back to `batchUpdate` `Request` objects. The `MarkdownDeserializer` orchestrator parses markdown via `markdown-it-py` AST and comment tags via `parse_tags()`, then dispatches to handlers. For the **update** case, the diff engine identifies changed regions and routes them through handler deserialization. For the **create** case, the full markdown is deserialized into a sequence of requests. See Sections 5.10 and 5.11.
 
 - **Note**: Pydantic models provide both type checking and runtime validation. When using `GoogleDocsClient`, API responses are converted to Pydantic models automatically, enabling attribute access throughout the codebase. When using `GoogleDocsTransport` directly, raw dicts are returned for maximum fidelity (useful for test fixtures, debugging, etc.).
 
@@ -355,14 +382,34 @@ Safety: `>` escaped as `\u003e` in JSON string values to prevent premature `-->`
 
 #### 5.8.2 Deserialization Strategy
 
-When uploading Markdown back to Google Docs:
+When uploading Markdown back to Google Docs, deserialization is handled by per-element handlers (see Section 5.11) dispatched by the `MarkdownDeserializer` orchestrator.
 
-- **Parse Comment Tags**: The `comment_tags.parse_tags()` function extracts all comment tags from markdown text, returning structured `ParsedTag` objects with type, data, content, and position spans
-- **Parse Metadata Block**: The `metadata.parse_metadata()` function extracts the embedded metadata JSON
-- **Strip Metadata**: The `metadata.strip_metadata()` function removes the metadata block for content-only diffing
-- **Widget Recreation**: For `<!-- person -->` tags → `insertPerson` requests; for `<!-- date -->` tags → `insertDate` requests
-- **One-Way Elements**: `RichLink` falls back to regular hyperlink; `AutoText`/`Equation` preserved in-place only
-- **Source Map Strategy**: At upload time, the serializer produces both canonical markdown and a source map (mapping markdown positions to API indices) from the current document. The diff operates on canonical vs. local markdown, and the source map translates diff positions to surgical `batchUpdate` operations.
+**Parsing Pipeline:**
+- **Parse Markdown AST**: `markdown-it-py` tokenizes the markdown into an AST (headings, paragraphs, lists, tables, code blocks, inline formatting, links, images)
+- **Parse Comment Tags**: `comment_tags.parse_tags()` extracts all HTML comment tags, returning `ParsedTag` objects with type, data, content, and position spans
+- **Parse Metadata Block**: `metadata.parse_metadata()` extracts the embedded metadata JSON, which is used to create `DocumentContext.from_metadata()` for the deserialization context
+- **Strip Metadata**: `metadata.strip_metadata()` removes the metadata block for content-only diffing
+
+**Handler Dispatch:**
+Each `ParsedTag` or AST token is matched to a handler via the `HandlerRegistry`. The handler's `deserialize()` method generates the appropriate `Request` objects:
+
+| Markdown Element | Handler | Request(s) Generated |
+|---|---|---|
+| `<!-- person: {...} -->Name<!-- /person -->` | `PersonHandler` | `InsertPersonRequest` |
+| `<!-- date: {...} -->text<!-- /date -->` | `DateHandler` | `InsertDateRequest` |
+| `<!-- style: {...} -->text<!-- /style -->` | `StyleHandler` | `InsertTextRequest` + `UpdateTextStyleRequest` |
+| `# Heading` | `HeadingHandler` | `InsertTextRequest` + `UpdateParagraphStyleRequest` |
+| `**bold**` | `InlineFormatHandler` | `UpdateTextStyleRequest` (bold=True) |
+| `[text](url)` | `LinkHandler` | `UpdateTextStyleRequest` (link) |
+| `- item` / `1. item` | `ListHandler` | `InsertTextRequest` + `CreateParagraphBulletsRequest` |
+| `\| table \|` | `TableHandler` | `InsertTableRequest` + cell content |
+| `` ``` code ``` `` | `CodeBlockHandler` | `InsertTextRequest` (with U+E907 reinsertion) |
+| `![alt](url)` | `ImageHandler` | `InsertInlineImageRequest` |
+| `<!-- rich-link: {...} -->[text](url)<!-- /rich-link -->` | `RichLinkHandler` | `InsertTextRequest` + `UpdateTextStyleRequest` (hyperlink fallback) |
+
+**One-Way Elements:** `RichLink` falls back to regular hyperlink (no `insertRichLink` API). `AutoText`/`Equation` are preserved in-place only during updates.
+
+**Source Map Strategy (Update Flow):** At upload time, the serializer produces both canonical markdown and a source map (mapping markdown positions to API indices) from the current document. The diff engine operates on canonical vs. local markdown, and the source map translates diff positions to surgical `batchUpdate` operations. The source map also records which handler produced each span, so the diff engine can route changed fragments through the correct handler for request generation.
 
 #### 5.8.3 Examples
 
@@ -445,43 +492,63 @@ This eliminates the need to reconstruct widgets from scratch -- we only edit the
 
 ### 5.10 Upload Strategy -- Atomic Edits, Not Reconstruction
 
-The upload strategy differs fundamentally between updating an existing document and creating a new one.
+The upload strategy differs fundamentally between updating an existing document and creating a new one. Both flows use the per-element handler architecture (Section 5.11) for deserialization.
 
 #### 5.10.1 Update Existing Document (Common Case)
 
-The approach is to **diff two Markdown strings** and map the diff back to API indices:
+The approach composes three systems: **serializer with source map**, **diff engine**, and **handler-based request generation**.
 
 1. Fetch the current document via `GoogleDocsClient.get_document()`
-2. Serialize it to Markdown using `MarkdownSerializer` (same code path as download)
-3. Text-diff the serialized version against the user's local Markdown
-4. Map diff ranges back to document indices (using index information from the original `Document` model)
-5. Generate surgical `DeleteContentRange` + `InsertText` requests targeting ONLY changed regions
-6. Widget boundaries (`U+E907` markers) are naturally preserved because unchanged regions produce no operations
-7. For modified widget regions: use dedicated insert requests where available (see 5.10.3)
-8. Process batch updates in correct order: deletions (end-to-start), insertions (start-to-end), widget inserts, style updates (any order)
+2. Serialize it to Markdown using `MarkdownSerializer` with source map enabled — produces `(canonical_markdown, SourceMap)`
+3. Strip metadata blocks from both canonical and local markdown (via `metadata.strip_metadata()`)
+4. Text-diff the canonical markdown against the user's local Markdown (via `diff_engine.py`)
+5. For each `DiffOp`, translate markdown positions to API indices via `SourceMap.lookup(md_pos)`
+6. For deletions: generate `DeleteContentRangeRequest` with the API range
+7. For insertions: identify the handler from the source map span, call `handler.deserialize()` to generate appropriate `Request` objects at the insertion point
+8. Widget boundaries (`U+E907` markers) are naturally preserved because unchanged regions produce no operations
+9. For modified widget regions: handlers generate dedicated insert requests where available (see 5.10.3)
+10. Process batch updates in correct order: deletions (end-to-start), insertions (start-to-end), widget inserts, style updates (any order)
 
-This approach does NOT require parsing Markdown back into a `Document` Pydantic model. We don't reconstruct the document -- we patch it.
+This approach does NOT require parsing the full Markdown back into a document model. We patch the document surgically.
+
+**Source Map Architecture:**
+
+The source map captures markdown-position-to-API-index mappings during serialization. It is built by handlers calling `ctx.source_map.record()` as they emit text.
+
+Key distinction: **visible text spans** map 1:1 to API character indices, while **syntax spans** (formatting markers like `**`, `*`, `~~`, and comment tags like `<!-- person: ... -->`) occupy space in the markdown string but have no API index counterpart. The source map tracks both types with a `SpanKind` enum.
+
+Each `SourceSpan` also records which handler produced it, enabling the diff engine to route changed fragments through the correct handler for request generation.
+
+```
+SourceSpan:
+  md_start, md_end       # Position in markdown text
+  api_start, api_end     # Google Docs API startIndex/endIndex
+  tab_id, segment_id     # Which tab and segment (body, header, footer)
+  kind: SpanKind          # TEXT, HEADING, LIST_ITEM, CODE_LINE, WIDGET, SYNTAX, ...
+  handler                 # Which ElementHandler produced this span
+  style, tag_data         # TextStyle and comment tag metadata
+```
 
 #### 5.10.2 Create New Document
 
 For creating a brand-new document from Markdown:
 
 1. Create a blank document via `GoogleDocsClient.create_document()`
-2. Parse the Markdown (potentially using `markdown-it-py`) into a sequence of `batchUpdate` `Request` objects
-3. Submit the requests to populate the document
+2. Parse the Markdown via `MarkdownDeserializer` orchestrator — walks `markdown-it-py` AST and parsed comment tags, dispatches to handler registry, returns `list[Request]`
+3. Submit the requests via `GoogleDocsClient.batch_update()` to populate the document
 
-This is a simpler one-directional pipeline. `markdown-it-py` may only be needed for this create flow, not the update flow.
+This flow validates the handler deserialization pipeline end-to-end without any diffing complexity. It is implemented before the update flow for this reason.
 
 #### 5.10.3 Widget Recreation on Upload
 
-Some non-text elements have dedicated `batchUpdate` insert requests, enabling round-trip fidelity beyond simple text patching:
+Some non-text elements have dedicated `batchUpdate` insert requests, enabling round-trip fidelity beyond simple text patching. Each is handled by its corresponding handler's `deserialize()` method:
 
-- **`insertPerson`**: Recreate person mentions from serialized `<!-- person: {...} -->` comments. Requires `personProperties.email` (and optionally `name`) plus a `location` index.
-- **`insertDate`**: Recreate date elements from serialized `<!-- date: {...} -->` comments. Accepts full `dateElementProperties` (format, locale, timezone, timestamp) plus a `location` index.
+- **`insertPerson`** (`PersonHandler`): Recreate person mentions from serialized `<!-- person: {...} -->` comments. Requires `personProperties.email` (and optionally `name`) plus a `location` index.
+- **`insertDate`** (`DateHandler`): Recreate date elements from serialized `<!-- date: {...} -->` comments. Accepts full `dateElementProperties` (format, locale, timezone, timestamp) plus a `location` index.
 
 Elements **without** dedicated insert requests cannot be recreated and must be handled differently:
 
-- **`RichLink`**: No `insertRichLink` exists. Fall back to a regular hyperlink (`InsertText` + `UpdateTextStyle` with `link.url`). The rich link widget (with preview card) will be lost on upload.
+- **`RichLink`** (`RichLinkHandler`): No `insertRichLink` exists. Falls back to a regular hyperlink (`InsertText` + `UpdateTextStyle` with `link.url`). The rich link widget (with preview card) will be lost on upload.
 - **`AutoText`**: No `insertAutoText` exists. Must be preserved in-place via atomic edits (don't delete/recreate). If an AutoText element is removed from the local Markdown, it cannot be restored.
 - **`Equation`**: No `insertEquation` exists and no content is exposed by the API. Must be preserved in-place.
 
@@ -492,6 +559,111 @@ Earlier design documents (now archived in `docs/archive/PYDANTIC_STRATEGY.md`) p
 - The API needs `batchUpdate` `Request` objects, not a `Document` model
 - The update case benefits from surgical edits that preserve widget state (U+E907 containers)
 - Diffing at the Markdown text level is simpler and more robust than structural model comparison
+- The per-element handler architecture (Section 5.11) achieves the same goal (shared format knowledge between ser and deser) without requiring a full document model round-trip
+
+### 5.11 Per-Element Handler Architecture and Context Design
+
+#### 5.11.1 Motivation
+
+The serializer (`markdown_serializer.py`) is a monolithic ~900-line file with per-element visitor methods. Building a matching deserializer would create a second ~900-line file with mirror logic, and the two would inevitably drift. The per-element handler pattern solves this by placing each element's serialization AND deserialization logic in a single handler class.
+
+#### 5.11.2 Handler Categories
+
+**TagElementHandler** — for elements serialized as HTML comment annotations (`<!-- type: {json} -->content<!-- /type -->`). The `TAG_TYPE` class attribute is shared between serialization and deserialization. Examples: `PersonHandler`, `DateHandler`, `StyleHandler`, `SuggestionHandler`, `RichLinkHandler`, `AutoTextHandler`, `EquationHandler`, break handlers.
+
+**BlockElementHandler** — for structural block elements (headings, lists, tables, code blocks). Serialize from Pydantic model structure to markdown block syntax; deserialize from `markdown-it-py` AST tokens to API requests.
+
+**InlineFormatHandler** — for inline text formatting (bold, italic, strikethrough, underline, inline code). The `MARKER` (e.g., `**`) and `STYLE_FIELD` (e.g., `bold`) class attributes encode the format knowledge shared between directions. These compose/stack rather than standing alone.
+
+#### 5.11.3 Handler Interface
+
+```python
+class ElementHandler(ABC):
+    @abstractmethod
+    def serialize_match(self, element) -> bool:
+        """Does this handler handle the given API element?"""
+
+    @abstractmethod
+    def serialize(self, element, ctx: SerContext) -> str | None:
+        """Convert API element to markdown text."""
+
+    @abstractmethod
+    def deserialize_match(self, token) -> bool:
+        """Does this handler handle the given markdown token/tag?"""
+
+    @abstractmethod
+    def deserialize(self, token, ctx: DeserContext) -> list[Request]:
+        """Convert markdown back to API requests."""
+```
+
+Dispatch is asymmetric: serialization dispatches on Pydantic field presence (`element.person`, `element.textRun`), while deserialization dispatches on AST token type (`heading_open`, `strong_open`) or `ParsedTag.tag_type`. Each handler declares what it handles from both sides.
+
+#### 5.11.4 Handler Registry
+
+`HandlerRegistry` indexes all handlers and provides `match_serialize(element)` and `match_deserialize(token)` lookups. The serializer orchestrator walks the Pydantic tree and delegates to the registry; the deserializer orchestrator walks the markdown AST and does the same.
+
+#### 5.11.5 Context Architecture
+
+The current serializer has 12+ instance variables for document defaults, lookups, accumulators, and per-paragraph transient state. The context architecture separates these into three layers:
+
+**Layer 1 — `DocumentContext` (frozen dataclass, shared between ser and deser):**
+
+Holds document-level defaults and lookup methods. Populated from two different sources depending on direction:
+
+- `DocumentContext.from_document_tab(tab)` — extracts from `DocumentTab.namedStyles` (serialization path)
+- `DocumentContext.from_metadata(metadata)` — extracts from parsed `<!-- google-docs-metadata ... -->` block (deserialization path)
+
+Fields: `default_font`, `default_font_size`, `default_fg_color`, `default_link_color`, `named_style_sizes`, `named_style_colors`, `named_style_fonts`, `date_defaults`, `document_id`, `tab_id`.
+
+Methods: `expected_font_size(style_name)`, `expected_color(style_name)`, `expected_font(style_name)`.
+
+Key insight: the embedded metadata block was already designed to preserve document defaults for exactly this purpose. The dual factory pattern makes the duality explicit.
+
+**Layer 2 — Direction-specific contexts (mutable):**
+
+`SerContext` — holds `DocumentContext`, `current_para_style` (set/cleared by orchestrator per paragraph), `footnote_refs` (accumulated during traversal), `date_defaults` (first DateElement sets, subsequent ones diff), `source_map` (optional `SourceMapBuilder`), `inline_objects` (lookup for `InlineObjectElement`), `lists_context` (lookup for list type resolution), `body_content` (for section break detection).
+
+`DeserContext` — holds `DocumentContext`, `index` (current API insertion index, starts at 1 for body), `tab_id`, `segment_id` (`""` for body, otherwise header/footer/footnote ID), `requests` (accumulator). Provides `advance(length)` and `emit(*reqs)` methods.
+
+**Layer 3 — Paragraph scope (transient):**
+
+The orchestrator sets `ctx.current_para_style` before processing a paragraph's inline elements and clears it after. Handlers read `ctx.current_para_style` and `ctx.doc.expected_color(ctx.current_para_style)` to determine what's "default" — they never set the paragraph style themselves.
+
+#### 5.11.6 Handler-Diff Engine Integration
+
+Each handler tags the source map spans it produces during serialization. When the diff engine finds a changed span, it knows which handler produced it and can ask that same handler to generate the update requests. This creates a closed loop: serialize → source map → diff → handler.deserialize() → requests.
+
+#### 5.11.7 File Structure
+
+```
+google_docs_markdown/
+    handlers/                      Per-element handler package
+        __init__.py                Registry, exports all handlers
+        base.py                    ElementHandler ABC + subclasses
+        context.py                 DocumentContext, SerContext, DeserContext
+        person.py                  PersonHandler
+        date.py                    DateHandler
+        heading.py                 HeadingHandler
+        inline_format.py           Bold, Italic, Strikethrough, Underline, InlineCode
+        link.py                    LinkHandler
+        list_handler.py            ListHandler
+        table.py                   TableHandler
+        code_block.py              CodeBlockHandler
+        image.py                   ImageHandler
+        rich_link.py               RichLinkHandler
+        style.py                   StyleHandler
+        suggestion.py              SuggestionHandler
+        breaks.py                  PageBreak, ColumnBreak, SectionBreak
+        toc.py                     TableOfContentsHandler
+        footnote.py                FootnoteHandler
+        header_footer.py           HeaderHandler, FooterHandler
+    source_map.py                  SourceMap, SourceSpan, SourceMapBuilder
+    element_registry.py            Shared constants
+    markdown_serializer.py         Slim orchestrator (~200 lines)
+    markdown_deserializer.py       Deserializer orchestrator
+    diff_engine.py                 Text diffing + request generation
+    uploader.py                    Create and update flows
+```
 
 ## 6. Resources
 
