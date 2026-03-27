@@ -70,18 +70,18 @@ class DateHandler(TagElementHandler):
             timestamp=timestamp,
         )
 
-        return [
-            Request(
-                insertDate=InsertDateRequest(
-                    dateElementProperties=date_props,
-                    location=Location(
-                        index=ctx.index,
-                        segmentId=ctx.segment_id or None,
-                        tabId=ctx.tab_id or None,
-                    ),
-                )
+        req = Request(
+            insertDate=InsertDateRequest(
+                dateElementProperties=date_props,
+                location=Location(
+                    index=ctx.index,
+                    segmentId=ctx.segment_id or None,
+                    tabId=ctx.tab_id or None,
+                ),
             )
-        ]
+        )
+        ctx.advance(1)
+        return [req]
 
 
 def _timestamp_from_display(display_text: str) -> str:

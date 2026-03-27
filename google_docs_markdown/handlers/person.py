@@ -33,15 +33,15 @@ class PersonHandler(TagElementHandler):
         email = data.get("email")
         if not email:
             return []
-        return [
-            Request(
-                insertPerson=InsertPersonRequest(
-                    personProperties=PersonProperties(email=email),
-                    location=Location(
-                        index=ctx.index,
-                        segmentId=ctx.segment_id or None,
-                        tabId=ctx.tab_id or None,
-                    ),
-                )
+        req = Request(
+            insertPerson=InsertPersonRequest(
+                personProperties=PersonProperties(email=email),
+                location=Location(
+                    index=ctx.index,
+                    segmentId=ctx.segment_id or None,
+                    tabId=ctx.tab_id or None,
+                ),
             )
-        ]
+        )
+        ctx.advance(1)
+        return [req]

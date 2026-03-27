@@ -355,25 +355,41 @@ class MarkdownDeserializer:
                 )
             )
 
-            table_index = ctx.index
-            ctx.advance(num_rows * num_cols * 2 + 4)
+            insert_index = ctx.index
+            # InsertTable creates: 1 pre-paragraph + table body + trailing paragraph.
+            # Table body = rows * (2*cols + 1) + 2 indices.
+            # We advance past pre-paragraph + body; the trailing paragraph
+            # becomes the insertion point for subsequent content.
+            table_body_size = num_rows * (2 * num_cols + 1) + 2
+            ctx.advance(1 + table_body_size)
 
+            # Populate cells in REVERSE order so each insert doesn't shift
+            # subsequent cell indices within the same batchUpdate.
+            cell_inserts: list[tuple[int, str]] = []
             for row_idx, row in enumerate(rows):
                 for col_idx, cell_text in enumerate(row):
                     if cell_text:
-                        cell_index = table_index + 4 + row_idx * (num_cols * 2 + 1) + col_idx * 2
-                        ctx.emit(
-                            Request(
-                                insertText=InsertTextRequest(
-                                    text=cell_text,
-                                    location=Location(
-                                        index=cell_index,
-                                        segmentId=ctx.segment_id or None,
-                                        tabId=ctx.tab_id or None,
-                                    ),
-                                )
-                            )
+                        cell_index = insert_index + 4 + row_idx * (num_cols * 2 + 1) + col_idx * 2
+                        cell_inserts.append((cell_index, cell_text))
+
+            for cell_index, cell_text in reversed(cell_inserts):
+                ctx.emit(
+                    Request(
+                        insertText=InsertTextRequest(
+                            text=cell_text,
+                            location=Location(
+                                index=cell_index,
+                                segmentId=ctx.segment_id or None,
+                                tabId=ctx.tab_id or None,
+                            ),
                         )
+                    )
+                )
+
+            # Cell text inserts shift everything after the table by
+            # the total length of all inserted cell content.
+            total_cell_len = sum(len(text) for _, text in cell_inserts)
+            ctx.advance(total_cell_len)
 
         return i + 1
 
@@ -408,6 +424,7 @@ class MarkdownDeserializer:
             return
 
         raw_parts: list[str] = []
+        link_href: str | None = None
         for child in token.children:
             if child.type == "text":
                 raw_parts.append(child.content)
@@ -415,6 +432,12 @@ class MarkdownDeserializer:
                 raw_parts.append(child.content)
             elif child.type in ("softbreak", "hardbreak"):
                 raw_parts.append("\n")
+            elif child.type == "link_open":
+                link_href = str((child.attrs or {}).get("href", ""))
+                raw_parts.append("[")
+            elif child.type == "link_close":
+                raw_parts.append(f"]({link_href})" if link_href else "]")
+                link_href = None
 
         raw_content = "".join(raw_parts)
         if not raw_content.strip():
