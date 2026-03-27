@@ -131,7 +131,7 @@ class Uploader:
         return document_id
 
     # ------------------------------------------------------------------
-    # Update flow (Phase 3.9) — stubs
+    # Update flow (Phase 3.9)
     # ------------------------------------------------------------------
 
     def update_document(
@@ -155,11 +155,9 @@ class Uploader:
             ``True`` if changes were applied, ``False`` if no changes detected.
         """
         from google_docs_markdown.diff_engine import DiffEngine
-        from google_docs_markdown.downloader import Downloader
         from google_docs_markdown.markdown_serializer import MarkdownSerializer
 
         serializer = MarkdownSerializer()
-        downloader = Downloader(client=self._client, serializer=serializer)
 
         doc = self._client.get_document(document_id)
         target_tab = _find_target_tab(doc, tab_id)

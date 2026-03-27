@@ -161,6 +161,12 @@ class DiffEngine:
         This is the main entry point. Returns an empty list when no changes
         are detected (enabling no-op short-circuit).
 
+        When the source map has sufficient coverage, surgical (line-level)
+        edits are generated.  When the source map cannot map the changed
+        positions (e.g. because only structural spans were recorded), falls
+        back to a full-content replacement strategy: delete everything from
+        index 1, then re-insert using the deserializer.
+
         Args:
             canonical: Markdown serialized from the live document.
             local: The local (edited) Markdown to push.
@@ -175,15 +181,29 @@ class DiffEngine:
         if not ops:
             return []
 
-        canonical_clean = strip_metadata(canonical)
-        local_clean = strip_metadata(local)
+        surgical = self._try_surgical(ops, canonical, source_map, tab_id=tab_id, segment_id=segment_id)
+        if surgical is not None:
+            return surgical
 
+        return self._full_replacement(canonical, local, tab_id=tab_id, segment_id=segment_id)
+
+    def _try_surgical(
+        self,
+        ops: list[DiffOp],
+        canonical: str,
+        source_map: SourceMap,
+        *,
+        tab_id: str,
+        segment_id: str,
+    ) -> list[Request] | None:
+        """Attempt surgical edits via source map.  Returns ``None`` on mapping failure."""
+        canonical_clean = strip_metadata(canonical)
         line_offsets_canonical = _line_offsets(canonical_clean)
-        line_offsets_local = _line_offsets(local_clean)
 
         deletions: list[Request] = []
         insertions: list[Request] = []
         style_requests: list[Request] = []
+        mapping_failed = False
 
         for op in ops:
             if op.kind == DiffOpKind.DELETE:
@@ -191,19 +211,21 @@ class DiffEngine:
                 md_end = line_offsets_canonical[op.canonical_end] if op.canonical_end < len(line_offsets_canonical) else len(canonical_clean)
                 api_start = source_map.lookup(md_start)
                 api_end = source_map.lookup(md_end - 1)
-                if api_start is not None and api_end is not None:
-                    deletions.append(
-                        Request(
-                            deleteContentRange=DeleteContentRangeRequest(
-                                range=Range(
-                                    startIndex=api_start,
-                                    endIndex=api_end + 1,
-                                    segmentId=segment_id or None,
-                                    tabId=tab_id or None,
-                                )
+                if api_start is None or api_end is None:
+                    mapping_failed = True
+                    break
+                deletions.append(
+                    Request(
+                        deleteContentRange=DeleteContentRangeRequest(
+                            range=Range(
+                                startIndex=api_start,
+                                endIndex=api_end + 1,
+                                segmentId=segment_id or None,
+                                tabId=tab_id or None,
                             )
                         )
                     )
+                )
 
             elif op.kind == DiffOpKind.INSERT:
                 md_pos = line_offsets_canonical[op.canonical_start] if op.canonical_start < len(line_offsets_canonical) else len(canonical_clean)
@@ -212,43 +234,88 @@ class DiffEngine:
                     api_pos = source_map.lookup(md_pos - 1)
                     if api_pos is not None:
                         api_pos += 1
-
-                if api_pos is not None:
-                    insert_req, style_reqs = self._make_insert_requests(
-                        op.local_text, api_pos, tab_id=tab_id, segment_id=segment_id,
-                    )
-                    insertions.append(insert_req)
-                    style_requests.extend(style_reqs)
+                if api_pos is None:
+                    mapping_failed = True
+                    break
+                insert_req, style_reqs = self._make_insert_requests(
+                    op.local_text, api_pos, tab_id=tab_id, segment_id=segment_id,
+                )
+                insertions.append(insert_req)
+                style_requests.extend(style_reqs)
 
             elif op.kind == DiffOpKind.REPLACE:
                 md_start = line_offsets_canonical[op.canonical_start]
                 md_end = line_offsets_canonical[op.canonical_end] if op.canonical_end < len(line_offsets_canonical) else len(canonical_clean)
                 api_start = source_map.lookup(md_start)
                 api_end = source_map.lookup(md_end - 1)
-                if api_start is not None and api_end is not None:
-                    deletions.append(
-                        Request(
-                            deleteContentRange=DeleteContentRangeRequest(
-                                range=Range(
-                                    startIndex=api_start,
-                                    endIndex=api_end + 1,
-                                    segmentId=segment_id or None,
-                                    tabId=tab_id or None,
-                                )
+                if api_start is None or api_end is None:
+                    mapping_failed = True
+                    break
+                deletions.append(
+                    Request(
+                        deleteContentRange=DeleteContentRangeRequest(
+                            range=Range(
+                                startIndex=api_start,
+                                endIndex=api_end + 1,
+                                segmentId=segment_id or None,
+                                tabId=tab_id or None,
                             )
                         )
                     )
-                    insert_req, style_reqs = self._make_insert_requests(
-                        op.local_text, api_start, tab_id=tab_id, segment_id=segment_id,
-                    )
-                    insertions.append(insert_req)
-                    style_requests.extend(style_reqs)
+                )
+                insert_req, style_reqs = self._make_insert_requests(
+                    op.local_text, api_start, tab_id=tab_id, segment_id=segment_id,
+                )
+                insertions.append(insert_req)
+                style_requests.extend(style_reqs)
+
+        if mapping_failed:
+            return None
 
         deletions.sort(
             key=lambda r: -(r.deleteContentRange.range.startIndex if r.deleteContentRange and r.deleteContentRange.range and r.deleteContentRange.range.startIndex else 0)
         )
 
         return deletions + insertions + style_requests
+
+    def _full_replacement(
+        self,
+        canonical: str,
+        local: str,
+        *,
+        tab_id: str,
+        segment_id: str,
+    ) -> list[Request]:
+        """Fallback: delete all body content and re-insert from local markdown.
+
+        Used when the source map cannot map diff positions to API indices.
+        """
+        canonical_clean = strip_metadata(canonical)
+
+        requests: list[Request] = []
+
+        content_len = len(canonical_clean.rstrip("\n"))
+        if content_len > 0:
+            requests.append(
+                Request(
+                    deleteContentRange=DeleteContentRangeRequest(
+                        range=Range(
+                            startIndex=1,
+                            endIndex=1 + content_len,
+                            segmentId=segment_id or None,
+                            tabId=tab_id or None,
+                        )
+                    )
+                )
+            )
+
+        local_clean = strip_metadata(local)
+        insert_requests = self._deserializer.deserialize(
+            local_clean, tab_id=tab_id, segment_id=segment_id,
+        )
+        requests.extend(insert_requests)
+
+        return requests
 
     def _make_insert_requests(
         self,

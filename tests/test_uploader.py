@@ -321,3 +321,174 @@ class TestBuildTabMap:
     def test_empty_tabs(self) -> None:
         doc = Document(tabs=[])
         assert _build_tab_map(doc) == {}
+
+
+# ------------------------------------------------------------------
+# Update flow tests (Phase 3.9)
+# ------------------------------------------------------------------
+
+
+def _doc_with_content(
+    text: str = "Hello world\n",
+    tab_id: str = "t.0",
+    document_id: str = "doc-123",
+) -> Document:
+    """Create a Document with a single tab containing a simple paragraph."""
+    from google_docs_markdown.models.document import Body, DocumentTab, NamedStyle, NamedStyles
+    from google_docs_markdown.models.elements import (
+        Paragraph,
+        ParagraphElement,
+        SectionBreak,
+        StructuralElement,
+        TextRun,
+    )
+    from google_docs_markdown.models.styles import ParagraphStyle, TextStyle
+
+    return Document(
+        documentId=document_id,
+        title="Test Doc",
+        tabs=[
+            Tab(
+                tabProperties=TabProperties(tabId=tab_id, title="Main"),
+                documentTab=DocumentTab(
+                    body=Body(
+                        content=[
+                            StructuralElement(
+                                startIndex=0,
+                                endIndex=1,
+                                sectionBreak=SectionBreak(),
+                            ),
+                            StructuralElement(
+                                startIndex=1,
+                                endIndex=1 + len(text),
+                                paragraph=Paragraph(
+                                    elements=[
+                                        ParagraphElement(
+                                            startIndex=1,
+                                            endIndex=1 + len(text),
+                                            textRun=TextRun(
+                                                content=text,
+                                                textStyle=TextStyle(),
+                                            ),
+                                        )
+                                    ],
+                                    paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                                ),
+                            ),
+                        ]
+                    ),
+                    namedStyles=NamedStyles(
+                        styles=[
+                            NamedStyle(
+                                namedStyleType="NORMAL_TEXT",
+                                textStyle=TextStyle(),
+                            )
+                        ]
+                    ),
+                ),
+            )
+        ],
+    )
+
+
+class TestUpdateDocument:
+    def test_no_changes_returns_false(self) -> None:
+        doc = _doc_with_content("Hello\n")
+        client = _mock_client()
+        client.get_document.return_value = doc
+
+        uploader = Uploader(client=client)
+
+        from google_docs_markdown.markdown_serializer import MarkdownSerializer
+
+        serializer = MarkdownSerializer()
+        canonical = serializer.serialize(
+            doc.tabs[0].documentTab,  # type: ignore[union-attr,arg-type]
+            document_id="doc-123",
+            tab_id="t.0",
+        )
+
+        result = uploader.update_document("doc-123", canonical)
+        assert result is False
+        client.batch_update.assert_not_called()
+
+    def test_with_changes_returns_true(self) -> None:
+        doc = _doc_with_content("Hello\n")
+        client = _mock_client()
+        client.get_document.return_value = doc
+        client.batch_update.return_value = []
+
+        uploader = Uploader(client=client)
+        result = uploader.update_document("doc-123", "Completely different content\n")
+        assert result is True
+        assert client.batch_update.called
+
+    def test_specific_tab_id(self) -> None:
+        doc = _doc_with_content("Hello\n", tab_id="t.42")
+        client = _mock_client()
+        client.get_document.return_value = doc
+        client.batch_update.return_value = []
+
+        uploader = Uploader(client=client)
+        result = uploader.update_document("doc-123", "Changed\n", tab_id="t.42")
+        assert result is True
+
+    def test_missing_tab_raises(self) -> None:
+        doc = _doc_with_content("Hello\n", tab_id="t.0")
+        client = _mock_client()
+        client.get_document.return_value = doc
+
+        uploader = Uploader(client=client)
+        with pytest.raises(ValueError, match="No tab found"):
+            uploader.update_document("doc-123", "text\n", tab_id="t.missing")
+
+    def test_tab_without_content_raises(self) -> None:
+        doc = Document(
+            documentId="doc-123",
+            tabs=[Tab(tabProperties=TabProperties(tabId="t.0", title="Empty"))],
+        )
+        client = _mock_client()
+        client.get_document.return_value = doc
+
+        uploader = Uploader(client=client)
+        with pytest.raises(ValueError, match="has no content"):
+            uploader.update_document("doc-123", "text\n")
+
+
+class TestUpdateFromDirectory:
+    def test_matching_tabs_updated(self, tmp_path: Path) -> None:
+        doc = _doc_with_content("Hello\n", tab_id="t.0")
+        doc.tabs[0].tabProperties.title = "Main"  # type: ignore[union-attr]
+
+        md_dir = tmp_path / "doc"
+        md_dir.mkdir()
+        (md_dir / "Main.md").write_text("Updated content\n", encoding="utf-8")
+
+        client = _mock_client()
+        client.get_document.return_value = doc
+        client.batch_update.return_value = []
+
+        uploader = Uploader(client=client)
+        results = uploader.update_from_directory("doc-123", md_dir)
+        assert "Main" in results
+
+    def test_nonexistent_directory_raises(self) -> None:
+        client = _mock_client()
+        uploader = Uploader(client=client)
+        with pytest.raises(FileNotFoundError):
+            uploader.update_from_directory("doc-123", "/nonexistent")
+
+    def test_unmatched_tab_returns_false(self, tmp_path: Path) -> None:
+        doc = _doc_with_content("Hello\n", tab_id="t.0")
+        doc.tabs[0].tabProperties.title = "Main"  # type: ignore[union-attr]
+
+        md_dir = tmp_path / "doc"
+        md_dir.mkdir()
+        (md_dir / "Other.md").write_text("Content\n", encoding="utf-8")
+
+        client = _mock_client()
+        client.get_document.return_value = doc
+
+        uploader = Uploader(client=client)
+        results = uploader.update_from_directory("doc-123", md_dir)
+        assert results.get("Other") is False
