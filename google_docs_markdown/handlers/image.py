@@ -40,4 +40,21 @@ class ImageHandler(ElementHandler):
         return False
 
     def deserialize(self, token: Any, ctx: DeserContext) -> list[Any]:
-        return []
+        from google_docs_markdown.models.common import Location
+        from google_docs_markdown.models.requests import InsertInlineImageRequest, Request
+
+        src = getattr(token, "src", None) or (getattr(token, "attrs", None) or {}).get("src")
+        if not src:
+            return []
+        return [
+            Request(
+                insertInlineImage=InsertInlineImageRequest(
+                    uri=src,
+                    location=Location(
+                        index=ctx.index,
+                        segmentId=ctx.segment_id or None,
+                        tabId=ctx.tab_id or None,
+                    ),
+                )
+            )
+        ]

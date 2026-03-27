@@ -17,13 +17,15 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
+from google_docs_markdown.element_registry import DEFAULT_LINK_COLOR
 from google_docs_markdown.models.common import OptionalColor
 from google_docs_markdown.models.document import DocumentTab
 from google_docs_markdown.models.elements import ParagraphElement, StructuralElement
 
-_DEFAULT_LINK_COLOR = "#1155CC"
+if TYPE_CHECKING:
+    from google_docs_markdown.source_map import SourceMapBuilder
 
 
 def optional_color_to_hex(color: OptionalColor | None) -> str | None:
@@ -49,7 +51,7 @@ class DocumentContext:
     default_font: str | None = None
     default_font_size: float | None = None
     default_fg_color: str = "#000000"
-    default_link_color: str = _DEFAULT_LINK_COLOR
+    default_link_color: str = DEFAULT_LINK_COLOR
     named_style_sizes: dict[str, float] = field(default_factory=dict)
     named_style_colors: dict[str, str | None] = field(default_factory=dict)
     named_style_fonts: dict[str, str | None] = field(default_factory=dict)
@@ -114,7 +116,8 @@ class DocumentContext:
 
         default_font = ds.get("font")
         default_font_size = ds.get("fontSize")
-        default_link_color = ds.get("linkColor", _DEFAULT_LINK_COLOR)
+        default_fg_color = ds.get("fgColor", "#000000")
+        default_link_color = ds.get("linkColor", DEFAULT_LINK_COLOR)
         date_defaults = ds.get("dateDefaults")
 
         named_style_sizes: dict[str, float] = {}
@@ -136,7 +139,7 @@ class DocumentContext:
         return cls(
             default_font=default_font,
             default_font_size=default_font_size,
-            default_fg_color="#000000",
+            default_fg_color=default_fg_color,
             default_link_color=default_link_color,
             named_style_sizes=named_style_sizes,
             named_style_colors=named_style_colors,
@@ -183,6 +186,7 @@ class SerContext:
     document_id: str | None = None
     tab_id: str | None = None
     pending_style_props: dict[str, Any] | None = None
+    source_map: SourceMapBuilder | None = None
 
     collect_paragraph_text: Callable[[list[ParagraphElement]], str] | None = None
     visit_block: Callable[[Any], str | None] | None = None

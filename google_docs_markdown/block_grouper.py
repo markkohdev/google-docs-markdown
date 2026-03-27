@@ -14,11 +14,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from google_docs_markdown.element_registry import CODE_BLOCK_MARKER, ORDERED_GLYPH_TYPES
 from google_docs_markdown.models.common import List as DocList
 from google_docs_markdown.models.elements import Paragraph, StructuralElement
-
-_ORDERED_GLYPH_TYPES = frozenset({"DECIMAL", "ZERO_DECIMAL", "UPPER_ALPHA", "ALPHA", "UPPER_ROMAN", "ROMAN"})
-_CODE_BLOCK_MARKER = "\ue907"
 
 
 @dataclass
@@ -116,7 +114,7 @@ def _is_code_block_start(para: Paragraph) -> bool:
     first = para.elements[0]
     if not first.textRun or not first.textRun.content:
         return False
-    return first.textRun.content.startswith(_CODE_BLOCK_MARKER)
+    return first.textRun.content.startswith(CODE_BLOCK_MARKER)
 
 
 def _is_code_block_end(para: Paragraph) -> bool:
@@ -127,7 +125,7 @@ def _is_code_block_end(para: Paragraph) -> bool:
         if not elem.textRun or not elem.textRun.content:
             continue
         content = elem.textRun.content.rstrip("\n")
-        if content.endswith(_CODE_BLOCK_MARKER):
+        if content.endswith(CODE_BLOCK_MARKER):
             return True
         if content:
             return False
@@ -157,4 +155,4 @@ def _is_ordered_list(
         return False
 
     glyph_type = levels[nesting_level].glyphType
-    return glyph_type in _ORDERED_GLYPH_TYPES
+    return glyph_type in ORDERED_GLYPH_TYPES

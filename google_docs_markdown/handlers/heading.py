@@ -5,18 +5,9 @@ from __future__ import annotations
 from typing import Any
 
 from google_docs_markdown.comment_tags import TagType, opening_tag
+from google_docs_markdown.element_registry import HEADING_PREFIX
 from google_docs_markdown.handlers.base import BlockElementHandler
 from google_docs_markdown.handlers.context import DeserContext, SerContext
-
-_HEADING_PREFIX: dict[str, str] = {
-    "TITLE": "#",
-    "HEADING_1": "#",
-    "HEADING_2": "##",
-    "HEADING_3": "###",
-    "HEADING_4": "####",
-    "HEADING_5": "#####",
-    "HEADING_6": "######",
-}
 
 
 class HeadingHandler(BlockElementHandler):
@@ -33,7 +24,7 @@ class HeadingHandler(BlockElementHandler):
 
         Called by the orchestrator after collecting paragraph text.
         """
-        heading_prefix = _HEADING_PREFIX.get(style_type or "")
+        heading_prefix = HEADING_PREFIX.get(style_type or "")
         if heading_prefix and text:
             rendered = f"{heading_prefix} {text}"
             if style_type == "TITLE":

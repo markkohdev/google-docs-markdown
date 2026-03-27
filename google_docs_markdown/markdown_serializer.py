@@ -24,6 +24,7 @@ from google_docs_markdown.block_grouper import (
     group_elements,
 )
 from google_docs_markdown.comment_tags import TagType, wrap_tag
+from google_docs_markdown.element_registry import DEFAULT_LINK_COLOR
 from google_docs_markdown.handlers.context import DocumentContext, SerContext
 from google_docs_markdown.handlers.header_footer import FooterHandler, HeaderHandler
 from google_docs_markdown.handlers.heading import HeadingHandler
@@ -35,8 +36,7 @@ from google_docs_markdown.models.elements import (
     ParagraphElement,
     StructuralElement,
 )
-
-_DEFAULT_LINK_COLOR = "#1155CC"
+from google_docs_markdown.source_map import SourceMap, SourceMapBuilder, SpanKind
 
 
 class MarkdownSerializer:
@@ -103,6 +103,106 @@ class MarkdownSerializer:
         if metadata_block:
             all_parts.append(metadata_block)
         return _join_paragraphs(all_parts)
+
+    def serialize_with_source_map(
+        self,
+        document_tab: DocumentTab,
+        *,
+        document_id: str | None = None,
+        tab_id: str | None = None,
+    ) -> tuple[str, SourceMap]:
+        """Serialize and return both the Markdown text and a source map.
+
+        The source map records which Markdown character ranges correspond
+        to which Google Docs API indices, enabling the diff engine to
+        generate surgical ``batchUpdate`` requests.
+        """
+        if not document_tab.body or not document_tab.body.content:
+            return "", SourceMapBuilder(tab_id=tab_id or "", segment_id="").build()
+
+        builder = SourceMapBuilder(tab_id=tab_id or "", segment_id="")
+
+        doc_ctx = DocumentContext.from_document_tab(document_tab, document_id=document_id, tab_id=tab_id)
+        ctx = SerContext(
+            doc=doc_ctx,
+            inline_objects=document_tab.inlineObjects,
+            document_id=document_id,
+            tab_id=tab_id,
+            body_content=document_tab.body.content,
+            lists_context=document_tab.lists,
+            source_map=builder,
+        )
+        ctx.collect_paragraph_text = lambda elems: self._collect_paragraph_text(elems, ctx)
+        ctx.visit_block = lambda block: self._visit_block(block, ctx)
+
+        blocks = group_elements(document_tab.body.content, document_tab.lists)
+
+        paragraphs: list[str] = []
+        for block in blocks:
+            result = self._visit_block(block, ctx)
+            if result is not None:
+                paragraphs.append(result)
+
+        footnote_defs = self._serialize_footnotes(document_tab.footnotes, ctx)
+        if footnote_defs:
+            paragraphs.extend(footnote_defs)
+
+        header_blocks = HeaderHandler.serialize_headers(document_tab.headers, ctx)
+        footer_blocks = FooterHandler.serialize_footers(document_tab.footers, ctx)
+        metadata_block = self._build_metadata_block(document_tab, ctx)
+
+        all_parts = paragraphs + header_blocks + footer_blocks
+        if metadata_block:
+            all_parts.append(metadata_block)
+
+        markdown = _join_paragraphs(all_parts)
+
+        self._record_structural_spans(builder, document_tab, markdown)
+
+        return markdown, builder.build()
+
+    def _record_structural_spans(self, builder: SourceMapBuilder, document_tab: DocumentTab, markdown: str) -> None:
+        """Walk body content and record coarse structural spans.
+
+        This post-pass maps top-level structural elements to their Markdown
+        positions using the API ``startIndex``/``endIndex`` values.
+
+        Each structural element gets a span whose Markdown extent covers
+        ``api_end - api_start`` characters (the API element size) so the
+        source map can translate positions inside that element back to
+        API indices.
+        """
+        if not document_tab.body or not document_tab.body.content:
+            return
+
+        for element in document_tab.body.content:
+            api_start = element.startIndex
+            api_end = element.endIndex
+            if api_start is None or api_end is None:
+                continue
+
+            kind = SpanKind.TEXT
+            if element.paragraph and element.paragraph.paragraphStyle:
+                style_type = element.paragraph.paragraphStyle.namedStyleType
+                if style_type and style_type.startswith("HEADING"):
+                    kind = SpanKind.HEADING
+            elif element.table:
+                kind = SpanKind.TABLE_CELL
+            elif element.sectionBreak:
+                continue
+
+            api_len = api_end - api_start
+            if api_len <= 0:
+                continue
+
+            placeholder = " " * api_len
+            builder.record(
+                placeholder,
+                api_start=api_start,
+                api_end=api_end,
+                kind=kind,
+                handler_type="structural",
+            )
 
     # ------------------------------------------------------------------
     # Block / structural element dispatch
@@ -209,6 +309,8 @@ class MarkdownSerializer:
             default_styles["font"] = doc.default_font
         if doc.default_font_size is not None:
             default_styles["fontSize"] = doc.default_font_size
+        if doc.default_fg_color != "#000000":
+            default_styles["fgColor"] = doc.default_fg_color
 
         heading_styles: dict[str, dict[str, Any]] = {}
         for style_name in (
@@ -236,7 +338,7 @@ class MarkdownSerializer:
         if heading_styles:
             default_styles["headingStyles"] = heading_styles
 
-        if doc.default_link_color != _DEFAULT_LINK_COLOR:
+        if doc.default_link_color != DEFAULT_LINK_COLOR:
             default_styles["linkColor"] = doc.default_link_color
 
         if ctx.date_defaults:
