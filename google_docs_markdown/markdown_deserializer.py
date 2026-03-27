@@ -160,16 +160,19 @@ class MarkdownDeserializer:
         style_name = cast(_NamedStyleType, MD_HEADING_LEVEL_TO_STYLE.get(level, "NORMAL_TEXT"))
 
         inline_token = tokens[start + 1] if start + 1 < len(tokens) else None
-        text = self._extract_inline_text(inline_token) if inline_token else ""
 
-        if text:
-            insert_text = text + "\n"
-            start_index = ctx.index
-            self._emit_insert_text(ctx, insert_text)
+        start_index = ctx.index
+        if inline_token and self._inline_has_comment_tags(inline_token):
+            self._emit_inline_with_tags(inline_token, ctx)
+        else:
+            text = self._extract_inline_text(inline_token) if inline_token else ""
+            if text:
+                self._emit_insert_text(ctx, text + "\n")
+                self._apply_inline_formatting_from_token(inline_token, ctx, start_index)
 
+        if ctx.index > start_index:
             end_index = ctx.index - 1
             self._emit_paragraph_style(ctx, start_index, end_index, style_name)
-            self._apply_inline_formatting_from_token(inline_token, ctx, start_index)
 
         return start + 3
 
@@ -242,11 +245,19 @@ class MarkdownDeserializer:
         bullet_preset: _BulletPreset = "NUMBERED_DECIMAL_ALPHA_ROMAN" if is_ordered else "BULLET_DISC_CIRCLE_SQUARE"
 
         for item_text, _nesting, item_inline in items:
-            if item_text:
-                start_index = ctx.index
-                self._emit_insert_text(ctx, item_text + "\n")
-                end_index = ctx.index - 1
+            start_index = ctx.index
 
+            if item_inline and self._inline_has_comment_tags(item_inline):
+                self._emit_inline_with_tags(item_inline, ctx)
+            elif item_text:
+                self._emit_insert_text(ctx, item_text + "\n")
+                if item_inline:
+                    self._apply_inline_formatting_from_token(item_inline, ctx, start_index)
+            else:
+                continue
+
+            end_index = ctx.index - 1
+            if end_index > start_index:
                 ctx.emit(
                     Request(
                         createParagraphBullets=CreateParagraphBulletsRequest(
@@ -261,13 +272,16 @@ class MarkdownDeserializer:
                     )
                 )
 
-                if item_inline:
-                    self._apply_inline_formatting_from_token(item_inline, ctx, start_index)
-
         return i + 1
 
     def _extract_list_item(self, tokens: list[Token], start: int) -> tuple[str, Token | None, int]:
-        """Extract text and inline token from a list item, returning the next index."""
+        """Extract text and inline token from a list item, returning the next index.
+
+        When markdown-it produces an ``html_block`` inside a list item
+        (happens when the item starts with an HTML comment), the block
+        content is stored in the inline token's content so the caller
+        can detect tags via ``_inline_has_comment_tags``.
+        """
         i = start + 1
         text = ""
         inline_token = None
@@ -275,6 +289,19 @@ class MarkdownDeserializer:
             if tokens[i].type == "inline":
                 text = self._extract_inline_text(tokens[i])
                 inline_token = tokens[i]
+            elif tokens[i].type == "html_block":
+                html_content = (tokens[i].content or "").strip()
+                if html_content.startswith("<!--"):
+                    fake = Token("inline", "", 0)
+                    fake.content = html_content
+                    child_html = Token("html_inline", "", 0)
+                    child_html.content = html_content
+                    fake.children = [child_html]
+                    inline_token = fake
+                    tags = parse_tags(html_content)
+                    for tag in tags:
+                        if tag.content:
+                            text = tag.content
             elif tokens[i].type == "paragraph_open":
                 pass
             elif tokens[i].type == "paragraph_close":
@@ -312,9 +339,10 @@ class MarkdownDeserializer:
 
     def _handle_table(self, tokens: list[Token], start: int, ctx: DeserContext) -> int:
         """Process table_open .. rows .. table_close."""
-        rows: list[list[str]] = []
+        _CellInfo = tuple[str, Token | None]
+        rows: list[list[_CellInfo]] = []
         i = start + 1
-        current_row: list[str] | None = None
+        current_row: list[_CellInfo] | None = None
 
         while i < len(tokens) and tokens[i].type != "table_close":
             if tokens[i].type == "tr_open":
@@ -330,7 +358,8 @@ class MarkdownDeserializer:
             elif tokens[i].type in ("th_close", "td_close"):
                 i += 1
             elif tokens[i].type == "inline" and current_row is not None:
-                current_row.append(self._extract_inline_text(tokens[i]))
+                cell_token = tokens[i]
+                current_row.append((self._extract_inline_text(cell_token), cell_token))
                 i += 1
             elif tokens[i].type in ("thead_open", "thead_close", "tbody_open", "tbody_close"):
                 i += 1
@@ -367,7 +396,8 @@ class MarkdownDeserializer:
             # subsequent cell indices within the same batchUpdate.
             cell_inserts: list[tuple[int, str]] = []
             for row_idx, row in enumerate(rows):
-                for col_idx, cell_text in enumerate(row):
+                for col_idx, cell_info in enumerate(row):
+                    cell_text, _cell_token = cell_info
                     if cell_text:
                         cell_index = insert_index + 4 + row_idx * (num_cols * 2 + 1) + col_idx * 2
                         cell_inserts.append((cell_index, cell_text))
@@ -415,34 +445,74 @@ class MarkdownDeserializer:
         return any(child.type == "html_inline" and child.content.strip().startswith("<!--") for child in token.children)
 
     def _handle_inline_with_tags(self, token: Token, ctx: DeserContext) -> None:
-        """Process inline content that contains comment tags.
+        """Process inline content that contains comment tags (paragraph level).
 
-        Reassembles the raw content from inline children and dispatches
-        comment tags through the handler registry.
+        Delegates to ``_emit_inline_with_tags`` and appends a trailing newline.
+        """
+        self._emit_inline_with_tags(token, ctx)
+
+    def _emit_inline_with_tags(self, token: Token, ctx: DeserContext) -> None:
+        """Emit inline content with comment-tag dispatch AND formatting.
+
+        Walks inline children tracking formatting state (bold, italic, etc.)
+        while building a raw string that includes HTML comment text for tag
+        parsing.  Text segments between tags are emitted with their active
+        formatting applied; tags are dispatched to their handlers.
+
+        A trailing newline is always appended.
         """
         if not token.children:
             return
 
-        raw_parts: list[str] = []
+        # Phase 1: walk children, build segments with formatting context
+        _Segment = tuple[str, str, list[str]]  # (kind, content, formatting_stack)
+        segments: list[_Segment] = []
+        formatting: list[str] = []
         link_href: str | None = None
+
         for child in token.children:
             if child.type == "text":
-                raw_parts.append(child.content)
+                segments.append(("text", child.content, list(formatting)))
             elif child.type == "html_inline":
-                raw_parts.append(child.content)
-            elif child.type in ("softbreak", "hardbreak"):
-                raw_parts.append("\n")
+                html_lower = child.content.strip().lower()
+                if html_lower == "<u>":
+                    formatting.append("underline")
+                elif html_lower == "</u>":
+                    if "underline" in formatting:
+                        formatting.remove("underline")
+                else:
+                    segments.append(("html", child.content, []))
+            elif child.type == "strong_open":
+                formatting.append("bold")
+            elif child.type == "strong_close":
+                if "bold" in formatting:
+                    formatting.remove("bold")
+            elif child.type == "em_open":
+                formatting.append("italic")
+            elif child.type == "em_close":
+                if "italic" in formatting:
+                    formatting.remove("italic")
+            elif child.type == "s_open":
+                formatting.append("strikethrough")
+            elif child.type == "s_close":
+                if "strikethrough" in formatting:
+                    formatting.remove("strikethrough")
             elif child.type == "link_open":
                 link_href = str((child.attrs or {}).get("href", ""))
-                raw_parts.append("[")
+                formatting.append(f"link:{link_href}")
             elif child.type == "link_close":
-                raw_parts.append(f"]({link_href})" if link_href else "]")
+                formatting[:] = [f for f in formatting if not f.startswith("link:")]
                 link_href = None
+            elif child.type == "code_inline":
+                segments.append(("code", child.content, []))
+            elif child.type in ("softbreak", "hardbreak"):
+                segments.append(("text", "\n", list(formatting)))
 
-        raw_content = "".join(raw_parts)
+        raw_content = "".join(content for _, content, _ in segments)
         if not raw_content.strip():
             return
 
+        # Phase 2: parse tags from the reassembled raw content
         tags = parse_tags(raw_content)
         if not tags:
             text = self._extract_inline_text(token)
@@ -452,21 +522,82 @@ class MarkdownDeserializer:
                 self._apply_inline_formatting_from_token(token, ctx, start_index)
             return
 
+        # Phase 3: build a formatting map keyed by raw-content position
+        seg_ranges: list[tuple[int, int, str, list[str]]] = []
+        pos = 0
+        for kind, content, fmt in segments:
+            seg_ranges.append((pos, pos + len(content), kind, fmt))
+            pos += len(content)
+
+        # Phase 4: emit text between tags with formatting, dispatch tags
         last_end = 0
         for tag in tags:
-            before = raw_content[last_end : tag.start]
-            if before.strip():
-                start_index = ctx.index
-                self._emit_insert_text(ctx, before)
-
+            if tag.start > last_end:
+                self._emit_text_range_with_formatting(raw_content, last_end, tag.start, seg_ranges, ctx)
             self._dispatch_tag(tag, ctx)
             last_end = tag.end
 
-        after = raw_content[last_end:]
-        if after.strip():
-            self._emit_insert_text(ctx, after)
+        if last_end < len(raw_content):
+            self._emit_text_range_with_formatting(raw_content, last_end, len(raw_content), seg_ranges, ctx)
 
         self._emit_insert_text(ctx, "\n")
+
+    def _emit_text_range_with_formatting(
+        self,
+        raw: str,
+        start: int,
+        end: int,
+        seg_ranges: list[tuple[int, int, str, list[str]]],
+        ctx: DeserContext,
+    ) -> None:
+        """Emit a slice of the raw content, applying formatting from segment metadata.
+
+        Skips HTML segments (already handled as tags).  Consecutive characters
+        sharing the same formatting are batched into a single insert + style request.
+        """
+        # Collect (char, formatting) pairs for the range, skipping HTML segments
+        chars_with_fmt: list[tuple[str, list[str]]] = []
+        for i in range(start, end):
+            ch = raw[i]
+            fmt: list[str] = []
+            kind = "text"
+            for seg_start, seg_end, seg_kind, seg_fmt in seg_ranges:
+                if seg_start <= i < seg_end:
+                    kind = seg_kind
+                    fmt = seg_fmt
+                    break
+            if kind == "html":
+                continue
+            chars_with_fmt.append((ch, fmt))
+
+        if not chars_with_fmt:
+            return
+
+        # Group into runs of identical formatting
+        runs: list[tuple[str, list[str]]] = []
+        current_text = chars_with_fmt[0][0]
+        current_fmt = chars_with_fmt[0][1]
+        for ch, fmt in chars_with_fmt[1:]:
+            if fmt == current_fmt:
+                current_text += ch
+            else:
+                runs.append((current_text, current_fmt))
+                current_text = ch
+                current_fmt = fmt
+        runs.append((current_text, current_fmt))
+
+        # Emit each run
+        for run_text, run_fmt in runs:
+            if not run_text:
+                continue
+            run_start = ctx.index
+            self._emit_insert_text(ctx, run_text)
+            if run_fmt:
+                is_code = any(f == "code_inline" for f in run_fmt)
+                if is_code:
+                    self._emit_code_inline_style(ctx, run_start, ctx.index)
+                else:
+                    self._emit_text_style(ctx, run_start, ctx.index, run_fmt)
 
     # ------------------------------------------------------------------
     # Comment-tag dispatch

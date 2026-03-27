@@ -364,6 +364,133 @@ class TestDeserializerStyleTag:
         assert found_color or len(requests) > 0
 
 
+class TestDeserializerTagsInLists:
+    """Person, date, and other tags inside list items must produce proper API requests."""
+
+    def test_person_tag_in_list_item(self) -> None:
+        md = '- **Lead:** <!-- person: {"email": "alice@x.com"} -->Alice<!-- /person -->\n'
+        requests = deserialize(md)
+        person = _find_request(requests, "insertPerson")
+        assert person is not None
+        assert person.insertPerson is not None
+        assert person.insertPerson.personProperties is not None
+        assert person.insertPerson.personProperties.email == "alice@x.com"
+
+        bullets = _find_all_requests(requests, "createParagraphBullets")
+        assert len(bullets) == 1
+
+    def test_date_tag_in_list_item(self) -> None:
+        md = "- Date: <!-- date -->2026-01-08<!-- /date -->\n"
+        requests = deserialize(md)
+        date_req = _find_request(requests, "insertDate")
+        assert date_req is not None
+        assert date_req.insertDate is not None
+
+        bullets = _find_all_requests(requests, "createParagraphBullets")
+        assert len(bullets) == 1
+
+    def test_multiple_list_items_with_tags(self) -> None:
+        md = (
+            '- <!-- person: {"email": "a@x.com"} -->Alice<!-- /person -->\n'
+            '- <!-- person: {"email": "b@x.com"} -->Bob<!-- /person -->\n'
+        )
+        requests = deserialize(md)
+        persons = _find_all_requests(requests, "insertPerson")
+        assert len(persons) == 2
+        emails = {
+            p.insertPerson.personProperties.email for p in persons if p.insertPerson and p.insertPerson.personProperties
+        }
+        assert emails == {"a@x.com", "b@x.com"}
+
+        bullets = _find_all_requests(requests, "createParagraphBullets")
+        assert len(bullets) == 2
+
+    def test_ordered_list_with_person_tag(self) -> None:
+        md = '1. Contact: <!-- person: {"email": "c@x.com"} -->Charlie<!-- /person -->\n'
+        requests = deserialize(md)
+        person = _find_request(requests, "insertPerson")
+        assert person is not None
+
+        bullets = _find_all_requests(requests, "createParagraphBullets")
+        assert len(bullets) == 1
+        assert bullets[0].createParagraphBullets is not None
+        assert bullets[0].createParagraphBullets.bulletPreset == "NUMBERED_DECIMAL_ALPHA_ROMAN"
+
+    def test_list_item_with_bold_and_person_tag(self) -> None:
+        md = '- **Lead:** <!-- person: {"email": "d@x.com"} -->Dana<!-- /person -->\n'
+        requests = deserialize(md)
+        person = _find_request(requests, "insertPerson")
+        assert person is not None
+
+        bold_reqs = [
+            r
+            for r in _find_all_requests(requests, "updateTextStyle")
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.bold
+        ]
+        assert len(bold_reqs) >= 1
+
+    def test_list_item_without_tags_unchanged(self) -> None:
+        md = "- plain item 1\n- plain item 2\n"
+        requests = deserialize(md)
+        assert _find_request(requests, "insertPerson") is None
+        inserts = _find_all_requests(requests, "insertText")
+        assert len(inserts) == 2
+
+
+class TestDeserializerTagsInHeadings:
+    """Comment tags inside headings must be dispatched properly."""
+
+    def test_heading_with_suggestion_tag(self) -> None:
+        md = '### <!-- suggestion: {"id": "s1", "type": "insertion"} -->Suggested heading\n<!-- /suggestion -->\n'
+        requests = deserialize(md)
+        style = _find_request(requests, "updateParagraphStyle")
+        assert style is not None
+        assert style.updateParagraphStyle is not None
+        assert style.updateParagraphStyle.paragraphStyle is not None
+        assert style.updateParagraphStyle.paragraphStyle.namedStyleType == "HEADING_3"
+
+    def test_heading_without_tags_unchanged(self) -> None:
+        md = "## Normal heading\n"
+        requests = deserialize(md)
+        style = _find_request(requests, "updateParagraphStyle")
+        assert style is not None
+        assert style.updateParagraphStyle is not None
+        assert style.updateParagraphStyle.paragraphStyle is not None
+        assert style.updateParagraphStyle.paragraphStyle.namedStyleType == "HEADING_2"
+
+
+class TestDeserializerFormattingWithTags:
+    """Inline formatting (bold, italic) is preserved on text around tags."""
+
+    def test_bold_text_before_person_tag(self) -> None:
+        md = '**Leader:** <!-- person: {"email": "e@x.com"} -->Eve<!-- /person -->\n'
+        requests = deserialize(md)
+
+        person = _find_request(requests, "insertPerson")
+        assert person is not None
+
+        bold_reqs = [
+            r
+            for r in _find_all_requests(requests, "updateTextStyle")
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.bold
+        ]
+        assert len(bold_reqs) >= 1
+
+    def test_italic_text_around_date_tag(self) -> None:
+        md = "*Created:* <!-- date -->2026-01-01<!-- /date -->\n"
+        requests = deserialize(md)
+
+        date_req = _find_request(requests, "insertDate")
+        assert date_req is not None
+
+        italic_reqs = [
+            r
+            for r in _find_all_requests(requests, "updateTextStyle")
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.italic
+        ]
+        assert len(italic_reqs) >= 1
+
+
 # ------------------------------------------------------------------
 # Helpers
 # ------------------------------------------------------------------
