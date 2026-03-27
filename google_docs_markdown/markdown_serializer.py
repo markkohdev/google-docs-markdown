@@ -799,10 +799,7 @@ def _is_inline_code_style(style: TextStyle | None) -> bool:
     """
     if not style:
         return False
-    has_mono = bool(
-        style.weightedFontFamily
-        and style.weightedFontFamily.fontFamily == _INLINE_CODE_FONT
-    )
+    has_mono = bool(style.weightedFontFamily and style.weightedFontFamily.fontFamily == _INLINE_CODE_FONT)
     fg = _optional_color_to_hex(style.foregroundColor)
     return has_mono and fg == _INLINE_CODE_COLOR
 

@@ -15,10 +15,14 @@ import pytest
 
 from google_docs_markdown.markdown_serializer import MarkdownSerializer
 from google_docs_markdown.models.common import (
+    Color,
     Footer,
     Header,
+    OptionalColor,
     PersonProperties,
+    RgbColor,
     RichLinkProperties,
+    WeightedFontFamily,
 )
 from google_docs_markdown.models.document import Body, DocumentTab, NamedStyle, NamedStyles
 from google_docs_markdown.models.elements import (
@@ -211,7 +215,7 @@ class TestStyleComments:
                 NamedStyle(
                     namedStyleType="NORMAL_TEXT",
                     textStyle=TextStyle(
-                        weightedFontFamily={"fontFamily": default_font, "weight": 400},
+                        weightedFontFamily=WeightedFontFamily(fontFamily=default_font, weight=400),
                         fontSize=Dimension(magnitude=default_size, unit="PT"),
                     ),
                 )
@@ -223,7 +227,7 @@ class TestStyleComments:
         )
 
     def test_colored_text(self, serializer: MarkdownSerializer) -> None:
-        style = TextStyle(foregroundColor={"color": {"rgbColor": {"red": 1.0, "green": 0.0, "blue": 0.0}}})
+        style = TextStyle(foregroundColor=OptionalColor(color=Color(rgbColor=RgbColor(red=1.0, green=0.0, blue=0.0))))
         doc = self._make_styled_doc("red text", style)
         result = serializer.serialize(doc)
         assert '<!-- style: {"color": "#FF0000"} -->' in result
@@ -231,26 +235,26 @@ class TestStyleComments:
         assert "<!-- /style -->" in result
 
     def test_background_color(self, serializer: MarkdownSerializer) -> None:
-        style = TextStyle(backgroundColor={"color": {"rgbColor": {"red": 0.0, "green": 0.0, "blue": 1.0}}})
+        style = TextStyle(backgroundColor=OptionalColor(color=Color(rgbColor=RgbColor(red=0.0, green=0.0, blue=1.0))))
         doc = self._make_styled_doc("highlighted", style)
         result = serializer.serialize(doc)
         assert "background-color" in result
         assert "#0000FF" in result
 
     def test_default_font_no_style_comment(self, serializer: MarkdownSerializer) -> None:
-        style = TextStyle(weightedFontFamily={"fontFamily": "Proxima Nova", "weight": 400})
+        style = TextStyle(weightedFontFamily=WeightedFontFamily(fontFamily="Proxima Nova", weight=400))
         doc = self._make_styled_doc("normal text", style)
         result = serializer.serialize(doc)
         assert "<!-- style:" not in result
 
     def test_common_gdocs_font_no_style_comment(self, serializer: MarkdownSerializer) -> None:
-        style = TextStyle(weightedFontFamily={"fontFamily": "Arial", "weight": 400})
+        style = TextStyle(weightedFontFamily=WeightedFontFamily(fontFamily="Arial", weight=400))
         doc = self._make_styled_doc("arial text", style)
         result = serializer.serialize(doc)
         assert "font-family" not in result
 
     def test_custom_font_gets_style_comment(self, serializer: MarkdownSerializer) -> None:
-        style = TextStyle(weightedFontFamily={"fontFamily": "Comic Sans MS", "weight": 400})
+        style = TextStyle(weightedFontFamily=WeightedFontFamily(fontFamily="Comic Sans MS", weight=400))
         doc = self._make_styled_doc("custom font", style)
         result = serializer.serialize(doc)
         assert "Comic Sans MS" in result
@@ -268,7 +272,7 @@ class TestStyleComments:
     def test_style_wraps_markdown_formatting(self, serializer: MarkdownSerializer) -> None:
         style = TextStyle(
             bold=True,
-            foregroundColor={"color": {"rgbColor": {"red": 1.0, "green": 0.0, "blue": 0.0}}},
+            foregroundColor=OptionalColor(color=Color(rgbColor=RgbColor(red=1.0, green=0.0, blue=0.0))),
         )
         doc = self._make_styled_doc("bold red", style)
         result = serializer.serialize(doc)
