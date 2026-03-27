@@ -11,6 +11,13 @@ from typing import Any
 from google_docs_markdown.comment_tags import TagType, opening_tag
 from google_docs_markdown.handlers.base import TagElementHandler
 from google_docs_markdown.handlers.context import DeserContext, SerContext
+from google_docs_markdown.models.common import Location
+from google_docs_markdown.models.requests import (
+    InsertPageBreakRequest,
+    InsertSectionBreakRequest,
+    InsertTextRequest,
+    Request,
+)
 
 
 class HorizontalRuleHandler(TagElementHandler):
@@ -39,7 +46,17 @@ class PageBreakHandler(TagElementHandler):
         return opening_tag(TagType.PAGE_BREAK)
 
     def deserialize(self, token: Any, ctx: DeserContext) -> list[Any]:
-        return []
+        return [
+            Request(
+                insertPageBreak=InsertPageBreakRequest(
+                    location=Location(
+                        index=ctx.index,
+                        segmentId=ctx.segment_id or None,
+                        tabId=ctx.tab_id or None,
+                    )
+                )
+            )
+        ]
 
 
 class ColumnBreakHandler(TagElementHandler):
@@ -52,7 +69,18 @@ class ColumnBreakHandler(TagElementHandler):
         return opening_tag(TagType.COLUMN_BREAK)
 
     def deserialize(self, token: Any, ctx: DeserContext) -> list[Any]:
-        return []
+        return [
+            Request(
+                insertText=InsertTextRequest(
+                    text="\v",
+                    location=Location(
+                        index=ctx.index,
+                        segmentId=ctx.segment_id or None,
+                        tabId=ctx.tab_id or None,
+                    ),
+                )
+            )
+        ]
 
 
 class SectionBreakHandler(TagElementHandler):
@@ -77,7 +105,20 @@ class SectionBreakHandler(TagElementHandler):
         return opening_tag(TagType.SECTION_BREAK, data or None)
 
     def deserialize(self, token: Any, ctx: DeserContext) -> list[Any]:
-        return []
+        data = getattr(token, "data", None) or {}
+        section_type = data.get("type", "NEXT_PAGE")
+        return [
+            Request(
+                insertSectionBreak=InsertSectionBreakRequest(
+                    location=Location(
+                        index=ctx.index,
+                        segmentId=ctx.segment_id or None,
+                        tabId=ctx.tab_id or None,
+                    ),
+                    sectionType=section_type,
+                )
+            )
+        ]
 
 
 class AutoTextHandler(TagElementHandler):

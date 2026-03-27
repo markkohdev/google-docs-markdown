@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from google_docs_markdown.element_registry import INLINE_CODE_COLOR, MONOSPACE_FONT
 from google_docs_markdown.handlers.base import InlineFormatHandler
 from google_docs_markdown.handlers.context import SerContext
 from google_docs_markdown.models.styles import TextStyle
@@ -69,8 +70,8 @@ class InlineCodeHandler(InlineFormatHandler):
     MARKER = "`"
     STYLE_FIELD = "inline_code"
 
-    FONT = "Roboto Mono"
-    COLOR = "#188037"
+    FONT = MONOSPACE_FONT
+    COLOR = INLINE_CODE_COLOR
 
     def serialize_match(self, element: Any) -> bool:
         return False

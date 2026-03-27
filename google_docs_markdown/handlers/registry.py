@@ -81,6 +81,8 @@ class HandlerRegistry:
         from google_docs_markdown.handlers.list_handler import ListHandler
         from google_docs_markdown.handlers.person import PersonHandler
         from google_docs_markdown.handlers.rich_link import RichLinkHandler
+        from google_docs_markdown.handlers.style import StyleHandler
+        from google_docs_markdown.handlers.suggestion import SuggestionHandler
         from google_docs_markdown.handlers.table import TableHandler
         from google_docs_markdown.handlers.text_run import TextRunHandler
         from google_docs_markdown.handlers.toc import TableOfContentsHandler
@@ -96,6 +98,8 @@ class HandlerRegistry:
             ColumnBreakHandler(),
             AutoTextHandler(),
             EquationHandler(),
+            StyleHandler(),
+            SuggestionHandler(),
             TextRunHandler(),
         ]
 

@@ -250,7 +250,7 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 - **Atomic, surgical edits for updates:** Fetch current doc → serialize with source map → diff against local Markdown → map diff ranges to API indices → surgical `batchUpdate` requests. See `TECH_SPEC.md` Sections 5.9-5.10.
 - **Create-before-update ordering:** The create-new-document flow validates the deserializer end-to-end before the update flow layers diffing on top.
 
-**Progress (2026-03-27):** `GoogleDocsClient` exposes `create_document` and `batch_update` with Pydantic models (unit tested). CLI `upload` command exists as a stub. `list-tabs` CLI command implemented. **Phases 3.1–3.3 complete:** context layer (`DocumentContext`/`SerContext`/`DeserContext`), handler infrastructure (`ElementHandler` ABC, `HandlerRegistry`), and full handler migration (17 handler files, serializer refactored to ~230-line orchestrator). 423 tests pass. No deserializer, source map, diff engine, or `uploader.py` yet.
+**Progress (2026-03-27):** `GoogleDocsClient` exposes `create_document` and `batch_update` with Pydantic models (unit tested). CLI `upload` command exists as a stub. `list-tabs` CLI command implemented. **Phases 3.1–3.6 complete:** context layer, handler infrastructure, full handler migration, element registry with shared constants, source map (`SourceSpan`/`SpanKind`/`SourceMapBuilder`/`SourceMap`), and full markdown deserializer (`MarkdownDeserializer` with `markdown-it-py`, `deserialize()` on all handlers, comment-tag dispatch). 490 tests pass. No diff engine or `uploader.py` yet.
 
 #### 3.1: Context Layer ✅
 - [x] Create `google_docs_markdown/handlers/context.py`
@@ -281,54 +281,52 @@ Migrated all `_visit_*` methods from `markdown_serializer.py` into per-element h
 - [x] Refactored `markdown_serializer.py` from ~900 lines to ~230-line orchestrator that walks Pydantic tree and delegates to handler registry
 - [x] All existing 368 tests continue to pass after migration; backward-compatible private function re-exports maintained (`_apply_inline_formatting`, `_apply_link`, `_join_paragraphs`)
 
-#### 3.4: Element Registry and Shared Constants
-- [ ] Create `google_docs_markdown/element_registry.py`
-- [ ] Move heading level mappings (`_HEADING_PREFIX`) from serializer
-- [ ] Move glyph type sets (`_ORDERED_GLYPH_TYPES`) from `block_grouper.py`
-- [ ] Move monospace font set from serializer
-- [ ] Move inline format marker definitions (currently implicit in `_apply_inline_formatting`)
-- [ ] Move comment tag type to batchUpdate request type mapping
-- [ ] Both handlers and orchestrators import from here
-- [ ] Lightweight refactor — imports change but logic stays the same
+#### 3.4: Element Registry and Shared Constants ✅
+- [x] Create `google_docs_markdown/element_registry.py`
+- [x] Move heading level mappings (`HEADING_PREFIX`) from `heading.py`
+- [x] Move glyph type sets (`ORDERED_GLYPH_TYPES`) from `block_grouper.py`
+- [x] Move monospace font/color constants (`MONOSPACE_FONT`, `INLINE_CODE_COLOR`)
+- [x] Move inline format marker definitions (`InlineMarker` enum, `INLINE_MARKER_TO_STYLE_FIELD`)
+- [x] Move comment tag type to batchUpdate request type mapping (`TAG_TO_REQUEST_FIELD`)
+- [x] Add `MD_HEADING_LEVEL_TO_STYLE`, `HEADING_STYLES`, `DEFAULT_LINK_COLOR`, `CODE_BLOCK_MARKER`
+- [x] Both handlers and orchestrators import from here — all existing 423 tests pass
 
-#### 3.5: Source Map
-- [ ] Create `google_docs_markdown/source_map.py`
-- [ ] Define `SourceSpan` dataclass (md_start, md_end, api_start, api_end, tab_id, segment_id, kind, handler reference, style, tag_data)
-- [ ] Define `SpanKind` enum (TEXT, HEADING, LIST_ITEM, TABLE_CELL, CODE_LINE, WIDGET, SYNTAX, etc.)
-- [ ] Define `SourceMapBuilder` — passed as `ctx.source_map` during serialization; handlers call `ctx.source_map.record(...)` as they emit text
-- [ ] Define `SourceMap` — read-only view with `lookup(md_pos)` to translate markdown character position to API index
-- [ ] Track API indices from `StructuralElement.startIndex/endIndex` and `ParagraphElement.startIndex/endIndex` as handlers emit text
-- [ ] Distinguish visible-text spans (1:1 with API indices) from syntax spans (formatting markers `**`/`*`/`~~`, comment tags — no API index counterpart)
-- [ ] Add `serialize_with_source_map()` convenience method to serializer orchestrator
-- [ ] Unit tests: verify source map positions against known fixture documents
+#### 3.5: Source Map ✅
+- [x] Create `google_docs_markdown/source_map.py`
+- [x] Define `SourceSpan` dataclass (md_start, md_end, api_start, api_end, tab_id, segment_id, kind, handler_type, style, tag_data)
+- [x] Define `SpanKind` enum (TEXT, HEADING, LIST_ITEM, TABLE_CELL, CODE_LINE, WIDGET, SYNTAX, IMAGE, FOOTNOTE_REF, LINK, METADATA)
+- [x] Define `SourceMapBuilder` with `record()`, `record_syntax()`, `advance()`, `set_segment()`, `build()`
+- [x] Define `SourceMap` read-only view with `lookup(md_pos)`, `span_at()`, `spans_in_range()`, `visible_spans()`, `syntax_spans()`
+- [x] Add `source_map` field to `SerContext`
+- [x] Add `serialize_with_source_map()` to `MarkdownSerializer` — records structural spans from API indices
+- [x] Unit tests: 20 tests in `test_source_map.py` — builder, recording, syntax vs visible spans, lookup, range queries
 
-#### 3.6: Markdown Deserializer (Handlers + Orchestrator)
-Implement `deserialize()` on each handler, plus new `markdown_deserializer.py` orchestrator.
+#### 3.6: Markdown Deserializer (Handlers + Orchestrator) ✅
+Implemented `deserialize()` on each handler, plus new `markdown_deserializer.py` orchestrator.
 
-- [ ] Add `markdown-it-py` dependency
-- [ ] Implement `deserialize()` on each handler class:
-  - `PersonHandler` → `InsertPersonRequest`
-  - `DateHandler` → `InsertDateRequest`
-  - `StyleHandler` → `InsertText` + `UpdateTextStyleRequest`
-  - `HeadingHandler` → `InsertText` + `UpdateParagraphStyleRequest`
-  - `InlineFormatHandlers` → `UpdateTextStyleRequest` (bold, italic, etc.)
-  - `LinkHandler` → `UpdateTextStyleRequest` with `link.url`
-  - `ListHandler` → `InsertText` + `CreateParagraphBulletsRequest`
-  - `TableHandler` → `InsertTableRequest` + cell content inserts
-  - `CodeBlockHandler` → `InsertTextRequest` (with U+E907 reinsertion for widget container)
+- [x] Add `markdown-it-py>=4.0.0` dependency
+- [x] Implement `deserialize()` on handler classes:
+  - `PersonHandler` → `InsertPersonRequest` with email from tag data
+  - `DateHandler` → `InsertDateRequest` with format/locale/timezone from tag data, merged with `dateDefaults`
+  - `StyleHandler` → `InsertText` + `UpdateTextStyleRequest` (color, background-color, font-size, font-family, baseline-offset, small-caps)
+  - `RichLinkHandler` → `InsertText` + `UpdateTextStyleRequest` with link (no `insertRichLink` API)
+  - `PageBreakHandler` → `InsertPageBreakRequest`
+  - `ColumnBreakHandler` → `InsertTextRequest` (vertical tab)
+  - `SectionBreakHandler` → `InsertSectionBreakRequest` with section type
+  - `TableOfContentsHandler` → `InsertTextRequest` placeholder
   - `ImageHandler` → `InsertInlineImageRequest`
-  - `RichLinkHandler` → regular `InsertText` + `UpdateTextStyleRequest` (link fallback — no `insertRichLink` API)
-  - Break/TOC handlers → appropriate insert requests
-- [ ] Create `google_docs_markdown/markdown_deserializer.py` orchestrator:
-  - Parse markdown via `markdown-it-py` AST
-  - Parse HTML comment annotations via existing `comment_tags.parse_tags()`
-  - Parse embedded metadata via existing `metadata.parse_metadata()`
-  - Create `DeserContext` with `DocumentContext.from_metadata()`
-  - Walk AST tokens, dispatch to handler registry via `match_deserialize()`
-  - Return `list[Request]`
-- [ ] Handle `tabId` and `segmentId` in Location/Range objects for multi-tab and header/footer segments
-- [ ] Preserve U+E907 positions in internal representation for round-trip fidelity (deferred from Phase 2.4)
-- [ ] Unit tests: verify each handler produces correct Request objects for deserialization
+- [x] Create `google_docs_markdown/markdown_deserializer.py` orchestrator:
+  - Parse markdown via `markdown-it-py` AST (with strikethrough + table plugins enabled)
+  - Walk block-level tokens: headings, paragraphs, lists, code fences, tables, horizontal rules, HTML blocks
+  - Inline formatting: bold, italic, strikethrough, underline (`<u>`), links, inline code, images
+  - Title/subtitle detection via `<!-- title -->`/`<!-- subtitle -->` comment tags
+  - Comment-tag dispatch: block-level `html_block` and inline `html_inline` tags parsed via `comment_tags.parse_tags()` and dispatched through `HandlerRegistry.match_deserialize()`
+  - Metadata handling: `parse_metadata()` → `DocumentContext.from_metadata()` → `DeserContext`
+  - `tabId` and `segmentId` propagated to all Location/Range objects
+  - Convenience function `deserialize()` for one-call usage
+  - Returns `list[Request]` for `batchUpdate`
+- [x] Added `StyleHandler` and `SuggestionHandler` to `HandlerRegistry.default()` for deserialization dispatch
+- [x] Unit tests: 33 tests in `test_markdown_deserializer.py` — headings (1-6), paragraphs, bold/italic/strikethrough/underline, inline code, links, lists (ordered + unordered), code blocks, tables, person/date/page-break/section-break tags, metadata stripping, tab/segment IDs, style tags, rich-link tags, edge cases, index progression
 
 #### 3.7: Create New Documents (Uploader — Create Flow)
 - [x] Handle document creation (`documents().create()`) — `GoogleDocsClient.create_document`

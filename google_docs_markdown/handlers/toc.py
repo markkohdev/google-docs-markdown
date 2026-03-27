@@ -19,4 +19,18 @@ class TableOfContentsHandler(TagElementHandler):
         return opening_tag(TagType.TABLE_OF_CONTENTS)
 
     def deserialize(self, token: Any, ctx: DeserContext) -> list[Any]:
-        return []
+        from google_docs_markdown.models.common import Location
+        from google_docs_markdown.models.requests import InsertTextRequest, Request
+
+        return [
+            Request(
+                insertText=InsertTextRequest(
+                    text="[TOC]\n",
+                    location=Location(
+                        index=ctx.index,
+                        segmentId=ctx.segment_id or None,
+                        tabId=ctx.tab_id or None,
+                    ),
+                )
+            )
+        ]

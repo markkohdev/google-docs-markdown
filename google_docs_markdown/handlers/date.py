@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from google_docs_markdown.comment_tags import TagType, wrap_tag
 from google_docs_markdown.handlers.base import TagElementHandler
 from google_docs_markdown.handlers.context import DeserContext, SerContext
+from google_docs_markdown.models.common import Location
+from google_docs_markdown.models.elements import DateElementProperties
+from google_docs_markdown.models.requests import InsertDateRequest, Request
 
 
 class DateHandler(TagElementHandler):
@@ -49,4 +52,29 @@ class DateHandler(TagElementHandler):
         return wrap_tag(TagType.DATE, display, inline_data or None)
 
     def deserialize(self, token: Any, ctx: DeserContext) -> list[Any]:
-        return []
+        data = token.data or {}
+
+        date_defaults = ctx.doc.date_defaults or {}
+        merged = dict(date_defaults)
+        merged.update(data)
+
+        date_props = DateElementProperties(
+            dateFormat=cast(Any, merged.get("format")),
+            locale=merged.get("locale"),
+            timeFormat=cast(Any, merged.get("timeFormat")),
+            timeZoneId=merged.get("timeZoneId"),
+            timestamp=merged.get("timestamp"),
+        )
+
+        return [
+            Request(
+                insertDate=InsertDateRequest(
+                    dateElementProperties=date_props,
+                    location=Location(
+                        index=ctx.index,
+                        segmentId=ctx.segment_id or None,
+                        tabId=ctx.tab_id or None,
+                    ),
+                )
+            )
+        ]
