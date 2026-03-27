@@ -7,7 +7,7 @@ Tests that commands exist and are properly configured.
 from __future__ import annotations
 
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 import typer
 from pytest import raises
@@ -51,6 +51,7 @@ class TestDownloadCommand:
             output_dir="/out",
             tab_names=None,
             overwrite=False,
+            _prefetched=ANY,
         )
 
     @patch("google_docs_markdown.downloader.Downloader")
@@ -65,6 +66,7 @@ class TestDownloadCommand:
             output_dir="/out",
             tab_names=["Tab A"],
             overwrite=False,
+            _prefetched=ANY,
         )
 
     @patch("google_docs_markdown.downloader.Downloader")
@@ -79,6 +81,7 @@ class TestDownloadCommand:
             output_dir=None,
             tab_names=None,
             overwrite=False,
+            _prefetched=ANY,
         )
 
     @patch("google_docs_markdown.downloader.Downloader")
@@ -93,6 +96,7 @@ class TestDownloadCommand:
             output_dir="/out",
             tab_names=None,
             overwrite=True,
+            _prefetched=ANY,
         )
 
     @patch("typer.confirm", return_value=True)

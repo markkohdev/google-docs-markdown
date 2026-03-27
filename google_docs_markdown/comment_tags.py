@@ -136,6 +136,11 @@ def parse_tags(text: str) -> list[ParsedTag]:
 
     Returns both wrapping tags (with content between open/close) and
     self-closing tags (opening tag with no corresponding close).
+
+    Note: same-type tags are assumed not to nest.  Behaviour is undefined
+    for inputs like ``<!-- style --><!-- style -->inner<!-- /style -->
+    outer<!-- /style -->`` — the inner opening tag will be consumed as
+    content of the first match.
     """
     tags: list[ParsedTag] = []
     used_closes: set[int] = set()

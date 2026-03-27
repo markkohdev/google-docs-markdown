@@ -70,7 +70,7 @@ class Downloader:
         """
         doc = self._client.get_document(document_id)
         result: dict[str, str] = {}
-        self._collect_tabs(doc.tabs or [], result, prefix="", tab_filter=tab_names)
+        self._collect_tabs(doc.tabs or [], result, prefix="", tab_filter=tab_names, document_id=doc.documentId)
         return result
 
     def download_to_files(
@@ -80,6 +80,7 @@ class Downloader:
         *,
         tab_names: list[str] | None = None,
         overwrite: bool = True,
+        _prefetched: tuple[str, dict[str, str]] | None = None,
     ) -> dict[str, Path]:
         """Download a document and write Markdown files to disk.
 
@@ -91,6 +92,8 @@ class Downloader:
             tab_names: Optional list of tab titles to include.
             overwrite: If ``False``, raise :class:`FileConflictError` when any
                 target file already exists on disk.
+            _prefetched: Internal — ``(title, tab_markdowns)`` tuple to reuse
+                a previous fetch+serialize result and skip the API call.
 
         Returns:
             Dict mapping tab path to the written file Path.
@@ -99,17 +102,17 @@ class Downloader:
             FileConflictError: If *overwrite* is ``False`` and one or more
                 target files already exist.
         """
-        doc = self._client.get_document(document_id)
-        title = doc.title or "Untitled Document"
+        if _prefetched is not None:
+            title, tab_markdowns = _prefetched
+        else:
+            title, tab_markdowns = self._fetch_and_serialize(document_id, tab_names=tab_names)
+
         doc_dir = sanitize_filename(title)
 
         if output_dir is None:
             output_dir = Path(doc_dir)
         else:
             output_dir = Path(output_dir) / doc_dir
-
-        tab_markdowns: dict[str, str] = {}
-        self._collect_tabs(doc.tabs or [], tab_markdowns, prefix="", tab_filter=tab_names)
 
         planned: dict[str, Path] = {}
         for tab_path in tab_markdowns:
@@ -128,6 +131,24 @@ class Downloader:
             written[tab_path] = file_path
 
         return written
+
+    def _fetch_and_serialize(
+        self,
+        document_id: str,
+        *,
+        tab_names: list[str] | None = None,
+    ) -> tuple[str, dict[str, str]]:
+        """Fetch a document and serialize tabs without writing to disk.
+
+        Returns:
+            ``(title, tab_markdowns)`` where *title* is the document title
+            and *tab_markdowns* maps tab paths to Markdown content.
+        """
+        doc = self._client.get_document(document_id)
+        title = doc.title or "Untitled Document"
+        tab_markdowns: dict[str, str] = {}
+        self._collect_tabs(doc.tabs or [], tab_markdowns, prefix="", tab_filter=tab_names, document_id=doc.documentId)
+        return title, tab_markdowns
 
     def get_document_title(self, document_id: str) -> str:
         """Return the title of a Google Doc.
@@ -184,18 +205,25 @@ class Downloader:
         *,
         prefix: str,
         tab_filter: list[str] | None,
+        document_id: str | None = None,
     ) -> None:
         """Recursively serialize tabs and populate *result*."""
         for tab in tabs:
             title = "Untitled"
-            if tab.tabProperties and tab.tabProperties.title:
-                title = tab.tabProperties.title
+            tab_id: str | None = None
+            if tab.tabProperties:
+                title = tab.tabProperties.title or "Untitled"
+                tab_id = tab.tabProperties.tabId
 
             tab_path = f"{prefix}/{title}" if prefix else title
 
             if tab.documentTab is not None:
                 if tab_filter is None or title in tab_filter:
-                    result[tab_path] = self._serializer.serialize(tab.documentTab)
+                    result[tab_path] = self._serializer.serialize(
+                        tab.documentTab,
+                        document_id=document_id,
+                        tab_id=tab_id,
+                    )
 
             if tab.childTabs:
                 self._collect_tabs(
@@ -203,6 +231,7 @@ class Downloader:
                     result,
                     prefix=tab_path,
                     tab_filter=tab_filter,
+                    document_id=document_id,
                 )
 
 

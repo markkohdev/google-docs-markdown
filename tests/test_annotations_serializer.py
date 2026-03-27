@@ -247,11 +247,13 @@ class TestStyleComments:
         result = serializer.serialize(doc)
         assert "<!-- style:" not in result
 
-    def test_common_gdocs_font_no_style_comment(self, serializer: MarkdownSerializer) -> None:
+    def test_non_default_common_font_gets_style_comment(self, serializer: MarkdownSerializer) -> None:
+        """Arial differs from the doc default (Proxima Nova), so it gets annotated."""
         style = TextStyle(weightedFontFamily=WeightedFontFamily(fontFamily="Arial", weight=400))
         doc = self._make_styled_doc("arial text", style)
         result = serializer.serialize(doc)
-        assert "font-family" not in result
+        assert "font-family" in result
+        assert "Arial" in result
 
     def test_custom_font_gets_style_comment(self, serializer: MarkdownSerializer) -> None:
         style = TextStyle(weightedFontFamily=WeightedFontFamily(fontFamily="Comic Sans MS", weight=400))

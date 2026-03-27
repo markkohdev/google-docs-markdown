@@ -32,7 +32,7 @@ _METADATA_RE = re.compile(
 
 
 class _SafeEncoder(json.JSONEncoder):
-    """JSON encoder that escapes ``>`` in strings to prevent ``-->``."""
+    """JSON encoder that escapes all ``>`` characters in output to prevent premature ``-->`` comment close."""
 
     def encode(self, o: Any) -> str:  # noqa: ANN401
         result = super().encode(o)
@@ -88,6 +88,4 @@ def strip_metadata(markdown_text: str) -> str:
 
     Useful for diffing content without metadata.
     """
-    if _METADATA_RE.search(markdown_text):
-        return _METADATA_RE.sub("", markdown_text).rstrip("\n") + "\n"
-    return markdown_text
+    return _METADATA_RE.sub("", markdown_text).rstrip("\n") + "\n"
