@@ -1,8 +1,8 @@
 # Google Docs Markdown - Technical Specification
 
-**Document Version:** 1.7.0  
+**Document Version:** 1.8.0  
 **Date:** 2026-01-08  
-**Last Updated:** 2026-03-27 (Phase 3 restructured: per-element handler architecture, context layer, source map, diff engine design; old Phase 4 absorbed into Phase 3)  
+**Last Updated:** 2026-03-27 (Phase 4.1–4.3 complete: round-trip fidelity fixes, new serialization/deserialization features, round-trip test infrastructure)  
 **Authors:** Mark Koh  
 **Status:** Active
 
@@ -126,17 +126,17 @@ The tool is organized into several distinct components that work together to pro
 
 - **CLI** (`cli.py`): Parses command-line arguments via `typer`, orchestrates operations, provides user feedback. Commands: `download` (with `--force`, file conflict handling, stale cleanup), `upload` (stub), `diff` (stub), `list-tabs`, `setup`.
 - **Downloader** (`downloader.py`): Orchestrates fetching a `Document` via `GoogleDocsClient`, iterating tabs recursively, serializing each tab via `MarkdownSerializer`, and writing `.md` files to a directory structure. Supports selective tab download via `tab_names` filter, file conflict detection (`FileConflictError`), stale file cleanup (`find_stale_files`), and empty directory removal (`remove_empty_dirs`).
-- **Uploader** (`uploader.py`, planned): Orchestrates upload flows. Create flow: deserializes markdown into `Request` objects and creates new document. Update flow: composes serializer (with source map), diff engine, and handlers to produce surgical `batchUpdate` requests. See Section 5.10.
-- **Handlers** (`handlers/`, planned): Per-element handler classes that own both serialization and deserialization logic for each document element concept. `ElementHandler` ABC with `TagElementHandler`, `BlockElementHandler`, and `InlineFormatHandler` subclasses. Each handler implements `serialize()` (Pydantic model → Markdown text) and `deserialize()` (Markdown token/tag → `Request` objects). Handlers are registered in a `HandlerRegistry` that dispatches by Pydantic field (ser) or by token/tag type (deser). See Section 5.11.
-- **Context** (`handlers/context.py`, planned): Three-layer context architecture. `DocumentContext` (frozen dataclass with document defaults — populated from `DocumentTab` or from embedded metadata block via dual factories). `SerContext` and `DeserContext` (mutable, direction-specific traversal state). Handlers access document defaults via `ctx.doc.expected_color()`, `ctx.doc.expected_font()`, etc. See Section 5.11.
-- **MarkdownSerializer** (`markdown_serializer.py`): Orchestrator for the serialization direction. Currently a monolithic 900-line visitor; will be refactored to a slim ~200-line orchestrator that walks the Pydantic tree and delegates to the handler registry. Uses a block-grouper pre-processing pass (`block_grouper.py`) to group list items and code blocks. Optionally produces a `SourceMap` for the update flow.
-- **MarkdownDeserializer** (`markdown_deserializer.py`, planned): Orchestrator for the deserialization direction. Parses markdown via `markdown-it-py` AST, parses comment tags via `comment_tags.parse_tags()`, dispatches to handler registry, returns `list[Request]`.
-- **SourceMap** (`source_map.py`, planned): Maps markdown character positions to Google Docs API character indices. Built during serialization by handlers calling `ctx.source_map.record()`. Read during update flow by `SourceMap.lookup(md_pos)` to translate diff positions to API ranges. See Section 5.10.
-- **DiffEngine** (`diff_engine.py`, planned): Text-level diffing using `difflib.SequenceMatcher`. Compares canonical markdown (from serializer) against local markdown. Produces `DiffOp` objects. Composes with source map to translate positions and with handlers to generate `Request` objects. See Section 5.10.
-- **ElementRegistry** (`element_registry.py`, planned): Shared constants imported by both serialization and deserialization sides — heading level mappings, glyph type sets, monospace font sets, inline format marker definitions, comment tag type to request type mappings.
+- **Uploader** (`uploader.py`): Orchestrates upload flows. Create flow: `create_from_markdown()` / `create_from_directory()` deserialize markdown into `Request` objects and create new documents (multi-tab via `addDocumentTab`). Update flow: `update_document()` / `update_from_directory()` compose serializer (with source map), diff engine, and handlers to produce surgical `batchUpdate` requests. See Section 5.10.
+- **Handlers** (`handlers/`): Per-element handler classes that own both serialization and deserialization logic. `ElementHandler` ABC with `TagElementHandler`, `BlockElementHandler`, and `InlineFormatHandler` subclasses. 17 handler files covering all document element types. Registered in a `HandlerRegistry` that dispatches by Pydantic field (ser) or by token/tag type (deser). See Section 5.11.
+- **Context** (`handlers/context.py`): Three-layer context architecture. `DocumentContext` (frozen dataclass with document defaults — populated from `DocumentTab` or from embedded metadata block via dual factories). `SerContext` and `DeserContext` (mutable, direction-specific traversal state). Handlers access document defaults via `ctx.doc.expected_color()`, `ctx.doc.expected_font()`, etc. See Section 5.11.
+- **MarkdownSerializer** (`markdown_serializer.py`): Slim ~230-line orchestrator that walks the Pydantic tree and delegates to the handler registry. Uses a block-grouper pre-processing pass (`block_grouper.py`) to group list items and code blocks. Optionally produces a `SourceMap` for the update flow.
+- **MarkdownDeserializer** (`markdown_deserializer.py`): Orchestrator for the deserialization direction. Parses markdown via `markdown-it-py` AST (with strikethrough + table plugins), parses comment tags via `comment_tags.parse_tags()`, dispatches to handler registry. Handles title/subtitle style overrides, inter-tag text in html_blocks, footnote references, checklist detection, paragraph alignment. Returns `list[Request]`.
+- **SourceMap** (`source_map.py`): Maps markdown character positions to Google Docs API character indices. Built during serialization by handlers calling `ctx.source_map.record()`. Read during update flow by `SourceMap.lookup(md_pos)` to translate diff positions to API ranges. See Section 5.10.
+- **DiffEngine** (`diff_engine.py`): Text-level diffing using `difflib.SequenceMatcher`. Compares canonical markdown (from serializer) against local markdown. Produces `DiffOp` objects with line-level position ranges. Composes with source map to translate positions and with handlers to generate `Request` objects. Full-replacement fallback when source map cannot map positions. See Section 5.10.
+- **ElementRegistry** (`element_registry.py`): Shared constants — heading level mappings, glyph type sets, monospace font sets (`MONOSPACE_FONTS`), inline format marker definitions, code block marker, inline code color, default link color, comment tag type to request type mappings.
 - **CommentTags** (`comment_tags.py`): Serialization and parsing for wrapping HTML comment annotations (`<!-- type: {json} -->content<!-- /type -->`). Provides `TagType` enum, `opening_tag()`, `closing_tag()`, `wrap_tag()`, and `parse_tags()`. Used by `TagElementHandler` subclasses.
 - **Metadata** (`metadata.py`): Handles the embedded metadata block at the bottom of markdown files (`<!-- google-docs-metadata ... -->`). Provides `serialize_metadata()`, `parse_metadata()`, and `strip_metadata()`. Used by `DocumentContext.from_metadata()` factory.
-- **BlockGrouper** (`block_grouper.py`): Pre-processing pass that groups `StructuralElement` lists into typed blocks: `ListBlock` (consecutive bullet paragraphs), `CodeBlock` (paragraphs between U+E907 bookend markers). All other elements pass through unchanged.
+- **BlockGrouper** (`block_grouper.py`): Pre-processing pass that groups `StructuralElement` lists into typed blocks: `ListBlock` (consecutive bullet paragraphs), `CodeBlock` (paragraphs between U+E907 bookend markers OR consecutive all-monospace paragraphs via fallback detection). The monospace fallback enables code blocks uploaded without U+E907 markers (which the API strips from `insertText`) to be re-detected on re-download.
 - **GoogleDocsClient** (`client.py`): High-level typed client that returns Pydantic models. Composes `GoogleDocsTransport`. Most consumers (CLI, downloader, uploader) should use this.
 - **GoogleDocsTransport** (`transport.py`): Low-level transport that handles authentication, API requests/responses, error handling, and retry logic. Returns raw dicts as received from the API. Used directly for scripts that need unmodified API responses (e.g., downloading test fixtures).
 - **Data Models** (`models/`): Pydantic models representing Google Docs API response objects, enabling attribute-based access (`doc.title`) and runtime validation. Generated from `google-api-python-client-stubs` via `scripts/generate_models.py`. Organized into `document.py`, `elements.py`, `styles.py`, `common.py`, `requests.py`, `responses.py`.
@@ -354,8 +354,12 @@ Self-closing variant for elements with no visible content:
 | Chip placeholder | `<!-- chip-placeholder -->` (U+E907 with no API data) | Preserve-in-place |
 | Title marker | `<!-- title -->` before `# text` | Yes (`updateParagraphStyle`) |
 | Subtitle marker | `<!-- subtitle -->` before `*text*` | Yes (`updateParagraphStyle`) |
-| Header | `<!-- header: {"id": "..."} -->content<!-- /header -->` | Via `segmentId` |
-| Footer | `<!-- footer: {"id": "..."} -->content<!-- /footer -->` | Via `segmentId` |
+| Header | `<!-- header: {"id": "..."} -->content<!-- /header -->` | Yes (`createHeader`) |
+| Footer | `<!-- footer: {"id": "..."} -->content<!-- /footer -->` | Yes (`createFooter`) |
+| Alignment | `<!-- align: {"value": "center"} -->` before paragraph | Yes (`updateParagraphStyle`) |
+| Image props | `![alt](url)<!-- image-props: {"width": ..., "height": ..., "crop": {...}} -->` | Yes (`objectSize` on `insertInlineImage`) |
+| Superscript | `<sup>text</sup>` | Yes (`baselineOffset: SUPERSCRIPT`) |
+| Subscript | `<sub>text</sub>` | Yes (`baselineOffset: SUBSCRIPT`) |
 
 **Style Comment Details:**
 - Style defaults extracted from NORMAL_TEXT named style (font, size, color)
@@ -391,7 +395,9 @@ When uploading Markdown back to Google Docs, deserialization is handled by per-e
 - **Strip Metadata**: `metadata.strip_metadata()` removes the metadata block for content-only diffing
 
 **Handler Dispatch:**
-Each `ParsedTag` or AST token is matched to a handler via the `HandlerRegistry`. The handler's `deserialize()` method generates the appropriate `Request` objects:
+Each `ParsedTag` or AST token is matched to a handler via the `HandlerRegistry`. The handler's `deserialize()` method generates the appropriate `Request` objects.
+
+**Phase 4 additions:** Title/subtitle style overrides, paragraph alignment, superscript/subscript (`<sup>`/`<sub>`), checklist (`BULLET_CHECKBOX`), footnote references (`CreateFootnoteRequest`), horizontal rules (styled border), table header bold + pinning (`PinTableHeaderRowsRequest`), image properties (`objectSize`), header/footer creation (`CreateHeaderRequest`/`CreateFooterRequest`).
 
 | Markdown Element | Handler | Request(s) Generated |
 |---|---|---|
@@ -463,12 +469,12 @@ This means the atomic-edit upload strategy (Section 5.10) can leverage `insertPe
 
 **Status:** Implemented in Phase 2.4 (`block_grouper.py` and `markdown_serializer.py`).
 
-Google Docs has no formal "code block" structural element in the API. Code blocks are detected using a combination of:
+Google Docs has no formal "code block" structural element in the API. Code blocks are detected using two mechanisms:
 
-1. **U+E907 boundary markers**: A paragraph starting with `\ue907` marks the start; a paragraph ending with `\ue907` marks the end. All paragraphs between (inclusive) are grouped into a `CodeBlock` dataclass by `block_grouper.py`.
-2. **Monospace font heuristic**: A helper `_paragraph_has_monospace_font()` detects monospace fonts (`Roboto Mono`, `Courier New`, `Consolas`, `Source Code Pro`). Currently available for validation but detection relies primarily on U+E907 markers.
-3. **Output**: `_visit_code_block()` in `markdown_serializer.py` renders bare fenced code blocks (` ``` `) with no language identifier (the API does not expose the language label from the widget's internal state). All U+E907 characters are stripped from the output.
-4. **U+E907 in non-code contexts**: `_visit_text_run()` also strips U+E907 from regular `TextRun.content`, handling smart chip placeholder occurrences outside code blocks.
+1. **U+E907 boundary markers** (primary): A paragraph starting with `\ue907` marks the start; a paragraph ending with `\ue907` marks the end. All paragraphs between (inclusive) are grouped into a `CodeBlock` dataclass by `block_grouper.py`.
+2. **Monospace font fallback** (Phase 4.1): Consecutive paragraphs where **all** text runs use a monospace font from `MONOSPACE_FONTS` (`Roboto Mono`, `Courier New`, `Consolas`, `Source Code Pro`) are grouped into a `CodeBlock` via `_apply_monospace_fallback()`. This handles code blocks that were uploaded without U+E907 markers (the Google Docs API strips U+E000–U+F8FF characters from `insertText`). Inline code (monospace + green `#188037` foreground) is excluded from fallback detection.
+3. **Output**: `CodeBlockHandler.serialize()` renders bare fenced code blocks (` ``` `) with no language identifier (the API does not expose the language label from the widget's internal state). All U+E907 characters are stripped from the output.
+4. **U+E907 in non-code contexts**: `TextRunHandler` strips U+E907 from regular `TextRun.content`, replacing with `<!-- chip-placeholder -->` for smart chip placeholder occurrences outside code blocks.
 
 #### 5.9.3 Implications for Upload (Atomic Edits)
 
