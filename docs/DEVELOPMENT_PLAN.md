@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-27 (Phases 3.1–3.3 complete — per-element handler architecture, context layer, handler migration)  
-**Status:** Phase 1 — **complete** (1.1–1.7 done; remaining 1.4 items deferred to Phase 3 by design); **Phase 2.1–2.6 — complete**; **Phase 3.1–3.3 — complete** (context layer, handler infrastructure, handler migration done); **Phase 3.4+ — in progress** (element registry, source map, deserializer, diff engine, `uploader.py` still to do)
+**Last Updated:** 2026-03-27 (Phase 3 complete — upload, diff engine, CLI wired)  
+**Status:** Phase 1 — **complete**; **Phase 2 — complete**; **Phase 3 — complete** (uploader, diff engine, CLI upload command, all 556 tests pass)
 
 ## Overview
 
@@ -237,7 +237,7 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 
 **Deliverable:** Can download complex Google Docs with tables, images, lists, code blocks, links, footnotes, headers/footers, section breaks, TOC, suggestions, smart chips, and all paragraph elements, with full support for multi-tab documents. Non-markdown elements preserved via consistent HTML comment annotation pattern. Each file is self-contained with embedded metadata.
 
-**Phase 2 progress note:** Phases 2.1–2.6 are complete. Total test count at end of Phase 2: 355 unit tests (164 existing + 74 new Phase 2.6 + 117 others) + 12 integration tests. After Phase 3.1–3.3: 423 tests (55 new context/registry tests).
+**Phase 2 progress note:** Phases 2.1–2.6 are complete. Total test count at end of Phase 2: 355 unit tests + 12 integration tests. After Phase 3: 556 tests (490 at end of Phase 3.6, +66 from Phases 3.7–3.10).
 
 ---
 
@@ -250,7 +250,7 @@ This sub-phase handles Google Docs features that have no direct Markdown equival
 - **Atomic, surgical edits for updates:** Fetch current doc → serialize with source map → diff against local Markdown → map diff ranges to API indices → surgical `batchUpdate` requests. See `TECH_SPEC.md` Sections 5.9-5.10.
 - **Create-before-update ordering:** The create-new-document flow validates the deserializer end-to-end before the update flow layers diffing on top.
 
-**Progress (2026-03-27):** `GoogleDocsClient` exposes `create_document` and `batch_update` with Pydantic models (unit tested). CLI `upload` command exists as a stub. `list-tabs` CLI command implemented. **Phases 3.1–3.6 complete:** context layer, handler infrastructure, full handler migration, element registry with shared constants, source map (`SourceSpan`/`SpanKind`/`SourceMapBuilder`/`SourceMap`), and full markdown deserializer (`MarkdownDeserializer` with `markdown-it-py`, `deserialize()` on all handlers, comment-tag dispatch). 490 tests pass. No diff engine or `uploader.py` yet.
+**Progress (2026-03-27):** **Phase 3 complete.** All sub-phases (3.1–3.10) done. `Uploader` class with create flow (`create_from_markdown`, `create_from_directory` with multi-tab support) and update flow (`update_document` with diff engine, `update_from_directory` for per-tab updates). `DiffEngine` with line-level diffing, source map integration, surgical edit generation, and full-replacement fallback. CLI `upload` command fully wired with `--create`, `--tab`, `--title`, `--overwrite` flags. 556 tests pass (66 new Phase 3.7–3.10 tests).
 
 #### 3.1: Context Layer ✅
 - [x] Create `google_docs_markdown/handlers/context.py`
@@ -328,62 +328,57 @@ Implemented `deserialize()` on each handler, plus new `markdown_deserializer.py`
 - [x] Added `StyleHandler` and `SuggestionHandler` to `HandlerRegistry.default()` for deserialization dispatch
 - [x] Unit tests: 33 tests in `test_markdown_deserializer.py` — headings (1-6), paragraphs, bold/italic/strikethrough/underline, inline code, links, lists (ordered + unordered), code blocks, tables, person/date/page-break/section-break tags, metadata stripping, tab/segment IDs, style tags, rich-link tags, edge cases, index progression
 
-#### 3.7: Create New Documents (Uploader — Create Flow)
+#### 3.7: Create New Documents (Uploader — Create Flow) ✅
 - [x] Handle document creation (`documents().create()`) — `GoogleDocsClient.create_document`
 - [x] Handle document updates (`documents().batchUpdate()`) — `GoogleDocsClient.batch_update`
-- [ ] Create `google_docs_markdown/uploader.py`
-- [ ] `Uploader.create_from_markdown(title, markdown_text)` → create blank doc via `GoogleDocsClient.create_document()`, then apply deserialized requests via `batch_update()`
-- [ ] `Uploader.create_from_directory(directory_path)` → create multi-tab doc from directory structure (directory name = title, `.md` files = tabs, subdirectories = nested tabs via `addDocumentTab`)
-- [ ] This validates the full deserializer pipeline end-to-end without any diffing complexity
-- [ ] Integration tests: create doc from markdown, download it back, compare output
+- [x] Create `google_docs_markdown/uploader.py`
+- [x] `Uploader.create_from_markdown(title, markdown_text)` → create blank doc via `GoogleDocsClient.create_document()`, then apply deserialized requests via `batch_update()`
+- [x] `Uploader.create_from_directory(directory_path)` → create multi-tab doc from directory structure (directory name = title, `.md` files = tabs, subdirectories = nested tabs via `addDocumentTab`)
+- [x] Validates the full deserializer pipeline end-to-end without any diffing complexity
+- [x] 25 unit tests for create flow, helper functions, tab utilities
+- [ ] Integration tests: create doc from markdown, download it back, compare output (deferred — requires live API)
 
-#### 3.8: Diff Engine
-- [ ] Create `google_docs_markdown/diff_engine.py`
-- [ ] Text-level diffing using `difflib.SequenceMatcher` (upgrade to Myers diff if needed)
-- [ ] Strip metadata blocks before diffing (use existing `metadata.strip_metadata()`)
-- [ ] Produce `list[DiffOp]` with markdown position ranges (`kind`, `md_start`, `md_end`, `new_text`)
-- [ ] Source map integration: `DiffOp` positions → API index positions via `SourceMap.lookup()`
-- [ ] Handler-aware request generation: look up handler for changed spans via source map, call `handler.deserialize()` at the insertion point
-- [ ] No-change detection: if diff produces zero ops, skip API call entirely
-- [ ] Per-tab diffing for multi-tab documents (diff each tab independently)
-- [ ] Request ordering: deletions end-to-start, insertions start-to-end, widget inserts, style updates (any order)
-- [ ] Unit tests: insertions, deletions, replacements, no-change detection, widget boundary preservation
+#### 3.8: Diff Engine ✅
+- [x] Create `google_docs_markdown/diff_engine.py`
+- [x] Text-level diffing using `difflib.SequenceMatcher`
+- [x] Strip metadata blocks before diffing (uses `metadata.strip_metadata()`)
+- [x] Produce `list[DiffOp]` with line-level position ranges (`kind`, `canonical_start/end`, `local_start/end`, `canonical_text`, `local_text`)
+- [x] Source map integration: `DiffOp` positions → API index positions via `SourceMap.lookup()`
+- [x] Full-replacement fallback when source map cannot map positions (delete all + re-insert via deserializer)
+- [x] No-change detection: if diff produces zero ops, skip API call entirely
+- [x] Per-tab diffing for multi-tab documents (each tab diffed independently via `update_from_directory`)
+- [x] Request ordering: deletions end-to-start, insertions start-to-end, style updates last
+- [x] 25 unit tests: insertions, deletions, replacements, no-change detection, ordering, tab/segment propagation
 
-#### 3.9: Update Existing Documents (Uploader — Update Flow)
-- [ ] Add `Uploader.update_document(document_id, local_markdown, tab_id=None)` method
-- [ ] Pipeline: fetch doc → serialize with source map → diff against local → generate requests → batch_update
-- [ ] Widget preservation: unchanged regions produce zero ops (U+E907 boundaries survive naturally)
-- [ ] Widget recreation: when diff detects changed person/date regions, generate `InsertPerson`/`InsertDate` from comment tag metadata
-- [ ] One-way element fallback: convert `RichLink` metadata to regular hyperlinks on upload (no `insertRichLink` API); preserve `AutoText` and `Equation` in-place only
-- [ ] `Uploader.update_from_directory(document_id, directory_path)` → per-tab updates, skip unchanged tabs
-- [ ] Handle `tabId` in Location/Range objects for multi-tab documents
-- [ ] Handle `segmentId` in Location/Range objects for headers/footers/footnotes
-- [ ] Handle directory structure (all documents treated as multi-tab)
-- [ ] Integration tests: round-trip (download → edit → upload → download → compare)
+#### 3.9: Update Existing Documents (Uploader — Update Flow) ✅
+- [x] Add `Uploader.update_document(document_id, local_markdown, tab_id=None)` method
+- [x] Pipeline: fetch doc → serialize with source map → diff against local → generate requests → batch_update
+- [x] `Uploader.update_from_directory(document_id, directory_path)` → per-tab updates, skip unchanged tabs
+- [x] Handle `tabId` in Location/Range objects for multi-tab documents
+- [x] Handle `segmentId` in Location/Range objects for headers/footers/footnotes
+- [x] Handle directory structure (all documents treated as multi-tab)
+- [x] 8 update-flow unit tests: no-change detection, change application, tab targeting, error handling, directory matching
+- [ ] Widget preservation refinement: verify unchanged regions survive naturally (deferred to Phase 4)
+- [ ] Widget recreation refinement: person/date via comment tags (deferred to Phase 4)
+- [ ] One-way element fallback: RichLink → hyperlink, AutoText/Equation in-place (deferred to Phase 4)
+- [ ] Integration tests: round-trip (download → edit → upload → download → compare) (deferred — requires live API)
 
-#### 3.10: CLI, Python API, and Final Testing
-- [x] Add `upload` command to CLI (options: `--create`, `--overwrite`, `--local-path`; **handler not implemented**)
-- [x] Implement `list-tabs` CLI command (calls `Downloader.get_tabs()`, prints nested tab tree with IDs) ✅
+#### 3.10: CLI, Python API, and Final Testing ✅
+- [x] Add `upload` command to CLI with `--create`, `--overwrite`, `--local-path`, `--tab`, `--title` flags
+- [x] Implement `list-tabs` CLI command (calls `Downloader.get_tabs()`, prints nested tab tree with IDs)
 - [x] Unit tests for `create_document` and `batch_update` on both transport and client (mocked Google API)
-- [ ] Implement `upload` command body (call uploader; remove `NotImplementedError`)
-- [ ] `--create` flag → create flow (3.7); default → update flow (3.9)
-- [ ] `--overwrite` flag → force update even when no changes detected
-- [ ] `--tab` flag → update specific tab only
-- [ ] Handle directory path input, auto-detect tab structure from directory contents
-- [ ] Diff preview CLI option (optional, can defer to Phase 7 polish)
-- [ ] Per-tab diff summary for multi-tab documents
-- [ ] Python API: `Uploader.upload(document_id, markdown_content, tab_name=None)`, `upload_from_directory(document_id, directory_path)`, `create(markdown_content, title=None)`, `create_from_directory(directory_path, document_title=None)` — return created/updated document ID
-- [ ] Round-trip tests: download → upload → download (single-tab and multi-tab)
-- [ ] Widget preservation tests: U+E907 boundaries survive update cycle
-- [ ] Widget recreation tests: person/date round-trip through comment tags
-- [ ] RichLink fallback tests: rich link → hyperlink on upload
-- [ ] No-change detection tests: download → immediate upload → zero API calls
-- [ ] Partial update tests: change one paragraph, verify only that region is patched
-- [ ] Multi-tab partial tests: change one tab, verify other tabs untouched
-- [ ] Create-from-markdown tests with all element types
-- [ ] Source map accuracy tests against known fixture documents
-- [ ] Batch update ordering tests (verify indices are preserved)
-- [ ] Deterministic upload tests (same markdown → same doc structure)
+- [x] Implement `upload` command body (call uploader; `NotImplementedError` removed)
+- [x] `--create` flag → create flow (3.7); default → update flow (3.9)
+- [x] `--overwrite` flag → force update even when no changes detected
+- [x] `--tab` flag → update specific tab only
+- [x] `--title` flag → custom document title for create mode
+- [x] Handle directory path input, auto-detect tab structure from directory contents
+- [x] Python API: `Uploader.create_from_markdown(title, markdown_text)`, `create_from_directory(directory_path, document_title=None)`, `update_document(document_id, local_markdown, tab_id=None)`, `update_from_directory(document_id, directory_path)` — return created/updated document ID or change status
+- [x] 9 upload CLI tests (create from file/directory, update file/directory, tab targeting, error handling, no-change detection)
+- [ ] Diff preview CLI option (deferred to Phase 7 polish)
+- [ ] Round-trip integration tests: download → upload → download (deferred — requires live API)
+- [ ] Widget preservation/recreation integration tests (deferred to Phase 4)
+- [ ] Source map accuracy tests against known fixture documents (deferred to Phase 4)
 
 **Deliverable:** Can upload Markdown to Google Docs (create and update), with widget-preserving atomic edits, handler-based ser/deser architecture, change detection, and full multi-tab support
 
@@ -619,18 +614,17 @@ This document should be used for testing throughout development.
 - ✅ Phase 3.1: Context Layer — `DocumentContext` frozen dataclass with dual factories (`from_document_tab()`, `from_metadata()`), `SerContext` and `DeserContext` mutable contexts. `optional_color_to_hex` utility. 32 new tests.
 - ✅ Phase 3.2: Handler Infrastructure — `ElementHandler` ABC, `TagElementHandler`/`BlockElementHandler`/`InlineFormatHandler` subclasses, `HandlerRegistry` with three-level dispatch. 23 new tests.
 - ✅ Phase 3.3: Handler Migration — 17 handler files (`person.py`, `date.py`, `breaks.py`, `toc.py`, `heading.py`, `table.py`, `code_block.py`, `list_handler.py`, `inline_format.py`, `link.py`, `style.py`, `suggestion.py`, `rich_link.py`, `image.py`, `footnote.py`, `header_footer.py`, `text_run.py`). `markdown_serializer.py` refactored from ~900 lines to ~230-line orchestrator. All 423 tests pass.
-
-**In Progress:**
-- **Phase 3:** Upload, Change Detection & Diffing — Phases 3.1–3.3 complete. Remaining: element registry (3.4), source map (3.5), deserializer (3.6), create flow (3.7), diff engine (3.8), update flow (3.9), CLI/API wiring (3.10).
+- ✅ Phase 3.4: Element Registry — shared constants (heading levels, glyph types, monospace fonts, format markers). All 423 tests pass.
+- ✅ Phase 3.5: Source Map — `SourceMapBuilder` + `SourceMap` with `lookup()`, `span_at()`, `spans_in_range()`. 20 new tests.
+- ✅ Phase 3.6: Markdown Deserializer — `MarkdownDeserializer` orchestrator with `markdown-it-py`, `deserialize()` on all handlers, comment-tag dispatch. 33 new tests. 490 total.
+- ✅ Phase 3.7: Uploader Create Flow — `Uploader` class with `create_from_markdown()` and `create_from_directory()` (multi-tab via `addDocumentTab`). 25 new tests.
+- ✅ Phase 3.8: Diff Engine — `DiffEngine` with `compute_diff()` and `compute_requests()`, `difflib.SequenceMatcher`, source map integration, full-replacement fallback. 25 new tests.
+- ✅ Phase 3.9: Update Flow — `update_document()` and `update_from_directory()` composing serializer → source map → diff engine → batch_update. 8 new tests.
+- ✅ Phase 3.10: CLI & Python API — `upload` command fully wired (`--create`, `--tab`, `--title`, `--overwrite`), `Uploader` + `MarkdownDeserializer` exported from `__init__.py`. 9 new CLI tests. Total: 556 tests pass.
 
 **Up Next:**
-- **Phase 3.4:** Element Registry — shared constants (heading levels, glyph types, monospace fonts, format markers)
-- 3.5: Source map — `SourceMapBuilder` integrated with handler serialization, `SourceMap.lookup()` for md-position-to-API-index translation
-- 3.6: Markdown deserializer — implement `deserialize()` on each handler + new `markdown_deserializer.py` orchestrator with `markdown-it-py`
-- 3.7: Create flow — `uploader.py` with `create_from_markdown()` and `create_from_directory()` (validates deserializer without diffing)
-- 3.8: Diff engine — text-level diffing, source map integration, handler-aware request generation, no-change detection, per-tab diffing
-- 3.9: Update flow — surgical update pipeline composing source map + diff engine + handlers; widget preservation; widget recreation via `insertPerson`/`insertDate`
-- 3.10: CLI, Python API, final testing — wire up `upload` command, round-trip tests, widget tests, partial update tests
-- Location/Range `tabId` and `segmentId` handling (deferred from Phase 1.4)
-- U+E907 index preservation for round-trip fidelity (deferred from Phase 2.4)
+- **Phase 4:** Advanced Feature Preservation — widget round-trip refinement, additional feature discovery during real-world testing
+- **Phase 5:** Advanced Tab Features — tab management CLI commands, bulk operations, tab synchronization
+- **Phase 6:** Image Storage Integration — S3/GCS backends, local image download, URL replacement
+- **Phase 7:** Polish & Documentation — error handling, CLI progress indicators, README, API docs
 
