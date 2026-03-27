@@ -1,10 +1,15 @@
 """CLI interface for Google Docs Markdown tool."""
 
+from __future__ import annotations
+
 from collections.abc import Callable
 from pathlib import Path
-from typing import Annotated
+from typing import TYPE_CHECKING, Annotated
 
 import typer
+
+if TYPE_CHECKING:
+    from google_docs_markdown.uploader import Uploader
 
 app = typer.Typer(
     name="google-docs-markdown",
@@ -155,24 +160,132 @@ def list_tabs(
 
 @app.command()
 def upload(
-    document_url: Annotated[str | None, typer.Argument(help="Google Doc URL or document ID")] = None,
-    local_document_path: Annotated[
+    document_url: Annotated[
+        str | None,
+        typer.Argument(help="Google Doc URL or document ID (required for update; optional for --create)"),
+    ] = None,
+    local_path: Annotated[
         str | None,
         typer.Option(
             "--local-path",
-            help="Path to local markdown file (if not provided, inferred from document URL)",
+            "-l",
+            help="Path to local markdown file or directory",
         ),
     ] = None,
     create: Annotated[
         bool,
-        typer.Option("--create", help="Create a new Google Doc instead of updating the existing one"),
+        typer.Option("--create", help="Create a new Google Doc instead of updating"),
     ] = False,
-    overwrite: Annotated[bool, typer.Option("--overwrite", help="Force upload even when no changes detected")] = False,
+    overwrite: Annotated[
+        bool,
+        typer.Option("--overwrite", help="Force update even when no changes detected"),
+    ] = False,
+    tab: Annotated[
+        str | None,
+        typer.Option("--tab", help="Update a specific tab by ID (update mode only)"),
+    ] = None,
+    title: Annotated[
+        str | None,
+        typer.Option("--title", help="Document title (create mode only; defaults to file/directory name)"),
+    ] = None,
 ) -> None:
-    """Upload Markdown to a Google Doc."""
-    document_url = _resolve_document_url(document_url)
-    typer.echo("Uploading Markdown to a Google Doc...")
-    raise NotImplementedError("This command is not implemented yet")
+    """Upload Markdown to a Google Doc (create new or update existing)."""
+    from google_docs_markdown.uploader import Uploader
+
+    uploader = Uploader()
+
+    if create:
+        _handle_create(uploader, local_path=local_path, title=title)
+    else:
+        document_url = _resolve_document_url(document_url)
+        _handle_update(
+            uploader,
+            document_url=document_url,
+            local_path=local_path,
+            overwrite=overwrite,
+            tab_id=tab,
+        )
+
+
+def _handle_create(
+    uploader: Uploader,
+    *,
+    local_path: str | None,
+    title: str | None,
+) -> None:
+    """Handle the ``--create`` flow."""
+
+    if local_path is None:
+        local_path = typer.prompt("Local markdown file or directory path")
+
+    path = Path(local_path)
+    if not path.exists():
+        typer.echo(f"Error: {path} does not exist", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        if path.is_dir():
+            doc_id = uploader.create_from_directory(path, document_title=title)
+        else:
+            doc_title = title or path.stem
+            markdown_text = path.read_text(encoding="utf-8")
+            doc_id = uploader.create_from_markdown(doc_title, markdown_text)
+    except Exception as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
+
+    url = f"https://docs.google.com/document/d/{doc_id}/edit"
+    typer.echo(f"Created document: {url}")
+
+
+def _handle_update(
+    uploader: Uploader,
+    *,
+    document_url: str,
+    local_path: str | None,
+    overwrite: bool,
+    tab_id: str | None,
+) -> None:
+    """Handle the update (default) flow."""
+
+    if local_path is None:
+        local_path = typer.prompt("Local markdown file or directory path")
+
+    path = Path(local_path)
+    if not path.exists():
+        typer.echo(f"Error: {path} does not exist", err=True)
+        raise typer.Exit(code=1)
+
+    try:
+        if path.is_dir():
+            results = uploader.update_from_directory(document_url, path)
+            changed = sum(1 for v in results.values() if v)
+            total = len(results)
+            for tab_path, was_changed in results.items():
+                status = "updated" if was_changed else "no changes"
+                typer.echo(f"  {tab_path}: {status}")
+            typer.echo(f"Updated {changed}/{total} tab(s).")
+        else:
+            markdown_text = path.read_text(encoding="utf-8")
+            changed = uploader.update_document(
+                document_url,
+                markdown_text,
+                tab_id=tab_id,
+            )
+            if changed:
+                typer.echo("Document updated successfully.")
+            elif overwrite:
+                changed = uploader.update_document(
+                    document_url,
+                    markdown_text,
+                    tab_id=tab_id,
+                )
+                typer.echo("Document force-updated (overwrite).")
+            else:
+                typer.echo("No changes detected.")
+    except Exception as exc:
+        typer.echo(f"Error: {exc}", err=True)
+        raise typer.Exit(code=1) from exc
 
 
 @app.command()

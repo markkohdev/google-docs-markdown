@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import Mock
 
 import pytest
 
@@ -143,11 +142,7 @@ class TestCreateFromDirectory:
 
         client = _mock_client()
         client.batch_update.return_value = [
-            Response(
-                addDocumentTab=AddDocumentTabResponse(
-                    tabProperties=TabProperties(tabId="t.new", title="Beta")
-                )
-            )
+            Response(addDocumentTab=AddDocumentTabResponse(tabProperties=TabProperties(tabId="t.new", title="Beta")))
         ]
         uploader = Uploader(client=client)
 
@@ -233,11 +228,7 @@ class TestCreateFromDirectory:
 
         client = _mock_client()
         client.batch_update.return_value = [
-            Response(
-                addDocumentTab=AddDocumentTabResponse(
-                    tabProperties=TabProperties(tabId="t.x")
-                )
-            )
+            Response(addDocumentTab=AddDocumentTabResponse(tabProperties=TabProperties(tabId="t.x")))
         ]
         uploader = Uploader(client=client)
 
@@ -253,9 +244,7 @@ class TestCreateFromDirectory:
 
 class TestGetFirstTabId:
     def test_returns_tab_id(self) -> None:
-        doc = Document(
-            tabs=[Tab(tabProperties=TabProperties(tabId="t.123"))]
-        )
+        doc = Document(tabs=[Tab(tabProperties=TabProperties(tabId="t.123"))])
         assert _get_first_tab_id(doc) == "t.123"
 
     def test_no_tabs_returns_empty(self) -> None:
@@ -402,8 +391,9 @@ class TestUpdateDocument:
         from google_docs_markdown.markdown_serializer import MarkdownSerializer
 
         serializer = MarkdownSerializer()
+        assert doc.tabs is not None
         canonical = serializer.serialize(
-            doc.tabs[0].documentTab,  # type: ignore[union-attr,arg-type]
+            doc.tabs[0].documentTab,  # type: ignore[arg-type]
             document_id="doc-123",
             tab_id="t.0",
         )
@@ -458,6 +448,7 @@ class TestUpdateDocument:
 class TestUpdateFromDirectory:
     def test_matching_tabs_updated(self, tmp_path: Path) -> None:
         doc = _doc_with_content("Hello\n", tab_id="t.0")
+        assert doc.tabs is not None
         doc.tabs[0].tabProperties.title = "Main"  # type: ignore[union-attr]
 
         md_dir = tmp_path / "doc"
@@ -480,6 +471,7 @@ class TestUpdateFromDirectory:
 
     def test_unmatched_tab_returns_false(self, tmp_path: Path) -> None:
         doc = _doc_with_content("Hello\n", tab_id="t.0")
+        assert doc.tabs is not None
         doc.tabs[0].tabProperties.title = "Main"  # type: ignore[union-attr]
 
         md_dir = tmp_path / "doc"

@@ -26,9 +26,8 @@ Pipeline
 from __future__ import annotations
 
 import difflib
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
 
 from google_docs_markdown.markdown_deserializer import MarkdownDeserializer
 from google_docs_markdown.metadata import strip_metadata
@@ -38,7 +37,7 @@ from google_docs_markdown.models.requests import (
     InsertTextRequest,
     Request,
 )
-from google_docs_markdown.source_map import SourceMap, SourceSpan, SpanKind
+from google_docs_markdown.source_map import SourceMap
 
 
 class DiffOpKind(StrEnum):
@@ -208,7 +207,11 @@ class DiffEngine:
         for op in ops:
             if op.kind == DiffOpKind.DELETE:
                 md_start = line_offsets_canonical[op.canonical_start]
-                md_end = line_offsets_canonical[op.canonical_end] if op.canonical_end < len(line_offsets_canonical) else len(canonical_clean)
+                md_end = (
+                    line_offsets_canonical[op.canonical_end]
+                    if op.canonical_end < len(line_offsets_canonical)
+                    else len(canonical_clean)
+                )
                 api_start = source_map.lookup(md_start)
                 api_end = source_map.lookup(md_end - 1)
                 if api_start is None or api_end is None:
@@ -228,7 +231,11 @@ class DiffEngine:
                 )
 
             elif op.kind == DiffOpKind.INSERT:
-                md_pos = line_offsets_canonical[op.canonical_start] if op.canonical_start < len(line_offsets_canonical) else len(canonical_clean)
+                md_pos = (
+                    line_offsets_canonical[op.canonical_start]
+                    if op.canonical_start < len(line_offsets_canonical)
+                    else len(canonical_clean)
+                )
                 api_pos = source_map.lookup(md_pos)
                 if api_pos is None and md_pos > 0:
                     api_pos = source_map.lookup(md_pos - 1)
@@ -238,14 +245,21 @@ class DiffEngine:
                     mapping_failed = True
                     break
                 insert_req, style_reqs = self._make_insert_requests(
-                    op.local_text, api_pos, tab_id=tab_id, segment_id=segment_id,
+                    op.local_text,
+                    api_pos,
+                    tab_id=tab_id,
+                    segment_id=segment_id,
                 )
                 insertions.append(insert_req)
                 style_requests.extend(style_reqs)
 
             elif op.kind == DiffOpKind.REPLACE:
                 md_start = line_offsets_canonical[op.canonical_start]
-                md_end = line_offsets_canonical[op.canonical_end] if op.canonical_end < len(line_offsets_canonical) else len(canonical_clean)
+                md_end = (
+                    line_offsets_canonical[op.canonical_end]
+                    if op.canonical_end < len(line_offsets_canonical)
+                    else len(canonical_clean)
+                )
                 api_start = source_map.lookup(md_start)
                 api_end = source_map.lookup(md_end - 1)
                 if api_start is None or api_end is None:
@@ -264,7 +278,10 @@ class DiffEngine:
                     )
                 )
                 insert_req, style_reqs = self._make_insert_requests(
-                    op.local_text, api_start, tab_id=tab_id, segment_id=segment_id,
+                    op.local_text,
+                    api_start,
+                    tab_id=tab_id,
+                    segment_id=segment_id,
                 )
                 insertions.append(insert_req)
                 style_requests.extend(style_reqs)
@@ -273,7 +290,13 @@ class DiffEngine:
             return None
 
         deletions.sort(
-            key=lambda r: -(r.deleteContentRange.range.startIndex if r.deleteContentRange and r.deleteContentRange.range and r.deleteContentRange.range.startIndex else 0)
+            key=lambda r: (
+                -(
+                    r.deleteContentRange.range.startIndex
+                    if r.deleteContentRange and r.deleteContentRange.range and r.deleteContentRange.range.startIndex
+                    else 0
+                )
+            )
         )
 
         return deletions + insertions + style_requests
@@ -311,7 +334,9 @@ class DiffEngine:
 
         local_clean = strip_metadata(local)
         insert_requests = self._deserializer.deserialize(
-            local_clean, tab_id=tab_id, segment_id=segment_id,
+            local_clean,
+            tab_id=tab_id,
+            segment_id=segment_id,
         )
         requests.extend(insert_requests)
 

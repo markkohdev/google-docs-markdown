@@ -19,11 +19,6 @@ from google_docs_markdown.downloader import FileConflictError, TabSummary
 class TestCLICommands:
     """Test that CLI commands exist and are callable."""
 
-    def test_upload_command_exists(self) -> None:
-        """Test that upload command exists and raises NotImplementedError."""
-        with raises(NotImplementedError, match="This command is not implemented yet"):
-            cli.upload(document_url="test-doc-id")
-
     def test_diff_command_exists(self) -> None:
         """Test that diff command exists and raises NotImplementedError."""
         with raises(NotImplementedError, match="This command is not implemented yet"):
@@ -269,6 +264,156 @@ class TestMain:
         """Test that main() calls the typer app."""
         cli.main()
         mock_app.assert_called_once()
+
+
+class TestUploadCommand:
+    """Test the upload command wiring."""
+
+    @patch("google_docs_markdown.uploader.Uploader")
+    def test_upload_create_from_file(self, mock_ul_cls: Mock, tmp_path: Path) -> None:
+        md_file = tmp_path / "test.md"
+        md_file.write_text("# Hello\n", encoding="utf-8")
+
+        mock_ul = mock_ul_cls.return_value
+        mock_ul.create_from_markdown.return_value = "new-doc-id"
+
+        cli.upload(
+            document_url=None,
+            local_path=str(md_file),
+            create=True,
+        )
+
+        mock_ul.create_from_markdown.assert_called_once_with("test", "# Hello\n")
+
+    @patch("google_docs_markdown.uploader.Uploader")
+    def test_upload_create_from_directory(self, mock_ul_cls: Mock, tmp_path: Path) -> None:
+        md_dir = tmp_path / "My Doc"
+        md_dir.mkdir()
+        (md_dir / "Tab.md").write_text("text\n", encoding="utf-8")
+
+        mock_ul = mock_ul_cls.return_value
+        mock_ul.create_from_directory.return_value = "new-doc-id"
+
+        cli.upload(
+            document_url=None,
+            local_path=str(md_dir),
+            create=True,
+        )
+
+        mock_ul.create_from_directory.assert_called_once()
+
+    @patch("google_docs_markdown.uploader.Uploader")
+    def test_upload_create_with_title(self, mock_ul_cls: Mock, tmp_path: Path) -> None:
+        md_file = tmp_path / "data.md"
+        md_file.write_text("content\n", encoding="utf-8")
+
+        mock_ul = mock_ul_cls.return_value
+        mock_ul.create_from_markdown.return_value = "new-doc-id"
+
+        cli.upload(
+            document_url=None,
+            local_path=str(md_file),
+            create=True,
+            title="Custom Title",
+        )
+
+        mock_ul.create_from_markdown.assert_called_once_with("Custom Title", "content\n")
+
+    @patch("google_docs_markdown.uploader.Uploader")
+    def test_upload_update_file(self, mock_ul_cls: Mock, tmp_path: Path) -> None:
+        md_file = tmp_path / "doc.md"
+        md_file.write_text("updated\n", encoding="utf-8")
+
+        mock_ul = mock_ul_cls.return_value
+        mock_ul.update_document.return_value = True
+
+        cli.upload(
+            document_url="doc-id-1234567890",
+            local_path=str(md_file),
+        )
+
+        mock_ul.update_document.assert_called_once_with(
+            "doc-id-1234567890",
+            "updated\n",
+            tab_id=None,
+        )
+
+    @patch("google_docs_markdown.uploader.Uploader")
+    def test_upload_update_directory(self, mock_ul_cls: Mock, tmp_path: Path) -> None:
+        md_dir = tmp_path / "Doc"
+        md_dir.mkdir()
+        (md_dir / "Tab.md").write_text("text\n", encoding="utf-8")
+
+        mock_ul = mock_ul_cls.return_value
+        mock_ul.update_from_directory.return_value = {"Tab": True}
+
+        cli.upload(
+            document_url="doc-id-1234567890",
+            local_path=str(md_dir),
+        )
+
+        mock_ul.update_from_directory.assert_called_once_with("doc-id-1234567890", Path(str(md_dir)))
+
+    @patch("google_docs_markdown.uploader.Uploader")
+    def test_upload_update_with_tab_id(self, mock_ul_cls: Mock, tmp_path: Path) -> None:
+        md_file = tmp_path / "doc.md"
+        md_file.write_text("changed\n", encoding="utf-8")
+
+        mock_ul = mock_ul_cls.return_value
+        mock_ul.update_document.return_value = True
+
+        cli.upload(
+            document_url="doc-id-1234567890",
+            local_path=str(md_file),
+            tab="t.42",
+        )
+
+        mock_ul.update_document.assert_called_once_with(
+            "doc-id-1234567890",
+            "changed\n",
+            tab_id="t.42",
+        )
+
+    @patch("google_docs_markdown.uploader.Uploader")
+    def test_upload_no_changes_detected(self, mock_ul_cls: Mock, tmp_path: Path) -> None:
+        md_file = tmp_path / "doc.md"
+        md_file.write_text("same\n", encoding="utf-8")
+
+        mock_ul = mock_ul_cls.return_value
+        mock_ul.update_document.return_value = False
+
+        cli.upload(
+            document_url="doc-id-1234567890",
+            local_path=str(md_file),
+        )
+
+        mock_ul.update_document.assert_called_once()
+
+    def test_upload_create_nonexistent_path(self) -> None:
+        import click
+
+        with raises((SystemExit, click.exceptions.Exit)):
+            cli.upload(
+                document_url=None,
+                local_path="/nonexistent/file.md",
+                create=True,
+            )
+
+    @patch("google_docs_markdown.uploader.Uploader")
+    def test_upload_update_error_handling(self, mock_ul_cls: Mock, tmp_path: Path) -> None:
+        import click
+
+        md_file = tmp_path / "doc.md"
+        md_file.write_text("text\n", encoding="utf-8")
+
+        mock_ul = mock_ul_cls.return_value
+        mock_ul.update_document.side_effect = RuntimeError("API error")
+
+        with raises((SystemExit, click.exceptions.Exit)):
+            cli.upload(
+                document_url="doc-id-1234567890",
+                local_path=str(md_file),
+            )
 
 
 class TestAppConfiguration:

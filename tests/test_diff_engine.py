@@ -3,8 +3,7 @@
 from __future__ import annotations
 
 from google_docs_markdown.diff_engine import DiffEngine, DiffOp, DiffOpKind, _line_offsets
-from google_docs_markdown.models.requests import Request
-from google_docs_markdown.source_map import SourceMap, SourceMapBuilder, SourceSpan, SpanKind
+from google_docs_markdown.source_map import SourceMap, SourceMapBuilder, SpanKind
 
 
 def _simple_source_map(text: str, *, api_offset: int = 1) -> SourceMap:
@@ -143,7 +142,9 @@ class TestComputeRequests:
             indices = [
                 r.deleteContentRange.range.startIndex
                 for r in delete_reqs
-                if r.deleteContentRange and r.deleteContentRange.range and r.deleteContentRange.range.startIndex is not None
+                if r.deleteContentRange
+                and r.deleteContentRange.range
+                and r.deleteContentRange.range.startIndex is not None
             ]
             assert indices == sorted(indices, reverse=True)
 
@@ -152,9 +153,7 @@ class TestComputeRequests:
         sm = _simple_source_map(text)
 
         engine = DiffEngine()
-        requests = engine.compute_requests(
-            text, "Hello\nWorld\n", sm, tab_id="t.42"
-        )
+        requests = engine.compute_requests(text, "Hello\nWorld\n", sm, tab_id="t.42")
 
         for r in requests:
             if r.insertText and r.insertText.location:
@@ -165,9 +164,7 @@ class TestComputeRequests:
         sm = _simple_source_map(text)
 
         engine = DiffEngine()
-        requests = engine.compute_requests(
-            text, "Hello\nWorld\n", sm, segment_id="header.1"
-        )
+        requests = engine.compute_requests(text, "Hello\nWorld\n", sm, segment_id="header.1")
 
         for r in requests:
             if r.insertText and r.insertText.location:
