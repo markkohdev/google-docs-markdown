@@ -8,7 +8,12 @@ from google_docs_markdown.block_grouper import group_elements
 from google_docs_markdown.comment_tags import TagType, closing_tag, opening_tag
 from google_docs_markdown.handlers.base import TagElementHandler
 from google_docs_markdown.handlers.context import DeserContext, SerContext
-from google_docs_markdown.models.common import Footer, Header
+from google_docs_markdown.models.common import Footer, Header, Location
+from google_docs_markdown.models.requests import (
+    CreateFooterRequest,
+    CreateHeaderRequest,
+    Request,
+)
 
 
 class HeaderHandler(TagElementHandler):
@@ -43,7 +48,21 @@ class HeaderHandler(TagElementHandler):
         return result
 
     def deserialize(self, token: Any, ctx: DeserContext) -> list[Any]:
-        return []
+        # Emit a CreateHeaderRequest targeting the leading section break (index 0).
+        # Inserting content into the header requires a two-pass approach: the
+        # header ID is only known after the API responds to this request, so
+        # content InsertTextRequests must be issued in a subsequent batch.
+        req = Request(
+            createHeader=CreateHeaderRequest(
+                type="DEFAULT",
+                sectionBreakLocation=Location(
+                    index=0,
+                    segmentId=ctx.segment_id or None,
+                    tabId=ctx.tab_id or None,
+                ),
+            )
+        )
+        return [req]
 
 
 class FooterHandler(TagElementHandler):
@@ -78,4 +97,17 @@ class FooterHandler(TagElementHandler):
         return result
 
     def deserialize(self, token: Any, ctx: DeserContext) -> list[Any]:
-        return []
+        # Emit a CreateFooterRequest targeting the leading section break (index 0).
+        # Same two-pass caveat as HeaderHandler: content insertion requires
+        # the footer ID returned by the API response.
+        req = Request(
+            createFooter=CreateFooterRequest(
+                type="DEFAULT",
+                sectionBreakLocation=Location(
+                    index=0,
+                    segmentId=ctx.segment_id or None,
+                    tabId=ctx.tab_id or None,
+                ),
+            )
+        )
+        return [req]

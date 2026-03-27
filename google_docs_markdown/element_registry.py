@@ -47,6 +47,7 @@ ORDERED_GLYPH_TYPES = frozenset({"DECIMAL", "ZERO_DECIMAL", "UPPER_ALPHA", "ALPH
 
 CODE_BLOCK_MARKER = "\ue907"
 MONOSPACE_FONT = "Roboto Mono"
+MONOSPACE_FONTS = frozenset({"Roboto Mono", "Courier New", "Consolas", "Source Code Pro"})
 INLINE_CODE_COLOR = "#188037"
 
 # ---------------------------------------------------------------------------

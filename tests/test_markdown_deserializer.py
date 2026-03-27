@@ -206,6 +206,63 @@ class TestDeserializerTable:
         assert "D" in texts
 
 
+class TestDeserializerTableFormatting:
+    def test_bold_headers_emit_bold_style_requests(self) -> None:
+        md = "| **A** | **B** |\n| --- | --- |\n| C | D |\n"
+        requests = deserialize(md)
+
+        bold_reqs = [
+            r
+            for r in _find_all_requests(requests, "updateTextStyle")
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.bold is True
+        ]
+        assert len(bold_reqs) == 2
+
+        cell_inserts = _find_all_requests(requests, "insertText")
+        texts = [r.insertText.text for r in cell_inserts if r.insertText and r.insertText.text]
+        assert "A" in texts
+        assert "B" in texts
+        for t in texts:
+            assert "**" not in t
+
+    def test_non_bold_headers_no_bold_style(self) -> None:
+        md = "| A | B |\n| --- | --- |\n| C | D |\n"
+        requests = deserialize(md)
+
+        bold_reqs = [
+            r
+            for r in _find_all_requests(requests, "updateTextStyle")
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.bold is True
+        ]
+        assert len(bold_reqs) == 0
+
+    def test_table_emits_pin_header_rows_request(self) -> None:
+        md = "| A | B |\n| --- | --- |\n| C | D |\n"
+        requests = deserialize(md)
+
+        pin_req = _find_request(requests, "pinTableHeaderRows")
+        assert pin_req is not None
+        assert pin_req.pinTableHeaderRows is not None
+        assert pin_req.pinTableHeaderRows.pinnedHeaderRowsCount == 1
+        assert pin_req.pinTableHeaderRows.tableStartLocation is not None
+
+    def test_bold_header_pin_combined(self) -> None:
+        md = "| **H1** | **H2** |\n| --- | --- |\n| D1 | D2 |\n"
+        requests = deserialize(md)
+
+        pin_req = _find_request(requests, "pinTableHeaderRows")
+        assert pin_req is not None
+        assert pin_req.pinTableHeaderRows is not None
+        assert pin_req.pinTableHeaderRows.pinnedHeaderRowsCount == 1
+
+        bold_reqs = [
+            r
+            for r in _find_all_requests(requests, "updateTextStyle")
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.bold is True
+        ]
+        assert len(bold_reqs) == 2
+
+
 class TestDeserializerCommentTags:
     def test_person_tag(self) -> None:
         md = '<!-- person: {"email": "alice@example.com"} -->Alice<!-- /person -->\n'
@@ -524,6 +581,433 @@ class TestDeserializerFormattingWithTags:
             if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.bold is False
         ]
         assert len(bold_false) >= 1, "Unformatted text after bold should get explicit clear"
+
+
+class TestTitleSubtitleDeserialization:
+    """Verify <!-- title --> and <!-- subtitle --> markers produce correct named styles."""
+
+    def test_title_marker_produces_title_style(self) -> None:
+        md = "<!-- title -->\n# My Title\n"
+        requests = deserialize(md)
+        style_req = _find_request(requests, "updateParagraphStyle")
+        assert style_req is not None
+        assert style_req.updateParagraphStyle is not None
+        assert style_req.updateParagraphStyle.paragraphStyle is not None
+        assert style_req.updateParagraphStyle.paragraphStyle.namedStyleType == "TITLE"
+
+    def test_subtitle_marker_produces_subtitle_style(self) -> None:
+        md = "<!-- subtitle -->\n*My Subtitle*\n"
+        requests = deserialize(md)
+        style_req = _find_request(requests, "updateParagraphStyle")
+        assert style_req is not None
+        assert style_req.updateParagraphStyle is not None
+        assert style_req.updateParagraphStyle.paragraphStyle is not None
+        assert style_req.updateParagraphStyle.paragraphStyle.namedStyleType == "SUBTITLE"
+
+    def test_heading_without_title_marker_stays_heading(self) -> None:
+        md = "# Normal Heading\n"
+        requests = deserialize(md)
+        style_req = _find_request(requests, "updateParagraphStyle")
+        assert style_req is not None
+        assert style_req.updateParagraphStyle is not None
+        assert style_req.updateParagraphStyle.paragraphStyle is not None
+        assert style_req.updateParagraphStyle.paragraphStyle.namedStyleType == "HEADING_1"
+
+
+class TestBoldItalicWithTags:
+    """Verify bold/italic formatting works alongside comment tags."""
+
+    def test_bold_italic_with_style_tag(self) -> None:
+        """Bold and italic formatting must survive when mixed with style tags."""
+        md = (
+            "This text **should be bold**. This text *should be italic*. "
+            '<!-- style: {"color": "#E06666"} -->colored<!-- /style -->\n'
+        )
+        requests = deserialize(md)
+
+        style_reqs = _find_all_requests(requests, "updateTextStyle")
+        bold_on = [
+            r
+            for r in style_reqs
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.bold is True
+        ]
+        italic_on = [
+            r
+            for r in style_reqs
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.italic is True
+        ]
+        assert len(bold_on) >= 1, "Bold should be applied"
+        assert len(italic_on) >= 1, "Italic should be applied"
+
+    def test_all_text_content_present(self) -> None:
+        """All text content must be emitted in insertText requests."""
+        md = "**bold** normal *italic*\n"
+        requests = deserialize(md)
+
+        text_reqs = _find_all_requests(requests, "insertText")
+        all_text = "".join(r.insertText.text for r in text_reqs if r.insertText and r.insertText.text)
+        assert "bold" in all_text
+        assert "normal" in all_text
+        assert "italic" in all_text
+
+
+class TestDeserializerImageProps:
+    """Image deserialization with image-props comment tag."""
+
+    def test_image_with_props_sets_object_size(self) -> None:
+        md = '![photo](https://example.com/img.png)<!-- image-props: {"width": 200.0, "height": 100.0} -->\n'
+        requests = deserialize(md)
+        img_req = _find_request(requests, "insertInlineImage")
+        assert img_req is not None
+        assert img_req.insertInlineImage is not None
+        assert img_req.insertInlineImage.uri == "https://example.com/img.png"
+        assert img_req.insertInlineImage.objectSize is not None
+        assert img_req.insertInlineImage.objectSize.width is not None
+        assert img_req.insertInlineImage.objectSize.width.magnitude == 200.0
+        assert img_req.insertInlineImage.objectSize.height is not None
+        assert img_req.insertInlineImage.objectSize.height.magnitude == 100.0
+
+    def test_image_without_props_no_object_size(self) -> None:
+        md = "![alt](https://example.com/img.png)\n"
+        requests = deserialize(md)
+        img_req = _find_request(requests, "insertInlineImage")
+        assert img_req is not None
+        assert img_req.insertInlineImage is not None
+        assert img_req.insertInlineImage.uri == "https://example.com/img.png"
+        assert img_req.insertInlineImage.objectSize is None
+
+    def test_image_props_with_only_width(self) -> None:
+        md = '![](https://example.com/x.png)<!-- image-props: {"width": 150.0} -->\n'
+        requests = deserialize(md)
+        img_req = _find_request(requests, "insertInlineImage")
+        assert img_req is not None
+        assert img_req.insertInlineImage is not None
+        assert img_req.insertInlineImage.objectSize is not None
+        assert img_req.insertInlineImage.objectSize.width is not None
+        assert img_req.insertInlineImage.objectSize.width.magnitude == 150.0
+        assert img_req.insertInlineImage.objectSize.height is None
+
+
+class TestHtmlBlockInterTagText:
+    """Regression tests for text between comment tags in html_block lines."""
+
+    def test_style_with_inline_code_between(self) -> None:
+        """Text + backtick code between style tags should all be emitted."""
+        md = (
+            '<!-- style: {"font-size": 12.0} -->bigger text<!-- /style -->'
+            '`code`<!-- style: {"font-size": 12.0} --> inline<!-- /style -->\n'
+        )
+        requests = deserialize(md)
+
+        text_reqs = _find_all_requests(requests, "insertText")
+        all_text = "".join(r.insertText.text for r in text_reqs if r.insertText and r.insertText.text)
+        assert "bigger text" in all_text
+        assert "code" in all_text
+        assert "inline" in all_text
+
+    def test_plain_text_between_tags_emitted(self) -> None:
+        """Plain text between two self-closing tags should not be dropped."""
+        md = "<!-- page-break -->some text<!-- page-break -->\n"
+        requests = deserialize(md)
+
+        text_reqs = _find_all_requests(requests, "insertText")
+        all_text = "".join(r.insertText.text for r in text_reqs if r.insertText and r.insertText.text)
+        assert "some text" in all_text
+
+    def test_pure_comment_tag_block(self) -> None:
+        """A pure comment tag html_block still works normally."""
+        md = "<!-- page-break -->\n"
+        requests = deserialize(md)
+        pb = _find_request(requests, "insertPageBreak")
+        assert pb is not None
+
+
+class TestDeserializerFootnotes:
+    """Footnote references emit CreateFootnoteRequest; definitions are stripped."""
+
+    def test_footnote_ref_emits_create_footnote(self) -> None:
+        md = "Hello[^1] world\n"
+        requests = deserialize(md)
+        fn = _find_request(requests, "createFootnote")
+        assert fn is not None
+        assert fn.createFootnote is not None
+        assert fn.createFootnote.location is not None
+
+    def test_footnote_ref_text_stripped(self) -> None:
+        """The literal ``[^1]`` text must not appear in any insertText request."""
+        md = "Hello[^1] world\n"
+        requests = deserialize(md)
+        inserts = _find_all_requests(requests, "insertText")
+        all_text = "".join(r.insertText.text for r in inserts if r.insertText and r.insertText.text)
+        assert "[^1]" not in all_text
+        assert "Hello" in all_text
+        assert "world" in all_text
+
+    def test_footnote_ref_location_index(self) -> None:
+        """CreateFootnoteRequest should point to the position after preceding text."""
+        md = "Hello[^1] world\n"
+        requests = deserialize(md)
+        fn = _find_request(requests, "createFootnote")
+        assert fn is not None
+        assert fn.createFootnote is not None
+        assert fn.createFootnote.location is not None
+        assert fn.createFootnote.location.index == 6  # after "Hello" (index 1 + 5)
+
+    def test_multiple_footnote_refs(self) -> None:
+        md = "A[^1] B[^2] C\n"
+        requests = deserialize(md)
+        fns = _find_all_requests(requests, "createFootnote")
+        assert len(fns) == 2
+
+    def test_footnote_definition_stripped(self) -> None:
+        """Footnote definitions like ``[^1]: text`` must not produce insertText."""
+        md = "Hello[^1] world\n\n[^1]: This is a footnote\n"
+        requests = deserialize(md)
+        inserts = _find_all_requests(requests, "insertText")
+        all_text = "".join(r.insertText.text for r in inserts if r.insertText and r.insertText.text)
+        assert "[^1]: This is a footnote" not in all_text
+
+    def test_footnote_ref_with_tab_id(self) -> None:
+        md = "Text[^1] here\n"
+        requests = deserialize(md, tab_id="t.1")
+        fn = _find_request(requests, "createFootnote")
+        assert fn is not None
+        assert fn.createFootnote is not None
+        assert fn.createFootnote.location is not None
+        assert fn.createFootnote.location.tabId == "t.1"
+
+
+class TestDeserializerHeaderFooter:
+    """Header and footer comment tag blocks produce create requests."""
+
+    def test_header_tag_produces_create_header(self) -> None:
+        md = '<!-- header: {"id": "kix.abc123"} -->\nHeader content here\n<!-- /header -->\n'
+        requests = deserialize(md)
+        header_req = _find_request(requests, "createHeader")
+        assert header_req is not None
+        assert header_req.createHeader is not None
+        assert header_req.createHeader.type == "DEFAULT"
+        assert header_req.createHeader.sectionBreakLocation is not None
+        assert header_req.createHeader.sectionBreakLocation.index == 0
+
+    def test_footer_tag_produces_create_footer(self) -> None:
+        md = '<!-- footer: {"id": "kix.def456"} -->\nFooter content here\n<!-- /footer -->\n'
+        requests = deserialize(md)
+        footer_req = _find_request(requests, "createFooter")
+        assert footer_req is not None
+        assert footer_req.createFooter is not None
+        assert footer_req.createFooter.type == "DEFAULT"
+        assert footer_req.createFooter.sectionBreakLocation is not None
+        assert footer_req.createFooter.sectionBreakLocation.index == 0
+
+    def test_header_tag_with_tab_id(self) -> None:
+        md = '<!-- header: {"id": "kix.h1"} -->\nContent\n<!-- /header -->\n'
+        requests = deserialize(md, tab_id="t.2")
+        header_req = _find_request(requests, "createHeader")
+        assert header_req is not None
+        assert header_req.createHeader is not None
+        assert header_req.createHeader.sectionBreakLocation is not None
+        assert header_req.createHeader.sectionBreakLocation.tabId == "t.2"
+
+    def test_footer_tag_with_tab_id(self) -> None:
+        md = '<!-- footer: {"id": "kix.f1"} -->\nContent\n<!-- /footer -->\n'
+        requests = deserialize(md, tab_id="t.3")
+        footer_req = _find_request(requests, "createFooter")
+        assert footer_req is not None
+        assert footer_req.createFooter is not None
+        assert footer_req.createFooter.sectionBreakLocation is not None
+        assert footer_req.createFooter.sectionBreakLocation.tabId == "t.3"
+
+
+# ---------------------------------------------------------------------------
+# Paragraph alignment deserialization tests (Feature 2)
+# ---------------------------------------------------------------------------
+
+
+class TestDeserializerAlignment:
+    def test_center_alignment(self) -> None:
+        md = '<!-- align: {"value": "center"} -->\nCentered text\n'
+        requests = deserialize(md)
+        insert = _find_request(requests, "insertText")
+        assert insert is not None
+        assert insert.insertText is not None
+        assert "Centered text" in (insert.insertText.text or "")
+
+        style_reqs = _find_all_requests(requests, "updateParagraphStyle")
+        align_req = None
+        for s in style_reqs:
+            ps = s.updateParagraphStyle
+            if ps and ps.paragraphStyle and ps.paragraphStyle.alignment == "CENTER":
+                align_req = s
+        assert align_req is not None
+        assert align_req.updateParagraphStyle is not None
+        assert align_req.updateParagraphStyle.fields == "alignment"
+
+    def test_right_alignment(self) -> None:
+        md = '<!-- align: {"value": "right"} -->\nRight aligned\n'
+        requests = deserialize(md)
+        style_reqs = _find_all_requests(requests, "updateParagraphStyle")
+        align_req = None
+        for s in style_reqs:
+            ps = s.updateParagraphStyle
+            if ps and ps.paragraphStyle and ps.paragraphStyle.alignment == "END":
+                align_req = s
+        assert align_req is not None
+
+    def test_justify_alignment(self) -> None:
+        md = '<!-- align: {"value": "justify"} -->\nJustified text\n'
+        requests = deserialize(md)
+        style_reqs = _find_all_requests(requests, "updateParagraphStyle")
+        align_req = None
+        for s in style_reqs:
+            ps = s.updateParagraphStyle
+            if ps and ps.paragraphStyle and ps.paragraphStyle.alignment == "JUSTIFIED":
+                align_req = s
+        assert align_req is not None
+
+    def test_no_alignment_tag_no_alignment_request(self) -> None:
+        md = "Normal paragraph\n"
+        requests = deserialize(md)
+        style_reqs = _find_all_requests(requests, "updateParagraphStyle")
+        for s in style_reqs:
+            ps = s.updateParagraphStyle
+            if ps and ps.paragraphStyle:
+                assert ps.paragraphStyle.alignment is None or ps.fields != "alignment"
+
+    def test_alignment_with_heading(self) -> None:
+        md = '<!-- align: {"value": "center"} -->\n# Centered Heading\n'
+        requests = deserialize(md)
+        style_reqs = _find_all_requests(requests, "updateParagraphStyle")
+        found_heading = False
+        found_alignment = False
+        for s in style_reqs:
+            ps = s.updateParagraphStyle
+            if ps and ps.paragraphStyle:
+                if ps.paragraphStyle.namedStyleType == "HEADING_1":
+                    found_heading = True
+                if ps.paragraphStyle.alignment == "CENTER":
+                    found_alignment = True
+        assert found_heading
+        assert found_alignment
+
+
+# ---------------------------------------------------------------------------
+# Superscript/subscript deserialization tests (Feature 3)
+# ---------------------------------------------------------------------------
+
+
+class TestDeserializerSuperSubscript:
+    def test_superscript(self) -> None:
+        md = "E=mc<sup>2</sup>\n"
+        requests = deserialize(md)
+        style_reqs = _find_all_requests(requests, "updateTextStyle")
+        sup_req = None
+        for s in style_reqs:
+            ts = s.updateTextStyle
+            if ts and ts.textStyle and ts.textStyle.baselineOffset == "SUPERSCRIPT":
+                sup_req = s
+        assert sup_req is not None
+        assert sup_req.updateTextStyle is not None
+        assert "baselineOffset" in (sup_req.updateTextStyle.fields or "")
+
+    def test_subscript(self) -> None:
+        md = "H<sub>2</sub>O\n"
+        requests = deserialize(md)
+        style_reqs = _find_all_requests(requests, "updateTextStyle")
+        sub_req = None
+        for s in style_reqs:
+            ts = s.updateTextStyle
+            if ts and ts.textStyle and ts.textStyle.baselineOffset == "SUBSCRIPT":
+                sub_req = s
+        assert sub_req is not None
+        assert sub_req.updateTextStyle is not None
+        assert "baselineOffset" in (sub_req.updateTextStyle.fields or "")
+
+    def test_superscript_text_content(self) -> None:
+        md = "x<sup>n</sup> value\n"
+        requests = deserialize(md)
+        inserts = _find_all_requests(requests, "insertText")
+        all_text = "".join(r.insertText.text for r in inserts if r.insertText and r.insertText.text)
+        assert "x" in all_text
+        assert "n" in all_text
+        assert "value" in all_text
+
+    def test_subscript_text_content(self) -> None:
+        md = "CO<sub>2</sub> emissions\n"
+        requests = deserialize(md)
+        inserts = _find_all_requests(requests, "insertText")
+        all_text = "".join(r.insertText.text for r in inserts if r.insertText and r.insertText.text)
+        assert "CO" in all_text
+        assert "2" in all_text
+        assert "emissions" in all_text
+
+    def test_no_baseline_offset_for_normal_text(self) -> None:
+        md = "Normal text\n"
+        requests = deserialize(md)
+        style_reqs = _find_all_requests(requests, "updateTextStyle")
+        for s in style_reqs:
+            ts = s.updateTextStyle
+            if ts and ts.textStyle:
+                assert ts.textStyle.baselineOffset is None
+
+
+# ---------------------------------------------------------------------------
+# Checklist deserialization tests (Feature 4)
+# ---------------------------------------------------------------------------
+
+
+class TestDeserializerChecklist:
+    def test_unchecked_checkbox(self) -> None:
+        md = "- [ ] Todo item\n"
+        requests = deserialize(md)
+        bullets = _find_all_requests(requests, "createParagraphBullets")
+        assert len(bullets) == 1
+        assert bullets[0].createParagraphBullets is not None
+        assert bullets[0].createParagraphBullets.bulletPreset == "BULLET_CHECKBOX"
+
+        inserts = _find_all_requests(requests, "insertText")
+        all_text = "".join(r.insertText.text for r in inserts if r.insertText and r.insertText.text)
+        assert "Todo item" in all_text
+        assert "[ ]" not in all_text
+
+    def test_checked_checkbox(self) -> None:
+        md = "- [x] Done item\n"
+        requests = deserialize(md)
+        bullets = _find_all_requests(requests, "createParagraphBullets")
+        assert len(bullets) == 1
+        assert bullets[0].createParagraphBullets is not None
+        assert bullets[0].createParagraphBullets.bulletPreset == "BULLET_CHECKBOX"
+
+        inserts = _find_all_requests(requests, "insertText")
+        all_text = "".join(r.insertText.text for r in inserts if r.insertText and r.insertText.text)
+        assert "Done item" in all_text
+        assert "[x]" not in all_text
+
+    def test_mixed_checkbox_and_regular(self) -> None:
+        md = "- [ ] Task one\n- Regular item\n"
+        requests = deserialize(md)
+        bullets = _find_all_requests(requests, "createParagraphBullets")
+        assert len(bullets) == 2
+        presets = [b.createParagraphBullets.bulletPreset for b in bullets if b.createParagraphBullets]
+        assert "BULLET_CHECKBOX" in presets
+        assert "BULLET_DISC_CIRCLE_SQUARE" in presets
+
+    def test_regular_bullet_unchanged(self) -> None:
+        md = "- Regular bullet\n"
+        requests = deserialize(md)
+        bullets = _find_all_requests(requests, "createParagraphBullets")
+        assert len(bullets) == 1
+        assert bullets[0].createParagraphBullets is not None
+        assert bullets[0].createParagraphBullets.bulletPreset == "BULLET_DISC_CIRCLE_SQUARE"
+
+    def test_multiple_checkboxes(self) -> None:
+        md = "- [ ] First\n- [x] Second\n- [ ] Third\n"
+        requests = deserialize(md)
+        bullets = _find_all_requests(requests, "createParagraphBullets")
+        assert len(bullets) == 3
+        for b in bullets:
+            assert b.createParagraphBullets is not None
+            assert b.createParagraphBullets.bulletPreset == "BULLET_CHECKBOX"
 
 
 # ------------------------------------------------------------------

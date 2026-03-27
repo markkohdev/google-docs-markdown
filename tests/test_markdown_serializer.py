@@ -1200,6 +1200,92 @@ class TestSerializerImages:
         result = serializer.serialize(doc)
         assert "![" not in result
 
+    def test_image_with_properties_emits_tag(self, serializer: MarkdownSerializer) -> None:
+        """Image with non-default size/crop/margins serializes an image-props comment tag."""
+        from google_docs_markdown.models.elements import InlineObjectElement
+
+        embedded_obj: dict[str, Any] = {
+            "imageProperties": {
+                "contentUri": "https://example.com/img.png",
+                "cropProperties": {"offsetRight": 0.705},
+            },
+            "size": {"width": {"magnitude": 200.0, "unit": "PT"}, "height": {"magnitude": 100.0, "unit": "PT"}},
+            "marginTop": {"magnitude": 18.0, "unit": "PT"},
+            "marginBottom": {"magnitude": 9.0, "unit": "PT"},
+            "marginLeft": {"magnitude": 9.0, "unit": "PT"},
+            "marginRight": {"magnitude": 9.0, "unit": "PT"},
+        }
+        inline_objects = {
+            "kix.img1": {
+                "objectId": "kix.img1",
+                "inlineObjectProperties": {"embeddedObject": embedded_obj},
+            }
+        }
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(
+                                    inlineObjectElement=InlineObjectElement(inlineObjectId="kix.img1"),
+                                ),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            ),
+            inlineObjects=inline_objects,
+        )
+        result = serializer.serialize(doc)
+        assert "![](https://example.com/img.png)" in result
+        assert "<!-- image-props:" in result
+        assert '"width": 200.0' in result
+        assert '"height": 100.0' in result
+        assert '"offsetRight": 0.705' in result
+        assert '"marginTop": 18.0' in result
+
+    def test_image_default_properties_no_tag(self, serializer: MarkdownSerializer) -> None:
+        """Image with only default margins and no cropping should NOT emit the tag."""
+        from google_docs_markdown.models.elements import InlineObjectElement
+
+        embedded_obj: dict[str, Any] = {
+            "imageProperties": {"contentUri": "https://example.com/img.png"},
+            "marginTop": {"magnitude": 9.0, "unit": "PT"},
+            "marginBottom": {"magnitude": 9.0, "unit": "PT"},
+            "marginLeft": {"magnitude": 9.0, "unit": "PT"},
+            "marginRight": {"magnitude": 9.0, "unit": "PT"},
+        }
+        inline_objects = {
+            "kix.img1": {
+                "objectId": "kix.img1",
+                "inlineObjectProperties": {"embeddedObject": embedded_obj},
+            }
+        }
+        doc = DocumentTab(
+            body=Body(
+                content=[
+                    StructuralElement(
+                        paragraph=Paragraph(
+                            elements=[
+                                ParagraphElement(
+                                    inlineObjectElement=InlineObjectElement(inlineObjectId="kix.img1"),
+                                ),
+                                ParagraphElement(textRun=TextRun(content="\n")),
+                            ],
+                            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                        )
+                    )
+                ]
+            ),
+            inlineObjects=inline_objects,
+        )
+        result = serializer.serialize(doc)
+        assert "![](https://example.com/img.png)" in result
+        assert "<!-- image-props:" not in result
+
     def test_fixture_single_tab_image(self, serializer: MarkdownSerializer) -> None:
         """Verify real fixture produces an image reference."""
         doc = _load_document(SINGLE_TAB_JSON)
@@ -1542,3 +1628,118 @@ class TestSerializerReuse:
         doc2 = _make_doc_tab([("World", "NORMAL_TEXT")])
         result2 = serializer.serialize(doc2)
         assert "Courier New" not in result2
+
+
+# ---------------------------------------------------------------------------
+# Paragraph alignment serialization tests (Feature 2)
+# ---------------------------------------------------------------------------
+
+
+class TestSerializerAlignment:
+    def test_center_alignment(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[ParagraphElement(textRun=TextRun(content="Centered text\n"))],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT", alignment="CENTER"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert '<!-- align: {"value": "center"} -->' in result
+        assert "Centered text" in result
+
+    def test_end_alignment(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[ParagraphElement(textRun=TextRun(content="Right aligned\n"))],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT", alignment="END"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert '<!-- align: {"value": "right"} -->' in result
+
+    def test_justified_alignment(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[ParagraphElement(textRun=TextRun(content="Justified text\n"))],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT", alignment="JUSTIFIED"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert '<!-- align: {"value": "justify"} -->' in result
+
+    def test_start_alignment_no_tag(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[ParagraphElement(textRun=TextRun(content="Normal text\n"))],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT", alignment="START"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert "<!-- align:" not in result
+
+    def test_no_alignment_no_tag(self, serializer: MarkdownSerializer) -> None:
+        doc_tab = _make_doc_tab([("Plain text", "NORMAL_TEXT")])
+        result = serializer.serialize(doc_tab)
+        assert "<!-- align:" not in result
+
+
+# ---------------------------------------------------------------------------
+# Superscript/subscript serialization tests (Feature 3)
+# ---------------------------------------------------------------------------
+
+
+class TestSerializerSuperSubscript:
+    def test_superscript(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="E=mc")),
+                ParagraphElement(textRun=TextRun(content="2", textStyle=TextStyle(baselineOffset="SUPERSCRIPT"))),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert "<sup>2</sup>" in result
+        assert "E=mc" in result
+
+    def test_subscript(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="H")),
+                ParagraphElement(textRun=TextRun(content="2", textStyle=TextStyle(baselineOffset="SUBSCRIPT"))),
+                ParagraphElement(textRun=TextRun(content="O\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert "<sub>2</sub>" in result
+        assert "H" in result
+        assert "O" in result
+
+    def test_no_baseline_offset_no_tag(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="Normal\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert "<sup>" not in result
+        assert "<sub>" not in result
+
+    def test_superscript_with_bold(self, serializer: MarkdownSerializer) -> None:
+        para = Paragraph(
+            elements=[
+                ParagraphElement(textRun=TextRun(content="x")),
+                ParagraphElement(
+                    textRun=TextRun(
+                        content="n",
+                        textStyle=TextStyle(bold=True, baselineOffset="SUPERSCRIPT"),
+                    )
+                ),
+                ParagraphElement(textRun=TextRun(content="\n")),
+            ],
+            paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+        )
+        doc_tab = DocumentTab(body=Body(content=[StructuralElement(paragraph=para)]))
+        result = serializer.serialize(doc_tab)
+        assert "<sup>**n**</sup>" in result

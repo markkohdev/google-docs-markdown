@@ -98,6 +98,7 @@ class TextRunHandler(ElementHandler):
         strikethrough = style and style.strikethrough
         link = style and style.link
         underline = style and style.underline and not link
+        baseline_offset = style.baselineOffset if style else None
 
         has_formatting = bold or italic or strikethrough or underline
         if has_formatting and not has_chip:
@@ -125,6 +126,15 @@ class TextRunHandler(ElementHandler):
 
         if link and link.url:
             content = _apply_link(content, link.url)
+
+        if baseline_offset == "SUPERSCRIPT":
+            leading, inner, trailing = _split_whitespace(content)
+            if inner:
+                content = f"{leading}<sup>{inner}</sup>{trailing}"
+        elif baseline_offset == "SUBSCRIPT":
+            leading, inner, trailing = _split_whitespace(content)
+            if inner:
+                content = f"{leading}<sub>{inner}</sub>{trailing}"
 
         style_props = StyleHandler.extract_non_default_style(style, ctx)
 

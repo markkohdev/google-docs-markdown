@@ -1,8 +1,8 @@
 # Google Docs Markdown - Development Plan
 
 **Created:** 2026-01-08  
-**Last Updated:** 2026-03-27 (Phase 3 complete — upload, diff engine, CLI wired)  
-**Status:** Phase 1 — **complete**; **Phase 2 — complete**; **Phase 3 — complete** (uploader, diff engine, CLI upload command, all 556 tests pass)
+**Last Updated:** 2026-03-27 (Phase 4.1 investigation complete — round-trip gaps identified)  
+**Status:** Phase 1 — **complete**; Phase 2 — **complete**; Phase 3 — **complete** (uploader, diff engine, CLI upload command, all 556 tests pass); Phase 4 — **in progress** (investigation done, implementation pending)
 
 ## Overview
 
@@ -384,26 +384,52 @@ Implemented `deserialize()` on each handler, plus new `markdown_deserializer.py`
 
 ---
 
-### Phase 4: Advanced Feature Preservation (Residual)
-**Goal:** Handle any remaining Google Docs features not covered by Phase 2.6
+### Phase 4: Round-Trip Fidelity & Feature Preservation
+**Goal:** Fix round-trip content corruption, fill serialization/deserialization gaps, and preserve all recoverable Google Docs data across download → edit → upload cycles.
 
-**Note:** The bulk of the metadata strategy and non-Markdown element handling has been folded into Phase 2.6. This phase covers only features discovered during Phase 2-3 implementation that require additional work.
+**Context:** Investigation of round-trip output (comparing original downloads in `test_outputs/Markdown Conversion Example - Multi-Tab/` with re-downloaded uploads in `test_outputs/upload_test3/`) revealed critical content corruption bugs, formatting losses, and a large set of API data that is silently dropped during serialization. Detailed findings are in `.cursor/plans/phase_4.1_investigation_80d098e3.plan.md`.
 
-#### 4.1: Additional Feature Discovery
-- [ ] Identify any Google Docs features not covered by Phase 2.6 during real-world testing
-- [ ] Handle edge cases in metadata serialization/deserialization discovered during Phase 3 (upload)
-- [ ] Handle embedded objects (charts, drawings) if encountered
+#### 4.1: Fix Round-Trip Content Corruption (P0)
+- [ ] **Code block round-trip**: Fenced code blocks degrade to per-line `<!-- style: {"font-family": "Roboto Mono"} -->` paragraphs because the deserializer doesn't emit U+E907 bookend markers (and the API strips U+E000–U+F8FF from `insertText`). Fix: add monospace-font heuristic as fallback code block detection in the serializer (group consecutive monospace paragraphs even without U+E907 boundaries).
+- [ ] **Style tag + inline code index corruption**: `<!-- style -->text<!-- /style -->` + backtick code merges with the next paragraph on round-trip. Debug `_emit_inline_with_tags` / `_emit_text_range_with_formatting` index arithmetic.
+- [ ] **Image round-trip**: Images vanish entirely. Investigate whether Google-hosted `contentUri` URLs are usable in `InsertInlineImageRequest` or are ephemeral. Fix index advancement for image insertion.
+- [ ] **Bold/italic formatting loss**: `**bold**` and `*italic*` become plain text after round-trip. Audit `_apply_inline_formatting_from_token` index ranges.
+- [ ] **Title/subtitle markers lost**: `<!-- title -->` / `<!-- subtitle -->` prefixes not re-emitted on re-download. Debug `TITLE`/`SUBTITLE` namedStyleType handling in the serializer when documents use Google's default named styles.
 
-#### 4.2: Metadata Round-Trip Refinement
-- [ ] Ensure HTML comment metadata survives download → edit → upload cycle
-- [ ] Ensure companion JSON metadata stays in sync with Markdown content
-- [ ] Handle metadata conflicts (e.g., user edits HTML comment, breaking JSON structure)
+#### 4.2: Fill Serialization & Deserialization Gaps
+- [ ] **Table cell formatting**: Serialize `tableCellStyle` (backgroundColor, borders, padding) and header row bold. Deserialize via `UpdateTableCellStyleRequest` + `UpdateTextStyleRequest` for cell content.
+- [ ] **Paragraph alignment**: Serialize `alignment: "CENTER"` (present on image paragraphs and table headers in fixture). Deserialize via `UpdateParagraphStyleRequest`.
+- [ ] **Image properties**: Serialize `inlineObjects` size, crop (`cropProperties.offsetRight` = 0.705 in fixture!), margins. Deserialize via `InsertInlineImageRequest.objectSize`.
+- [ ] **Person/date in list items**: Fix index handling when chips appear inside bulleted list items (chip insertion + bullet creation may conflict on indices).
+- [ ] **Document styles on create**: Emit `updateDocumentStyle` from metadata (margins, page size, background) and `updateNamedStyle` for heading definitions.
+- [ ] **headingId preservation**: Serialize heading IDs so TOC heading links and cross-heading references can be reconstructed.
+- [ ] **Footnote deserialization**: Implement `[^N]` parsing + `createFootnote` + `insertText` for footnote content.
+- [ ] **Header/footer deserialization**: Implement `createHeader`/`createFooter` + content insertion from comment tag blocks.
+- [ ] **Horizontal rule**: Replace `\n`-only deserializer output with a visual separator.
 
-#### 4.3: Testing
-- [ ] End-to-end round-trip tests with all advanced features
-- [ ] Verify feature preservation across multiple download/upload cycles
+**Elements confirmed NOT recreatable via API (accepted losses):**
+- Rich links (`insertRichLink` doesn't exist) → fall back to normal hyperlink
+- Suggestions (`suggestedInsertionIds`) → cannot be created via API, preserved as comment tags for informational purposes
+- Chip placeholders (dropdown/status/file chips) → U+E907 widgets with no API element type
+- TOC content → `insertText("[TOC]")` is a placeholder; real TOC is auto-generated by Google Docs
 
-**Deliverable:** Robust handling of all Google Docs features in Markdown round-trips
+#### 4.3: Round-Trip Testing Infrastructure
+- [ ] Build automated round-trip script: download doc → serialize to markdown → deserialize to requests → create new doc → download new doc → diff
+- [ ] Add idempotency tests: serialize → deserialize → serialize should produce identical markdown
+- [ ] Expand test fixture document to include missing element types: `footnoteReference`, `horizontalRule`, `pageBreak`, `columnBreak`, `autoText`, superscript/subscript, `alignment: RIGHT/JUSTIFY`, merged table cells, headers/footers
+- [ ] Add unit tests comparing serialized-then-deserialized output against fixture JSON
+
+#### 4.4: Metadata Reference System
+- [ ] Implement `#refN` reference tags in `comment_tags.py` — `opening_tag()` / `wrap_tag()` accept optional ref ID; `parse_tags()` detects `#refN` patterns alongside inline JSON
+- [ ] Add `references` map to metadata block in `metadata.py` — `serialize_metadata()` gains `references` parameter; `parse_metadata()` returns references map
+- [ ] Add ref registry to `SerContext` — assigns type-prefixed IDs (`#s1` for style, `#sg1` for suggestion, `#p1` for person, etc.), deduplicates identical data objects
+- [ ] Add ref lookup to `DeserContext` — resolves `#refN` from metadata before dispatching to handlers
+- [ ] Migrate verbose tag types to use references by default — `style`, `suggestion`, `rich-link`, `header`, `footer`, plus new types (image-props, table-cell-style, heading-id)
+- [ ] Keep simple/marker tags inline — `title`, `subtitle`, `page-break`, `column-break`, `equation`, `chip-placeholder`, `table-of-contents`
+- [ ] Allow any tag type to use either inline JSON or `#refN` (backward compatible parsing)
+- [ ] Element-level logic for when to auto-generate references: JSON object has >1 field, or duplicate annotation data exists in the document
+
+**Deliverable:** Robust round-trip fidelity for all Google Docs features, clean markdown output via metadata references
 
 ---
 
@@ -623,7 +649,7 @@ This document should be used for testing throughout development.
 - ✅ Phase 3.10: CLI & Python API — `upload` command fully wired (`--create`, `--tab`, `--title`, `--overwrite`), `Uploader` + `MarkdownDeserializer` exported from `__init__.py`. 9 new CLI tests. Total: 556 tests pass.
 
 **Up Next:**
-- **Phase 4:** Advanced Feature Preservation — widget round-trip refinement, additional feature discovery during real-world testing
+- **Phase 4:** Round-Trip Fidelity & Feature Preservation — fix content corruption bugs (code blocks, images, formatting loss), fill ser/deser gaps (table styling, alignment, image properties, footnotes, headers/footers, document styles), build round-trip test infrastructure, metadata reference system for cleaner annotation output
 - **Phase 5:** Advanced Tab Features — tab management CLI commands, bulk operations, tab synchronization
 - **Phase 6:** Image Storage Integration — S3/GCS backends, local image download, URL replacement
 - **Phase 7:** Polish & Documentation — error handling, CLI progress indicators, README, API docs

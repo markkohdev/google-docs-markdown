@@ -44,6 +44,8 @@ class TagType(StrEnum):
     SUBTITLE = "subtitle"
     HEADER = "header"
     FOOTER = "footer"
+    IMAGE_PROPS = "image-props"
+    ALIGNMENT = "align"
 
 
 def opening_tag(tag_type: TagType | str, data: dict[str, Any] | None = None) -> str:

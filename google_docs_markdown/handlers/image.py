@@ -4,9 +4,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from google_docs_markdown.comment_tags import TagType, self_closing_tag
 from google_docs_markdown.handlers.base import ElementHandler
 from google_docs_markdown.handlers.context import DeserContext, SerContext
 from google_docs_markdown.models.common import InlineObject
+
+_DEFAULT_MARGIN_PT = 9.0
 
 
 class ImageHandler(ElementHandler):
@@ -34,7 +37,13 @@ class ImageHandler(ElementHandler):
             return None
 
         alt = embedded.description or embedded.title or ""
-        return f"![{alt}]({image_props.contentUri})"
+        md = f"![{alt}]({image_props.contentUri})"
+
+        tag_data = _build_image_props_data(embedded, image_props)
+        if tag_data:
+            md += self_closing_tag(TagType.IMAGE_PROPS, tag_data)
+
+        return md
 
     def deserialize_match(self, token: Any) -> bool:
         return False
@@ -58,3 +67,41 @@ class ImageHandler(ElementHandler):
                 )
             )
         ]
+
+
+def _build_image_props_data(
+    embedded: Any,
+    image_props: Any,
+) -> dict[str, Any] | None:
+    """Build a dict of non-default image properties for the comment tag.
+
+    Returns ``None`` when all properties are at their defaults (9 PT margins,
+    no cropping, no explicit size).
+    """
+    data: dict[str, Any] = {}
+
+    if embedded.size:
+        if embedded.size.width and embedded.size.width.magnitude is not None:
+            data["width"] = embedded.size.width.magnitude
+        if embedded.size.height and embedded.size.height.magnitude is not None:
+            data["height"] = embedded.size.height.magnitude
+
+    crop = image_props.cropProperties
+    if crop:
+        crop_data: dict[str, float] = {}
+        for field in ("offsetTop", "offsetBottom", "offsetLeft", "offsetRight", "angle"):
+            val = getattr(crop, field, None)
+            if val is not None and val != 0:
+                crop_data[field] = val
+        if crop_data:
+            data["crop"] = crop_data
+
+    margins: dict[str, float] = {}
+    for field in ("marginTop", "marginBottom", "marginLeft", "marginRight"):
+        dim = getattr(embedded, field, None)
+        if dim and dim.magnitude is not None and dim.magnitude != _DEFAULT_MARGIN_PT:
+            margins[field] = dim.magnitude
+    if margins:
+        data["margins"] = margins
+
+    return data or None

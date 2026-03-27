@@ -256,3 +256,131 @@ class TestCodeBlockGrouping:
         assert isinstance(blocks[0], CodeBlock)
         assert isinstance(blocks[1], StructuralElement)
         assert isinstance(blocks[2], CodeBlock)
+
+
+class TestMonospaceFallback:
+    """Tests for the monospace-font fallback code block detection."""
+
+    def test_consecutive_monospace_grouped(self) -> None:
+        """Consecutive all-monospace paragraphs are grouped as a CodeBlock."""
+        elements = [
+            _code_para(_mono_text_run("def foo():\n")),
+            _code_para(_mono_text_run("    pass\n")),
+        ]
+        blocks = group_elements(elements)
+        assert len(blocks) == 1
+        assert isinstance(blocks[0], CodeBlock)
+        assert len(blocks[0].paragraphs) == 2
+
+    def test_monospace_between_regular(self) -> None:
+        """Monospace paragraphs between regular text form a code block."""
+        elements = [
+            _para("Before"),
+            _code_para(_mono_text_run("line 1\n")),
+            _code_para(_mono_text_run("line 2\n")),
+            _para("After"),
+        ]
+        blocks = group_elements(elements)
+        assert len(blocks) == 3
+        assert isinstance(blocks[0], StructuralElement)
+        assert isinstance(blocks[1], CodeBlock)
+        assert len(blocks[1].paragraphs) == 2
+        assert isinstance(blocks[2], StructuralElement)
+
+    def test_single_monospace_paragraph_grouped(self) -> None:
+        """A single all-monospace paragraph is still detected as code."""
+        elements = [
+            _para("Before"),
+            _code_para(_mono_text_run("single line\n")),
+            _para("After"),
+        ]
+        blocks = group_elements(elements)
+        assert len(blocks) == 3
+        assert isinstance(blocks[1], CodeBlock)
+        assert len(blocks[1].paragraphs) == 1
+
+    def test_inline_code_color_not_grouped(self) -> None:
+        """Monospace + green (inline code style) is NOT grouped as code block."""
+        from google_docs_markdown.models.common import Color, OptionalColor, RgbColor
+
+        inline_run = TextRun(
+            content="some_code()\n",
+            textStyle=TextStyle(
+                weightedFontFamily=WeightedFontFamily(fontFamily="Roboto Mono", weight=400),
+                foregroundColor=OptionalColor(
+                    color=Color(rgbColor=RgbColor(red=24 / 255, green=128 / 255, blue=55 / 255))
+                ),
+            ),
+        )
+        elements = [_code_para(inline_run)]
+        blocks = group_elements(elements)
+        assert len(blocks) == 1
+        assert isinstance(blocks[0], StructuralElement)
+
+    def test_heading_not_grouped(self) -> None:
+        """Monospace text in a heading paragraph is NOT grouped as code."""
+        heading = StructuralElement(
+            paragraph=Paragraph(
+                elements=[ParagraphElement(textRun=_mono_text_run("Code Heading\n"))],
+                paragraphStyle=ParagraphStyle(namedStyleType="HEADING_1"),
+            )
+        )
+        elements = [heading]
+        blocks = group_elements(elements)
+        assert len(blocks) == 1
+        assert isinstance(blocks[0], StructuralElement)
+
+    def test_mixed_font_not_grouped(self) -> None:
+        """A paragraph with both monospace and non-monospace runs is NOT grouped."""
+        elements = [
+            _code_para(
+                _mono_text_run("code "),
+                TextRun(content="regular\n", textStyle=TextStyle()),
+            ),
+        ]
+        blocks = group_elements(elements)
+        assert len(blocks) == 1
+        assert isinstance(blocks[0], StructuralElement)
+
+    def test_courier_new_also_detected(self) -> None:
+        """Non-Roboto-Mono monospace fonts are also detected."""
+        courier_run = TextRun(
+            content="code\n",
+            textStyle=TextStyle(
+                weightedFontFamily=WeightedFontFamily(fontFamily="Courier New", weight=400),
+            ),
+        )
+        elements = [_code_para(courier_run)]
+        blocks = group_elements(elements)
+        assert len(blocks) == 1
+        assert isinstance(blocks[0], CodeBlock)
+
+    def test_multiple_monospace_blocks_separated(self) -> None:
+        """Two runs of monospace paragraphs separated by normal text."""
+        elements = [
+            _code_para(_mono_text_run("block1 line1\n")),
+            _code_para(_mono_text_run("block1 line2\n")),
+            _para("Between"),
+            _code_para(_mono_text_run("block2 line1\n")),
+        ]
+        blocks = group_elements(elements)
+        assert len(blocks) == 3
+        assert isinstance(blocks[0], CodeBlock)
+        assert len(blocks[0].paragraphs) == 2
+        assert isinstance(blocks[1], StructuralElement)
+        assert isinstance(blocks[2], CodeBlock)
+        assert len(blocks[2].paragraphs) == 1
+
+    def test_list_items_with_monospace_not_grouped(self) -> None:
+        """List items with monospace font are NOT grouped as code blocks."""
+        bullet_mono = StructuralElement(
+            paragraph=Paragraph(
+                elements=[ParagraphElement(textRun=_mono_text_run("item\n"))],
+                paragraphStyle=ParagraphStyle(namedStyleType="NORMAL_TEXT"),
+                bullet=Bullet(listId="kix.abc"),
+            )
+        )
+        elements = [bullet_mono]
+        blocks = group_elements(elements)
+        assert len(blocks) == 1
+        assert isinstance(blocks[0], ListBlock)

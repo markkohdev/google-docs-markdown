@@ -77,6 +77,7 @@ class HandlerRegistry:
         from google_docs_markdown.handlers.code_block import CodeBlockHandler
         from google_docs_markdown.handlers.date import DateHandler
         from google_docs_markdown.handlers.footnote import FootnoteRefHandler
+        from google_docs_markdown.handlers.header_footer import FooterHandler, HeaderHandler
         from google_docs_markdown.handlers.image import ImageHandler
         from google_docs_markdown.handlers.list_handler import ListHandler
         from google_docs_markdown.handlers.person import PersonHandler
@@ -100,6 +101,8 @@ class HandlerRegistry:
             EquationHandler(),
             StyleHandler(),
             SuggestionHandler(),
+            HeaderHandler(),
+            FooterHandler(),
             TextRunHandler(),
         ]
 

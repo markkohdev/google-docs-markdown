@@ -4,9 +4,11 @@ The Google Docs API represents lists as consecutive Paragraph elements with
 ``bullet`` fields. This module groups those into ``ListBlock`` objects so
 the serializer can render them as a single Markdown list.
 
-Code blocks are detected via U+E907 boundary markers and monospace font
-(``Roboto Mono``).  Consecutive monospace paragraphs between U+E907
-bookends are grouped into ``CodeBlock`` objects.
+Code blocks are detected via two mechanisms:
+1. U+E907 boundary markers (native Google Docs code block widgets).
+2. Fallback: consecutive paragraphs where **all** text runs use a monospace
+   font (e.g. ``Roboto Mono``).  This handles code blocks that were
+   uploaded without U+E907 markers (which are stripped by the API).
 """
 
 from __future__ import annotations
@@ -14,7 +16,13 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from google_docs_markdown.element_registry import CODE_BLOCK_MARKER, ORDERED_GLYPH_TYPES
+from google_docs_markdown.element_registry import (
+    CODE_BLOCK_MARKER,
+    INLINE_CODE_COLOR,
+    MONOSPACE_FONTS,
+    ORDERED_GLYPH_TYPES,
+)
+from google_docs_markdown.handlers.context import optional_color_to_hex
 from google_docs_markdown.models.common import List as DocList
 from google_docs_markdown.models.elements import Paragraph, StructuralElement
 
@@ -37,7 +45,7 @@ class ListBlock:
 
 @dataclass
 class CodeBlock:
-    """A run of consecutive monospace paragraphs between U+E907 bookends."""
+    """A run of consecutive monospace paragraphs (U+E907 bookends or fallback)."""
 
     paragraphs: list[Paragraph] = field(default_factory=list)
 
@@ -55,6 +63,8 @@ def group_elements(
       into a single :class:`ListBlock`.
     * Paragraphs between U+E907 bookends that use a monospace font are
       collapsed into a single :class:`CodeBlock`.
+    * **Fallback:** consecutive all-monospace paragraphs (without U+E907)
+      are also collapsed into a :class:`CodeBlock`.
     * All other structural elements pass through unchanged.
     """
     blocks: list[Block] = []
@@ -104,7 +114,7 @@ def group_elements(
             current_list_id = None
             blocks.append(element)
 
-    return blocks
+    return _apply_monospace_fallback(blocks)
 
 
 def _is_code_block_start(para: Paragraph) -> bool:
@@ -130,6 +140,65 @@ def _is_code_block_end(para: Paragraph) -> bool:
         if content:
             return False
     return False
+
+
+def _is_all_monospace_paragraph(para: Paragraph) -> bool:
+    """Return True if every text run in the paragraph uses a monospace font.
+
+    Returns False for paragraphs with no text content, headings, list items,
+    or runs that look like inline code (monospace + green foreground).
+    """
+    if not para.elements:
+        return False
+    if para.bullet:
+        return False
+    style_type = para.paragraphStyle.namedStyleType if para.paragraphStyle else None
+    if style_type and style_type != "NORMAL_TEXT":
+        return False
+
+    has_text = False
+    for elem in para.elements:
+        if not elem.textRun or not elem.textRun.content:
+            continue
+        content = elem.textRun.content
+        if content.strip() == "" or content == "\n":
+            continue
+        has_text = True
+        ts = elem.textRun.textStyle
+        if not ts or not ts.weightedFontFamily or not ts.weightedFontFamily.fontFamily:
+            return False
+        if ts.weightedFontFamily.fontFamily not in MONOSPACE_FONTS:
+            return False
+        fg = optional_color_to_hex(ts.foregroundColor)
+        if fg == INLINE_CODE_COLOR:
+            return False
+    return has_text
+
+
+def _apply_monospace_fallback(blocks: list[Block]) -> list[Block]:
+    """Second pass: group consecutive all-monospace StructuralElements into CodeBlocks.
+
+    Only applies to StructuralElement blocks that were not already grouped
+    by the U+E907 detection pass.
+    """
+    result: list[Block] = []
+    i = 0
+    while i < len(blocks):
+        block = blocks[i]
+        if isinstance(block, StructuralElement) and block.paragraph and _is_all_monospace_paragraph(block.paragraph):
+            code = CodeBlock()
+            while i < len(blocks):
+                b = blocks[i]
+                if isinstance(b, StructuralElement) and b.paragraph and _is_all_monospace_paragraph(b.paragraph):
+                    code.paragraphs.append(b.paragraph)
+                    i += 1
+                else:
+                    break
+            result.append(code)
+        else:
+            result.append(block)
+            i += 1
+    return result
 
 
 def _is_ordered_list(

@@ -23,7 +23,7 @@ from google_docs_markdown.block_grouper import (
     ListBlock,
     group_elements,
 )
-from google_docs_markdown.comment_tags import TagType, wrap_tag
+from google_docs_markdown.comment_tags import TagType, self_closing_tag, wrap_tag
 from google_docs_markdown.element_registry import DEFAULT_LINK_COLOR
 from google_docs_markdown.handlers.context import DocumentContext, SerContext
 from google_docs_markdown.handlers.header_footer import FooterHandler, HeaderHandler
@@ -228,6 +228,8 @@ class MarkdownSerializer:
     # Paragraph processing
     # ------------------------------------------------------------------
 
+    _ALIGNMENT_MAP = {"CENTER": "center", "END": "right", "JUSTIFIED": "justify"}
+
     def _visit_paragraph(self, element: StructuralElement, ctx: SerContext) -> str:
         paragraph = element.paragraph
         assert paragraph is not None
@@ -239,7 +241,17 @@ class MarkdownSerializer:
         text = self._collect_paragraph_text(paragraph.elements or [], ctx)
         ctx.current_para_style = None
 
-        return self._heading_handler.format_paragraph(text, style_type, ctx)
+        alignment = None
+        if paragraph.paragraphStyle and paragraph.paragraphStyle.alignment:
+            alignment = paragraph.paragraphStyle.alignment
+
+        result = self._heading_handler.format_paragraph(text, style_type, ctx)
+
+        if alignment and alignment in self._ALIGNMENT_MAP:
+            align_tag = self_closing_tag(TagType.ALIGNMENT, {"value": self._ALIGNMENT_MAP[alignment]})
+            result = f"{align_tag}\n{result}"
+
+        return result
 
     def _collect_paragraph_text(self, elements: list[ParagraphElement], ctx: SerContext) -> str:
         """Concatenate and format inline text from paragraph elements.
