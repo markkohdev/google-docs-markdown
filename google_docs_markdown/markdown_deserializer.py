@@ -586,7 +586,10 @@ class MarkdownDeserializer:
                 current_fmt = fmt
         runs.append((current_text, current_fmt))
 
-        # Emit each run
+        # Emit each run.  When a run has less formatting than its predecessor,
+        # explicitly clear the dropped fields so Google Docs doesn't inherit
+        # the adjacent style (e.g. bold leaking onto unformatted text).
+        prev_fmt: list[str] = []
         for run_text, run_fmt in runs:
             if not run_text:
                 continue
@@ -598,6 +601,9 @@ class MarkdownDeserializer:
                     self._emit_code_inline_style(ctx, run_start, ctx.index)
                 else:
                     self._emit_text_style(ctx, run_start, ctx.index, run_fmt)
+            elif prev_fmt:
+                self._emit_clear_formatting(ctx, run_start, ctx.index, prev_fmt)
+            prev_fmt = run_fmt
 
     # ------------------------------------------------------------------
     # Comment-tag dispatch
@@ -769,6 +775,50 @@ class MarkdownDeserializer:
         if link_url:
             style_kwargs["link"] = Link(url=link_url)
             fields.append("link")
+
+        if not fields:
+            return
+
+        ctx.emit(
+            Request(
+                updateTextStyle=UpdateTextStyleRequest(
+                    range=Range(
+                        startIndex=start,
+                        endIndex=end,
+                        segmentId=ctx.segment_id or None,
+                        tabId=ctx.tab_id or None,
+                    ),
+                    textStyle=TextStyle(**style_kwargs),
+                    fields=",".join(fields),
+                )
+            )
+        )
+
+    def _emit_clear_formatting(self, ctx: DeserContext, start: int, end: int, prev_fmt: list[str]) -> None:
+        """Explicitly clear formatting fields that were active in the previous run.
+
+        Google Docs inherits the style of adjacent text on insertion.
+        This resets specific fields (bold, italic, etc.) to ``false`` so
+        unformatted text doesn't inherit formatting from a preceding run.
+        """
+        if start >= end:
+            return
+
+        fields: list[str] = []
+        style_kwargs: dict[str, Any] = {}
+        for f in prev_fmt:
+            if f == "bold":
+                style_kwargs["bold"] = False
+                fields.append("bold")
+            elif f == "italic":
+                style_kwargs["italic"] = False
+                fields.append("italic")
+            elif f == "strikethrough":
+                style_kwargs["strikethrough"] = False
+                fields.append("strikethrough")
+            elif f == "underline":
+                style_kwargs["underline"] = False
+                fields.append("underline")
 
         if not fields:
             return

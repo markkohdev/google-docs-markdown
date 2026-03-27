@@ -490,6 +490,41 @@ class TestDeserializerFormattingWithTags:
         ]
         assert len(italic_reqs) >= 1
 
+    def test_bold_does_not_leak_to_person_chip(self) -> None:
+        """Bold on 'Lead:' must not leak onto the unformatted space before the person chip."""
+        md = '**Lead:** <!-- person: {"email": "x@y.com"} -->Name<!-- /person -->\n'
+        requests = deserialize(md)
+
+        person = _find_request(requests, "insertPerson")
+        assert person is not None
+
+        style_reqs = _find_all_requests(requests, "updateTextStyle")
+        bold_true = [
+            r
+            for r in style_reqs
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.bold is True
+        ]
+        bold_false = [
+            r
+            for r in style_reqs
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.bold is False
+        ]
+        assert len(bold_true) >= 1, "Bold should be applied to 'Lead:'"
+        assert len(bold_false) >= 1, "Bold should be explicitly cleared on trailing text"
+
+    def test_formatting_clear_prevents_inheritance(self) -> None:
+        """Unformatted text after bold must get an explicit bold=false reset."""
+        md = '**bold** plain <!-- person: {"email": "a@b.com"} -->A<!-- /person -->\n'
+        requests = deserialize(md)
+
+        style_reqs = _find_all_requests(requests, "updateTextStyle")
+        bold_false = [
+            r
+            for r in style_reqs
+            if r.updateTextStyle and r.updateTextStyle.textStyle and r.updateTextStyle.textStyle.bold is False
+        ]
+        assert len(bold_false) >= 1, "Unformatted text after bold should get explicit clear"
+
 
 # ------------------------------------------------------------------
 # Helpers
